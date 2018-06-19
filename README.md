@@ -7,8 +7,14 @@ Subject to the lack of a layer of abstractive, consistent and portable APIs, it'
 ## Layout
 
 ```
-    ./ -- + -- src          # Source files.
-          | -- tests        # Unit tests.
-          | -- samples      # Samples demonstrating how to use this library.
-          \ -- notes        # Notes which contain information, thoughts and technical decisions.
+    ./
+     | -- inc               # Header files.
+     | -- notes             # Notes which contain information, thoughts and technique decisions.
+     | -- samples           # Samples demonstrating how to use this library.
+     | -- src               # Source files.
+     |     | -- darwin      # Source files for Mac OS X.
+     |     | -- unix        # Source files for UNIX.
+     |     | -- linux       # Source files for Linux.
+     |     \ -- windows     # Source files for Windows.
+     \ -- tests             # Unit tests.
 ```
