@@ -7,7 +7,7 @@ extern "C"
 {
 #endif
 
-const ppe_size ppe_mhs_bulk_size = 4 * (1 << 20);       /* 4MB for bulk size */
+/* ---- Types ---- */
 
 struct PPE_MEMHOSE_BULK
 {
@@ -26,19 +26,25 @@ struct PPE_MEMHOSE
     ppe_memhose_bulk_st blks_init[1];
 } ppe_memhose_st;
 
-static void * ppe_mhs_allocate_cfn(ppe_mempool_itf restrict itf, ppe_size size)
+/* ---- Preset Values ---- */
+
+const ppe_size ppe_mhs_bulk_size = 4 * (1 << 20);       /* 4MB for bulk size */
+
+/* ---- Functions ---- */
+
+static void * ppe_mhs_malloc_cfn(ppe_mempool_itf restrict itf, ppe_size size)
 {
-    return ppe_mhs_allocate((ppe_memhose)(itf), size);
+    return ppe_mhs_malloc((ppe_memhose)(itf), size);
 }
 
-static void * ppe_mhs_reallocate_cfn(ppe_mempool_itf restrict itf, void * restrict ptr, ppe_size size)
+static void * ppe_mhs_realloc_cfn(ppe_mempool_itf restrict itf, void * restrict ptr, ppe_size size)
 {
-    return ppe_mhs_reallocate((ppe_memhose)(itf), ptr, size);
+    return ppe_mhs_realloc((ppe_memhose)(itf), ptr, size);
 }
 
-static void ppe_mhs_deallocate_cfn(ppe_mempool_itf restrict itf, void * restrict ptr)
+static void ppe_mhs_free_cfn(ppe_mempool_itf restrict itf, void * restrict ptr)
 {
-    ppe_mhs_deallocate((ppe_memhose)(itf), ptr);
+    ppe_mhs_free((ppe_memhose)(itf), ptr);
 }
 
 static inline ppe_size ppe_mhs_round_up(ppe_size size)
@@ -60,7 +66,7 @@ PPE_API ppe_memhose ppe_mhs_create(ppe_size min_capacity)
     ppe_memhose hose = NULL;
     ppe_size new_cap = 0;
 
-    if (! mempool && ! (mempool = ppe_mp_create(ppe_mhs_allocate_cfn, ppe_mhs_reallocate_cfn, ppe_mhs_deallocate_cfn))) return NULL;
+    if (! mempool && ! (mempool = ppe_mp_create(&ppe_mhs_malloc_cfn, &ppe_mhs_realloc_cfn, &ppe_mhs_free_cfn))) return NULL;
 
     if (! (hose = (ppe_memhose)(calloc(1, sizeof(ppe_memhose_st))))) {
         /* No need to destroy the mempool */
@@ -148,7 +154,7 @@ static inline void ppe_mhs_swap_bulk(ppe_memhose restrict hose, ppe_uint i, ppe_
     hose->blks[j] = blk;
 }
 
-PPE_API void * ppe_mhs_allocate(ppe_memhose restrict hose, ppe_size size)
+PPE_API void * ppe_mhs_malloc(ppe_memhose restrict hose, ppe_size size)
 {
     ppe_uint i = 0;
     void * ptr = NULL;
@@ -172,12 +178,19 @@ PPE_API void * ppe_mhs_allocate(ppe_memhose restrict hose, ppe_size size)
     return ptr;
 }
 
-PPE_API void * ppe_mhs_reallocate(ppe_memhose restrict hose, void * restrict ptr, ppe_size size)
+PPE_API void * ppe_mhs_calloc(ppe_memhose restrict hose, ppe_size num, ppe_size size)
 {
-    return ppe_mhs_reallocate(hose, size);
+    void * p = ppe_mhs_malloc(hose, num * size);
+    if (p) memset(p, 0, num * size);
+    return p;
 }
 
-PPE_API void ppe_mhs_deallocate(ppe_memhose restrict hose, void * restrict ptr)
+PPE_API void * ppe_mhs_realloc(ppe_memhose restrict hose, void * restrict ptr, ppe_size size)
+{
+    return ppe_mhs_malloc(hose, size);
+}
+
+PPE_API void ppe_mhs_free(ppe_memhose restrict hose, void * restrict ptr)
 {
     assert(hose);
     return;
