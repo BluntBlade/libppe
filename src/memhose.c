@@ -1,5 +1,8 @@
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "ppe/errors.h"
 #include "ppe/memhose.h"
 
 #ifdef __cplusplus
@@ -9,7 +12,7 @@ extern "C"
 
 /* ---- Types ---- */
 
-struct PPE_MEMHOSE_BULK
+typedef struct PPE_MEMHOSE_BULK
 {
     ppe_size cap;
     ppe_size unused;
@@ -75,7 +78,7 @@ PPE_API ppe_memhose ppe_mhs_create(ppe_size min_capacity)
     }
 
     new_cap = (min_capacity == 0 ? ppe_mhs_bulk_size : ppe_mhs_round_up(min_capacity));
-    if (! hose->blks_init[0].buf = malloc(new_cap)) {
+    if (! (hose->blks_init[0].buf = malloc(new_cap))) {
         free(hose);
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
@@ -96,10 +99,10 @@ PPE_API void ppe_mhs_destroy(ppe_memhose restrict hose)
     ppe_uint i = 0;
 
     if (hose) {
-        for (i = 0; i < hose->cnt; i++) free(hose->blks[i].buf);
+        for (i = 0; i < hose->blk_cnt; i++) free(hose->blks[i].buf);
 
         if (hose->blks != &hose->blks_init[0]) {
-            memset(hose->blks, 0, sizeof(ppe_memhose_bulk_st) * hose->cnt);
+            memset(hose->blks, 0, sizeof(ppe_memhose_bulk_st) * hose->blk_cnt);
             free(hose->blks);
         }
 
@@ -114,7 +117,7 @@ PPE_API void ppe_mhs_free_all(ppe_memhose restrict hose)
 
     assert(hose);
 
-    for (i = 0; i < hose->cnt; i++) hose->blks[i].unused = hose->blks[i].cap;
+    for (i = 0; i < hose->blk_cnt; i++) hose->blks[i].unused = hose->blks[i].cap;
     hose->blk_end = hose->blk_cnt;
 }
 
@@ -138,7 +141,7 @@ static ppe_bool ppe_mhs_augment(ppe_memhose restrict hose, ppe_size total)
     new_blks[0].unused = new_cap;
     new_blks[0].buf = new_buf;
 
-    memset(hose->blks, 0, sizeof(ppe_memhose_bulk_st) * hose->cnt);
+    memset(hose->blks, 0, sizeof(ppe_memhose_bulk_st) * hose->blk_cnt);
     if (hose->blks != &hose->blks_init[0]) free(hose->blks);
 
     hose->blks = new_blks;

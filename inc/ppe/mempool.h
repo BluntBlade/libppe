@@ -21,11 +21,11 @@ typedef void (*ppe_mp_free_vfn)(ppe_mempool_itf restrict itf, void * restrict pt
 
 /* ---- Preset Values ---- */
 
-const ppe_mempool_itf PPE_MP_GLOBAL_ALLOCATOR = NULL:
+#define PPE_MP_GLOBAL_ALLOCATOR NULL
 
 /* ---- Functions ---- */
 
-PPE_API extern ppe_mempool ppe_mp_create(ppe_mp_malloc_vfn restrict malloc, ppe_mp_realloc_vfn restrict realloc, ppe_mp_free_vfn restrict free);
+PPE_API extern ppe_mempool ppe_mp_create(ppe_mp_malloc_vfn malloc, ppe_mp_realloc_vfn realloc, ppe_mp_free_vfn free);
 PPE_API extern void ppe_mp_destroy(ppe_mempool restrict mp);
 
 PPE_API extern void * ppe_mp_malloc_from(ppe_mempool_itf restrict itf, ppe_size size);
@@ -40,7 +40,7 @@ PPE_API extern ppe_mempool_itf ppe_mp_get_default(void);
 
 PPE_API extern void * ppe_mp_malloc(ppe_size size);
 PPE_API extern void * ppe_mp_calloc(ppe_size num, ppe_size size);
-PPE_API extern void * ppe_mp_realloc(void * restrict ptr, ppe_size size)
+PPE_API extern void * ppe_mp_realloc(void * restrict ptr, ppe_size size);
 PPE_API extern void ppe_mp_free(void * restrict ptr);
 
 #ifdef __cplusplus

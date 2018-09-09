@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "ppe/errors.h"
 #include "ppe/mempool.h"
 
@@ -17,7 +20,7 @@ typedef struct PPE_MEMPOOL
 
 /* ---- Functions ---- */
 
-PPE_API ppe_mempool ppe_mp_create(ppe_mp_allocate_vfn restrict malloc, ppe_mp_realloc_vfn restrict realloc, ppe_mp_free_vfn restrict free)
+PPE_API ppe_mempool ppe_mp_create(ppe_mp_malloc_vfn malloc, ppe_mp_realloc_vfn realloc, ppe_mp_free_vfn free)
 {
     ppe_mempool mp = calloc(1, sizeof(ppe_mempool_st));
     if (! mp) {
@@ -40,27 +43,27 @@ PPE_API void ppe_mp_destroy(ppe_mempool restrict mp)
 
 PPE_API void * ppe_mp_malloc_from(ppe_mempool_itf restrict itf, ppe_size size)
 {
-    return itf ? itf->malloc(itf, size) : malloc(size);
+    return itf ? (*itf)->malloc(itf, size) : malloc(size);
 }
 
 PPE_API void * ppe_mp_calloc_from(ppe_mempool_itf restrict itf, ppe_size num, ppe_size size)
 {
     void * p = NULL;
-    if (! itr) return calloc(num, size);
+    if (! itf) return calloc(num, size);
 
-    if ((p = itf->malloc(itf, num * size))) memset(p, 0, num * size);
+    if ((p = (*itf)->malloc(itf, num * size))) memset(p, 0, num * size);
     return p;
 }
 
 PPE_API void * ppe_mp_realloc_from(ppe_mempool_itf restrict itf, void * restrict ptr, ppe_size size)
 {
-    return itf ? itf->realloc(itf, ptr, size) : realloc(ptr, size);
+    return itf ? (*itf)->realloc(itf, ptr, size) : realloc(ptr, size);
 }
 
 PPE_API void ppe_mp_free_to(ppe_mempool_itf restrict itf, void * restrict ptr)
 {
     if (itf) {
-        itf->free(itf, ptr); 
+        (*itf)->free(itf, ptr); 
     } else {
         free(ptr);
     }
@@ -89,7 +92,7 @@ PPE_API void * ppe_mp_malloc(ppe_size size)
 
 PPE_API void * ppe_mp_calloc(ppe_size num, ppe_size size)
 {
-    return ppe_mp_calloc_from(s_mp_default, num * size);
+    return ppe_mp_calloc_from(s_mp_default, num, size);
 }
 
 PPE_API void * ppe_mp_realloc(void * restrict ptr, ppe_size size)

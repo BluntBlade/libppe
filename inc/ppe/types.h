@@ -1,6 +1,11 @@
 #ifndef PPE_TYPES_H
 #define PPE_TYPES_H 1
 
+#include <sys/types.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+
 /*== References:
  *      https://blog.csdn.net/wyywatdl/article/details/4683762
  *      https://en.m.wikipedia.org/wiki/64-bit_computing

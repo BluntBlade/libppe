@@ -13,7 +13,7 @@ enum
     PPE_ERR_BASIC_END = 1011
 };
 
-static ppe_char * g_basic_messages[] =
+static const ppe_char * g_basic_messages[] =
 {
     "Invalid argument is passed", /* PPE_ERR_INVALID_ARGUMENT = 1001 */
     "Operation failed or would block, try again", /* PPE_ERR_TRY_AGAIN = 1002 */
@@ -27,8 +27,8 @@ static ppe_char * g_basic_messages[] =
     "Out of range" /* PPE_ERR_OUT_OF_RANGE = 1010 */
 };
 
-static ppe_uint g_code;
-static ppe_char * g_message;
+static ppe_uint g_code = 0;
+static const ppe_char * g_message = NULL;
 
 PPE_API void ppe_err_set(ppe_uint code, const ppe_char * restrict msg)
 {
