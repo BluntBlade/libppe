@@ -50,11 +50,17 @@ PPE_API extern ppe_log_itf ppe_log_get_default(void);
 
 /* ---- Wrappers ---- */
 
-PPE_API extern void ppe_log_debug(const char * fmt, ...);
-PPE_API extern void ppe_log_info(const char * fmt, ...);
-PPE_API extern void ppe_log_warn(const char * fmt, ...);
-PPE_API extern void ppe_log_error(const char * fmt, ...);
-PPE_API extern void ppe_log_fatal(const char * fmt, ...);
+PPE_API extern void ppe_log_debug(const char * msg);
+PPE_API extern void ppe_log_info(const char * msg);
+PPE_API extern void ppe_log_warn(const char * msg);
+PPE_API extern void ppe_log_error(const char * msg);
+PPE_API extern void ppe_log_fatal(const char * msg);
+
+PPE_API extern void ppe_log_debugf(const char * fmt, ...);
+PPE_API extern void ppe_log_infof(const char * fmt, ...);
+PPE_API extern void ppe_log_warnf(const char * fmt, ...);
+PPE_API extern void ppe_log_errorf(const char * fmt, ...);
+PPE_API extern void ppe_log_fatalf(const char * fmt, ...);
 
 #ifdef __cplusplus
 }

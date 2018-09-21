@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -11,6 +12,18 @@ typedef struct _PPE_LOG
 {
     ppe_log_output_vfn out;
 } ppe_log_st;
+
+/* ---- Preset Values ---- */
+
+#if defined(PPE_CFG_OS_WINDOWS)
+
+static const char newline_s[] = { '\r', '\n' };
+
+#else
+
+static const char newline_s[] = { '\n' };
+
+#endif
 
 /* ---- Functions ---- */
 
@@ -28,25 +41,82 @@ PPE_API void ppe_log_destroy(ppe_log restrict log)
     if (log) free(log);
 }
 
+static ppe_log_level threshold_s = PPE_LOG_INFO;
+
+PPE_API ppe_log_level ppe_log_set_threshold(ppe_log_level level)
+{
+    ppe_log_level last = threshold_s;
+    threshold_s = level;
+    return last;
+}
+
+PPE_API ppe_log_level ppe_log_get_threshold(void)
+{
+    return threshold_s;
+}
+
+static ppe_log_itf default_logger_s = PPE_LOG_STDERR_LOGGER;
+
+PPE_API ppe_log_itf ppe_log_set_default(ppe_log_itf restrict log)
+{
+    ppe_log last = default_logger_s;
+    default_logger_s = log;
+    return last;
+}
+
+PPE_API ppe_log_itf ppe_log_get_default(void)
+{
+    return default_logger_s;
+}
+
 PPE_API void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, const char * fmt, ...)
 {
     va_list args;
 
-    if (level < s_ppe_log_threshold) return;
+    assert(fmt && strchr(fmt, '%'));
+
+    if (level < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(s_ppe_log_default, level, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, level, fmt, args);
     va_end(args, fmt);
 }
 
-static char ppe_log_buf[4096];
-static const char * ppe_log_level_tags[] = {
-    "[DEBUG]",
-    "[INFO]",
-    "[WARN]",
-    "[ERROR]",
-    "[FATAL]"
-};
+#if !defined(PPE_CFG_LOG_BUFFER_SIZE) || (PPE_CFG_LOG_BUFFER_SIZE < 128)
+#define PPE_CFG_LOG_BUFFER_SIZE 4096
+#endif
+
+static char buffer_s[PPE_CFG_LOG_BUFFER_SIZE];
+
+static ppe_size ppe_log_format_tags(ppe_log_level, char * restrict buf, ppe_size cap)
+{
+    static const char * const level_tags_l[] = {
+        "[DEBUG]",
+        "[INFO]",
+        "[WARN]",
+        "[ERROR]",
+        "[FATAL]"
+    };
+    static const ppe_size level_tags_size_l[] = {
+        strlen(level_tags_l[PPE_LOG_DEBUG]),
+        strlen(level_tags_l[PPE_LOG_INFO]),
+        strlen(level_tags_l[PPE_LOG_WARN]),
+        strlen(level_tags_l[PPE_LOG_ERROR]),
+        strlen(level_tags_l[PPE_LOG_FATAL])
+    };
+
+    ppe_size size = 0;
+
+    /* TODO: Timestamp Tag */
+
+    /* TODO: Thread ID Tag */
+
+    memcpy(buf + size, level_tags_l[level], level_tags_size_l[level]);  
+    size += level_tags_size_l[level];
+
+    buf[size] = '\0';
+    return size;
+}
 
 static void ppe_log_output_to(ppe_log_itf restrict log, const char * buf, ppe_size size)
 {
@@ -59,118 +129,180 @@ static void ppe_log_output_to(ppe_log_itf restrict log, const char * buf, ppe_si
 
     ret = fwrite(stderr, buf, size);
     if (ret < 0) {
-        /* PANIC */
+        /* TODO: PANIC */
         return;
     }
 }
 
-PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * fmt, va_list args)
+PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict fmt, va_list args)
 {
-    ppe_size size = 0;
-    int ret = 0;
-
-    /* TODO: Timestamp Tag */
-
-    memcpy(buf + size, ppe_log_level_tags[level], strlen(ppe_log_level_tags[level]));  
-    size += strlen(ppe_log_level_tags[level]);
-
-    /* TODO: Thread ID Tag */
-
-    ret = vsnprintf(buf + size, sizeof(ppe_log_buf) - size, fmt, args);
+    ppe_size size = ppe_log_format_tags(level, buffer_s, sizeof(buffer_s));
+    int ret = vsnprintf(buffer_s + size, sizeof(buffer_s) - size, fmt, args);
     if (ret < 0) {
-        /* PANIC */
+        /* TODO: PANIC */
         return;
     }
     size += ret;
 
-    /* TODO: CRLF */
-    if (size < sizeof(ppe_log_buf)) {
-        ppe_log_buf[size++] = '\n';
+#if defined(PPE_CFG_OS_WINDOWS)
+
+    if (size < sizeof(buffer_s) - 1) {
+        buffer_s[size++] = '\r';
+        buffer_s[size++] = '\n';
+        ppe_log_output_to(log, buffer_s, size);
+        return;
     }
 
-    ppe_log_output_to(log, buf, size);
-}
+#else
 
-static ppe_log_level s_ppe_log_threshold = PPE_LOG_INFO;
+    if (size < sizeof(buffer_s)) {
+        buffer_s[size++] = '\n';
+        ppe_log_output_to(log, buffer_s, size);
+        return;
+    }
 
-PPE_API ppe_log_level ppe_log_set_threshold(ppe_log_level level)
-{
-    ppe_log_level last = s_ppe_log_threshold;
-    s_ppe_log_threshold = level;
-    return last;
-}
+#endif
 
-PPE_API ppe_log_level ppe_log_get_threshold(void)
-{
-    return s_ppe_log_threshold;
-}
-
-static ppe_log_itf s_ppe_log_default = PPE_LOG_STDERR_LOGGER;
-
-PPE_API ppe_log_itf ppe_log_set_default(ppe_log_itf restrict log)
-{
-    ppe_log last = s_ppe_log_default;
-    s_ppe_log_default = log;
-    return last;
-}
-
-PPE_API ppe_log_itf ppe_log_get_default(void)
-{
-    return s_ppe_log_default;
+    ppe_log_output_to(log, buffer_s, size);
+    ppe_log_output_to(log, newline_s, sizeof(newline_s));
+    return;
 }
 
 /* ---- Wrappers ---- */
 
-PPE_API void ppe_log_debug(const char * fmt, ...)
+PPE_API void ppe_log_debug(const char * msg, ppe_size size)
+{
+    ppe_size tags_size = 0;
+
+    assert(msg && ! strchr(msg, '%'));
+
+    if (PPE_LOG_DEBUG < threshold_s) return;
+
+    tags_size = ppe_log_format_tags(PPE_LOG_DEBUG, buffer_s, sizeof(buffer_s));
+    ppe_log_output_to(default_logger_s, buffer_s, tags_size);
+
+    ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
+    ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
+}
+
+PPE_API void ppe_log_info(const char * msg, ppe_size size)
+{
+    ppe_size tags_size = 0;
+
+    assert(msg && ! strchr(msg, '%'));
+
+    if (PPE_LOG_INFO < threshold_s) return;
+
+    tags_size = ppe_log_format_tags(PPE_LOG_INFO, buffer_s, sizeof(buffer_s));
+    ppe_log_output_to(default_logger_s, buffer_s, tags_size);
+
+    ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
+    ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
+}
+
+PPE_API void ppe_log_warn(const char * msg, ppe_size size)
+{
+    ppe_size tags_size = 0;
+
+    assert(msg && ! strchr(msg, '%'));
+
+    if (PPE_LOG_WARN < threshold_s) return;
+
+    tags_size = ppe_log_format_tags(PPE_LOG_WARN, buffer_s, sizeof(buffer_s));
+    ppe_log_output_to(default_logger_s, buffer_s, tags_size);
+
+    ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
+    ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
+}
+
+PPE_API void ppe_log_error(const char * msg, ppe_size size)
+{
+    ppe_size tags_size = 0;
+
+    assert(msg && ! strchr(msg, '%'));
+
+    if (PPE_LOG_ERROR < threshold_s) return;
+
+    tags_size = ppe_log_format_tags(PPE_LOG_ERROR, buffer_s, sizeof(buffer_s));
+    ppe_log_output_to(default_logger_s, buffer_s, tags_size);
+
+    ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
+    ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
+}
+
+PPE_API void ppe_log_fatal(const char * msg, ppe_size size)
+{
+    ppe_size tags_size = 0;
+
+    assert(msg && ! strchr(msg, '%'));
+
+    tags_size = ppe_log_format_tags(PPE_LOG_FATAL, buffer_s, sizeof(buffer_s));
+    ppe_log_output_to(default_logger_s, buffer_s, tags_size);
+
+    ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
+    ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
+}
+
+PPE_API void ppe_log_debugf(const char * fmt, ...)
 {
     va_list args;
 
-    if (PPE_LOG_DEBUG < s_ppe_log_threshold) return;
+    assert(fmt && strchr(fmt, '%'));
+
+    if (PPE_LOG_DEBUG < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(s_ppe_log_default, PPE_LOG_DEBUG, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_DEBUG, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_info(const char * fmt, ...)
+PPE_API void ppe_log_infof(const char * fmt, ...)
 {
     va_list args;
 
-    if (PPE_LOG_INFO < s_ppe_log_threshold) return;
+    assert(fmt && strchr(fmt, '%'));
+
+    if (PPE_LOG_INFO < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(s_ppe_log_default, PPE_LOG_INFO, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_INFO, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_warn(const char * fmt, ...)
+PPE_API void ppe_log_warnf(const char * fmt, ...)
 {
     va_list args;
 
-    if (PPE_LOG_WARN < s_ppe_log_threshold) return;
+    assert(fmt && strchr(fmt, '%'));
+
+    if (PPE_LOG_WARN < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(s_ppe_log_default, PPE_LOG_WARN, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_WARN, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_error(const char * fmt, ...)
+PPE_API void ppe_log_errorf(const char * fmt, ...)
 {
     va_list args;
 
-    if (PPE_LOG_ERROR < s_ppe_log_threshold) return;
+    assert(fmt && strchr(fmt, '%'));
+
+    if (PPE_LOG_ERROR < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(s_ppe_log_default, PPE_LOG_ERROR, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_ERROR, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_fatal(const char * fmt, ...)
+PPE_API void ppe_log_fatalf(const char * fmt, ...)
 {
     va_list args;
 
+    assert(fmt && strchr(fmt, '%'));
+
     va_start(args, fmt);
-    ppe_log_vprintf_to(s_ppe_log_default, PPE_LOG_FATAL, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_FATAL, fmt, args);
     va_end(args, fmt);
 }
 
