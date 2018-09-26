@@ -39,8 +39,8 @@ typdef void (*ppe_log_output_vfn)(ppe_log_itf restrict itf, const char * msg, pp
 PPE_API extern ppe_log ppe_log_create(ppe_log_output_vfn out);
 PPE_API extern void ppe_log_destroy(ppe_log restrict log);
 
-PPE_API extern void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, const char * fmt, ...);
-PPE_API extern void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * fmt, va_list args);
+PPE_API extern void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * fmt, ...);
+PPE_API extern void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * fmt, va_list args);
 
 PPE_API extern ppe_log_level ppe_log_set_threshold(ppe_log_level level);
 PPE_API extern ppe_log_level ppe_log_get_threshold(void);
@@ -50,17 +50,17 @@ PPE_API extern ppe_log_itf ppe_log_get_default(void);
 
 /* ---- Wrappers ---- */
 
-PPE_API extern void ppe_log_debug(const char * msg);
-PPE_API extern void ppe_log_info(const char * msg);
-PPE_API extern void ppe_log_warn(const char * msg);
-PPE_API extern void ppe_log_error(const char * msg);
-PPE_API extern void ppe_log_fatal(const char * msg);
+PPE_API extern void ppe_log_debug(const char * restrict where, const char * msg);
+PPE_API extern void ppe_log_info(const char * restrict where, const char * msg);
+PPE_API extern void ppe_log_warn(const char * restrict where, const char * msg);
+PPE_API extern void ppe_log_error(const char * restrict where, const char * msg);
+PPE_API extern void ppe_log_fatal(const char * restrict where, const char * msg);
 
-PPE_API extern void ppe_log_debugf(const char * fmt, ...);
-PPE_API extern void ppe_log_infof(const char * fmt, ...);
-PPE_API extern void ppe_log_warnf(const char * fmt, ...);
-PPE_API extern void ppe_log_errorf(const char * fmt, ...);
-PPE_API extern void ppe_log_fatalf(const char * fmt, ...);
+PPE_API extern void ppe_log_debugf(const char * restrict where, const char * fmt, ...);
+PPE_API extern void ppe_log_infof(const char * restrict where, const char * fmt, ...);
+PPE_API extern void ppe_log_warnf(const char * restrict where, const char * fmt, ...);
+PPE_API extern void ppe_log_errorf(const char * restrict where, const char * fmt, ...);
+PPE_API extern void ppe_log_fatalf(const char * restrict where, const char * fmt, ...);
 
 #ifdef __cplusplus
 }

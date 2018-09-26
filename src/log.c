@@ -69,7 +69,7 @@ PPE_API ppe_log_itf ppe_log_get_default(void)
     return default_logger_s;
 }
 
-PPE_API void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, const char * fmt, ...)
+PPE_API void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * fmt, ...)
 {
     va_list args;
 
@@ -83,12 +83,13 @@ PPE_API void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, co
 }
 
 #if !defined(PPE_CFG_LOG_BUFFER_SIZE) || (PPE_CFG_LOG_BUFFER_SIZE < 128)
+#undef PPE_CFG_LOG_BUFFER_SIZE
 #define PPE_CFG_LOG_BUFFER_SIZE 4096
 #endif
 
 static char buffer_s[PPE_CFG_LOG_BUFFER_SIZE];
 
-static ppe_size ppe_log_format_tags(ppe_log_level, char * restrict buf, ppe_size cap)
+static ppe_size ppe_log_format_tags(ppe_log_level, const char * restrict where, char * restrict buf, ppe_size cap)
 {
     static const char * const level_tags_l[] = {
         "[DEBUG]",
@@ -97,22 +98,21 @@ static ppe_size ppe_log_format_tags(ppe_log_level, char * restrict buf, ppe_size
         "[ERROR]",
         "[FATAL]"
     };
-    static const ppe_size level_tags_size_l[] = {
-        strlen(level_tags_l[PPE_LOG_DEBUG]),
-        strlen(level_tags_l[PPE_LOG_INFO]),
-        strlen(level_tags_l[PPE_LOG_WARN]),
-        strlen(level_tags_l[PPE_LOG_ERROR]),
-        strlen(level_tags_l[PPE_LOG_FATAL])
-    };
 
     ppe_size size = 0;
+    int i = 0;
 
     /* TODO: Timestamp Tag */
 
     /* TODO: Thread ID Tag */
 
-    memcpy(buf + size, level_tags_l[level], level_tags_size_l[level]);  
-    size += level_tags_size_l[level];
+    /* Where Tag */
+    i = 0;
+    while((buf[size++] = where[i++]) != '\0');
+
+    /* Level Tag */
+    i = 0;
+    while((buf[size++] = level_tags_l[level][i++]) != '\0');
 
     buf[size] = '\0';
     return size;
@@ -134,9 +134,9 @@ static void ppe_log_output_to(ppe_log_itf restrict log, const char * buf, ppe_si
     }
 }
 
-PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict fmt, va_list args)
+PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * restrict fmt, va_list args)
 {
-    ppe_size size = ppe_log_format_tags(level, buffer_s, sizeof(buffer_s));
+    ppe_size size = ppe_log_format_tags(level, where, buffer_s, sizeof(buffer_s));
     int ret = vsnprintf(buffer_s + size, sizeof(buffer_s) - size, fmt, args);
     if (ret < 0) {
         /* TODO: PANIC */
@@ -170,7 +170,7 @@ PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, c
 
 /* ---- Wrappers ---- */
 
-PPE_API void ppe_log_debug(const char * msg, ppe_size size)
+PPE_API void ppe_log_debug(const char * restrict where, const char * msg, ppe_size size)
 {
     ppe_size tags_size = 0;
 
@@ -178,14 +178,14 @@ PPE_API void ppe_log_debug(const char * msg, ppe_size size)
 
     if (PPE_LOG_DEBUG < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_DEBUG, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(PPE_LOG_DEBUG, where, buffer_s, sizeof(buffer_s));
     ppe_log_output_to(default_logger_s, buffer_s, tags_size);
 
     ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
     ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
 }
 
-PPE_API void ppe_log_info(const char * msg, ppe_size size)
+PPE_API void ppe_log_info(const char * restrict where, const char * msg, ppe_size size)
 {
     ppe_size tags_size = 0;
 
@@ -193,14 +193,14 @@ PPE_API void ppe_log_info(const char * msg, ppe_size size)
 
     if (PPE_LOG_INFO < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_INFO, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(PPE_LOG_INFO, where, buffer_s, sizeof(buffer_s));
     ppe_log_output_to(default_logger_s, buffer_s, tags_size);
 
     ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
     ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
 }
 
-PPE_API void ppe_log_warn(const char * msg, ppe_size size)
+PPE_API void ppe_log_warn(const char * restrict where, const char * msg, ppe_size size)
 {
     ppe_size tags_size = 0;
 
@@ -208,14 +208,14 @@ PPE_API void ppe_log_warn(const char * msg, ppe_size size)
 
     if (PPE_LOG_WARN < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_WARN, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(PPE_LOG_WARN, where, buffer_s, sizeof(buffer_s));
     ppe_log_output_to(default_logger_s, buffer_s, tags_size);
 
     ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
     ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
 }
 
-PPE_API void ppe_log_error(const char * msg, ppe_size size)
+PPE_API void ppe_log_error(const char * restrict where, const char * msg, ppe_size size)
 {
     ppe_size tags_size = 0;
 
@@ -223,27 +223,27 @@ PPE_API void ppe_log_error(const char * msg, ppe_size size)
 
     if (PPE_LOG_ERROR < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_ERROR, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(PPE_LOG_ERROR, where, buffer_s, sizeof(buffer_s));
     ppe_log_output_to(default_logger_s, buffer_s, tags_size);
 
     ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
     ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
 }
 
-PPE_API void ppe_log_fatal(const char * msg, ppe_size size)
+PPE_API void ppe_log_fatal(const char * restrict where, const char * msg, ppe_size size)
 {
     ppe_size tags_size = 0;
 
     assert(msg && ! strchr(msg, '%'));
 
-    tags_size = ppe_log_format_tags(PPE_LOG_FATAL, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(PPE_LOG_FATAL, where, buffer_s, sizeof(buffer_s));
     ppe_log_output_to(default_logger_s, buffer_s, tags_size);
 
     ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg));
     ppe_log_output_to(default_logger_s, newline_s, sizeof(newline_s));
 }
 
-PPE_API void ppe_log_debugf(const char * fmt, ...)
+PPE_API void ppe_log_debugf(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
 
@@ -252,11 +252,11 @@ PPE_API void ppe_log_debugf(const char * fmt, ...)
     if (PPE_LOG_DEBUG < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(default_logger_s, PPE_LOG_DEBUG, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_DEBUG, where, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_infof(const char * fmt, ...)
+PPE_API void ppe_log_infof(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
 
@@ -265,11 +265,11 @@ PPE_API void ppe_log_infof(const char * fmt, ...)
     if (PPE_LOG_INFO < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(default_logger_s, PPE_LOG_INFO, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_INFO, where, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_warnf(const char * fmt, ...)
+PPE_API void ppe_log_warnf(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
 
@@ -278,11 +278,11 @@ PPE_API void ppe_log_warnf(const char * fmt, ...)
     if (PPE_LOG_WARN < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(default_logger_s, PPE_LOG_WARN, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_WARN, where, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_errorf(const char * fmt, ...)
+PPE_API void ppe_log_errorf(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
 
@@ -291,18 +291,18 @@ PPE_API void ppe_log_errorf(const char * fmt, ...)
     if (PPE_LOG_ERROR < threshold_s) return;
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(default_logger_s, PPE_LOG_ERROR, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_ERROR, where, fmt, args);
     va_end(args, fmt);
 }
 
-PPE_API void ppe_log_fatalf(const char * fmt, ...)
+PPE_API void ppe_log_fatalf(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
 
     assert(fmt && strchr(fmt, '%'));
 
     va_start(args, fmt);
-    ppe_log_vprintf_to(default_logger_s, PPE_LOG_FATAL, fmt, args);
+    ppe_log_vprintf_to(default_logger_s, PPE_LOG_FATAL, where, fmt, args);
     va_end(args, fmt);
 }
 
