@@ -32,11 +32,12 @@ typedef enum _PPE_LOG_LEVEL
 
 /* ---- Interfaces ---- */
 
-typdef void (*ppe_log_output_vfn)(ppe_log_itf restrict itf, const char * msg, ppe_size size);
+typdef ppe_bool (*ppe_log_output_vfn)(ppe_log_itf restrict itf, const char * msg, ppe_size size);
+typdef ppe_bool (*ppe_log_flush_vfn)(ppe_log_itf restrict itf);
 
 /* ---- Functions ---- */
 
-PPE_API extern ppe_log ppe_log_create(ppe_log_output_vfn out);
+PPE_API extern ppe_log ppe_log_create(ppe_log_output_vfn out, ppe_log_flush_vfn flush);
 PPE_API extern void ppe_log_destroy(ppe_log restrict log);
 
 PPE_API extern void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * fmt, ...);
