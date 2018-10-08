@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -12,6 +13,8 @@ typedef struct _PPE_LOG
 {
     ppe_log_output_vfn out;
     ppe_log_flush_vfn flush;
+
+    ppe_uint32 flags;
 } ppe_log_st;
 
 /* ---- Preset Values ---- */
@@ -28,11 +31,12 @@ static const char newline_s[] = { '\n' };
 
 /* ---- Functions ---- */
 
-PPE_API ppe_log ppe_log_create(ppe_log_output_vfn out, ppe_log_flush_vfn flush)
+PPE_API ppe_log ppe_log_create(ppe_uint32 flags, ppe_log_output_vfn out, ppe_log_flush_vfn flush)
 {
     ppe_log log = (ppe_log) calloc(1, sizeof(ppe_log_st));
     if (! log) return NULL;
 
+    log->flags = flags;
     log->out = out;
     log->flush = flush;
     return log;
@@ -41,6 +45,23 @@ PPE_API ppe_log ppe_log_create(ppe_log_output_vfn out, ppe_log_flush_vfn flush)
 PPE_API void ppe_log_destroy(ppe_log restrict log)
 {
     if (log) free(log);
+}
+
+PPE_API void ppe_log_set_flags(ppe_log restrict log, ppe_uint32 flags)
+{
+    ppe_uint32 last = 0;
+
+    assert(log);
+
+    last = log->flags;
+    log->flags = flags;
+    return last;
+}
+
+PPE_API ppe_uint32 ppe_log_get_flags(ppe_log restrict log)
+{
+    assert(log);
+    return log->flags;
 }
 
 static ppe_log_level threshold_s = PPE_LOG_INFO;
@@ -90,8 +111,9 @@ PPE_API void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, co
 #endif
 
 static char buffer_s[PPE_CFG_LOG_BUFFER_SIZE];
+static ppe_uint32 default_flags_s = PPE_LOG_SHORT_FILENAME;
 
-static ppe_size ppe_log_format_tags(ppe_log_level level, const char * restrict where, char * restrict buf, ppe_size cap)
+static ppe_size ppe_log_format_tags(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, char * restrict buf, ppe_size cap)
 {
     static const char * const level_tags_l[] = {
         "[DEBUG]",
@@ -108,59 +130,83 @@ static ppe_size ppe_log_format_tags(ppe_log_level level, const char * restrict w
         strlen(level_tags_l[PPE_LOG_FATAL])
     };
 
+    ppe_uint32 flags = log ? (*log)->flags : default_flags_s;
     ppe_size size = 0;
     ppe_size len = 0;
+    char * pos = NULL;
+    struct timeval tv;
+    struct tm tm;
+    int ret = 0;
 
-    /* TODO: Timestamp Tag */
+    /* Timestamp Tag */
+    ret = gettimeofday(&tv, NULL);
+    if (ret < 0) {
+        /* TODO: Error Handling */
+        return size;
+    }
+    if (! gmtime_r(&tv.tv_sec, &tm)) {
+        /* TODO: Error Handling */
+        return size;
+    }
+
+    if (flags & PPE_LOG_MILLISECOND) {
+        ret = snprintf(buf + size, cap - size, "%04d-%02d-%02d %02d:%02d:%02d.%03d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec / 1000));
+    } else {
+        ret = snprintf(buf + size, cap - size, "%04d-%02d-%02d %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    }
+    if (ret < 0) {
+        /* TODO: Error Handling */
+        return size;
+    }
+    size += ret;
 
     /* TODO: Thread ID Tag */
 
     /* Where Tag */
+    if (! (flags & PPE_LOG_LONG_FILENAME)) {
+#if defined(PPE_CFG_OS_WINDOWS)
+        pos = strrchr(where, '\\');
+        if (! pos) = strrchr(where, '/');
+#else
+        pos = strrchr(where, '/');
+#endif
+
+        if (pos) where = pos;
+    }
+
     len = strlen(where);
+    if (size + len >= cap - 1) return size;
+
     memcpy(buf + size, where, len);
     size += len;
+    buf[size++] = ' ';
 
     /* Level Tag */
+    if (size + level_tags_size_l[level] >= cap - 1) return size;
+
     memcpy(buf + size, level_tags_l[level], level_tags_size_l[level]);
     size += level_tags_size_l[level];
+    buf[size++] = ' ';
 
-    buf[size] = '\0';
     return size;
 }
 
 static ppe_bool ppe_log_output_to(ppe_log_itf restrict log, const char * buf, ppe_size size)
 {
-    int ret = 0;
-
-    if (size == 0) return;
-
+    if (size == 0) return ppe_true;
     if (log) return (*log)->out(log, buf, size);
-
-    ret = fwrite(stderr, buf, size);
-    if (ret < 0) {
-        /* TODO: PANIC */
-        return ppe_false;
-    }
-    return ppe_true;
+    return fwrite(stderr, buf, size) == size;
 }
 
 static ppe_bool ppe_log_flush_to(ppe_log_itf restrict log)
 {
-    int ret = 0;
-
     if (log) return (*log)->flush(log);
-
-    ret = fflush(stderr);
-    if (ret < 0) {
-        /* TODO: PANIC */
-        return ppe_false;
-    }
-    return ppe_true;
+    return fflush(stderr) == EOF ? ppe_false : ppe_true;
 }
 
 PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * restrict fmt, va_list args)
 {
-    ppe_size size = ppe_log_format_tags(level, where, buffer_s, sizeof(buffer_s));
+    ppe_size size = ppe_log_format_tags(log, level, where, buffer_s, sizeof(buffer_s));
     int ret = vsnprintf(buffer_s + size, sizeof(buffer_s) - size, fmt, args);
     if (ret < 0) {
         /* TODO: PANIC */
@@ -205,7 +251,7 @@ PPE_API void ppe_log_debug(const char * restrict where, const char * msg, ppe_si
 
     if (PPE_LOG_DEBUG < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_DEBUG, where, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(default_logger_s, PPE_LOG_DEBUG, where, buffer_s, sizeof(buffer_s));
     if (! ppe_log_output_to(default_logger_s, buffer_s, tags_size)) return;
 
     if (! ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg))) return;
@@ -220,7 +266,7 @@ PPE_API void ppe_log_info(const char * restrict where, const char * msg, ppe_siz
 
     if (PPE_LOG_INFO < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_INFO, where, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(default_logger_s, PPE_LOG_INFO, where, buffer_s, sizeof(buffer_s));
     if (! ppe_log_output_to(default_logger_s, buffer_s, tags_size)) return;
 
     if (! ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg))) return;
@@ -235,7 +281,7 @@ PPE_API void ppe_log_warn(const char * restrict where, const char * msg, ppe_siz
 
     if (PPE_LOG_WARN < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_WARN, where, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(default_logger_s, PPE_LOG_WARN, where, buffer_s, sizeof(buffer_s));
     if (! ppe_log_output_to(default_logger_s, buffer_s, tags_size)) return;
 
     if (! ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg))) return;
@@ -250,7 +296,7 @@ PPE_API void ppe_log_error(const char * restrict where, const char * msg, ppe_si
 
     if (PPE_LOG_ERROR < threshold_s) return;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_ERROR, where, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(default_logger_s, PPE_LOG_ERROR, where, buffer_s, sizeof(buffer_s));
     if (! ppe_log_output_to(default_logger_s, buffer_s, tags_size)) return;
 
     if (! ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg))) return;
@@ -263,7 +309,7 @@ PPE_API void ppe_log_fatal(const char * restrict where, const char * msg, ppe_si
 {
     ppe_size tags_size = 0;
 
-    tags_size = ppe_log_format_tags(PPE_LOG_FATAL, where, buffer_s, sizeof(buffer_s));
+    tags_size = ppe_log_format_tags(default_logger_s, PPE_LOG_FATAL, where, buffer_s, sizeof(buffer_s));
     if (! ppe_log_output_to(default_logger_s, buffer_s, tags_size)) return;
 
     if (! ppe_log_output_to(default_logger_s, msg, size > 0 ? size : strlen(msg))) return;

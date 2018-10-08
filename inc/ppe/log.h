@@ -26,9 +26,18 @@ typedef enum _PPE_LOG_LEVEL
     PPE_LOG_FATAL = 4
 } ppe_log_level;
 
+enum
+{
+    PPE_LOG_SHORT_FILENAME = 0x0,
+    PPE_LOG_LONG_FILENAME = 0x1,
+    PPE_LOG_MILLISECOND = 0x2
+};
+
 /* ---- Preset Values ---- */
 
 #define PPE_LOG_STDERR_LOGGER NULL
+
+#define PPE_LOG_FILE_LOCATION (__FILE__ ## ":" ## #__LINE__)
 
 /* ---- Interfaces ---- */
 
@@ -37,8 +46,11 @@ typdef ppe_bool (*ppe_log_flush_vfn)(ppe_log_itf restrict itf);
 
 /* ---- Functions ---- */
 
-PPE_API extern ppe_log ppe_log_create(ppe_log_output_vfn out, ppe_log_flush_vfn flush);
+PPE_API extern ppe_log ppe_log_create(ppe_uint32 flags, ppe_log_output_vfn out, ppe_log_flush_vfn flush);
 PPE_API extern void ppe_log_destroy(ppe_log restrict log);
+
+PPE_API extern ppe_uint32 ppe_log_set_flags(ppe_log restrict log, ppe_uint32 flags);
+PPE_API extern ppe_uint32 ppe_log_get_flags(ppe_log restrict log);
 
 PPE_API extern void ppe_log_printf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * fmt, ...);
 PPE_API extern void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * fmt, va_list args);
