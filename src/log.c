@@ -150,9 +150,9 @@ static ppe_size ppe_log_format_tags(ppe_log_itf restrict log, ppe_log_level leve
     }
 
     if (flags & PPE_LOG_MILLISECOND) {
-        ret = snprintf(buf + size, cap - size, "%04d-%02d-%02d %02d:%02d:%02d.%03d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec / 1000));
+        ret = snprintf(buf + size, cap - size, "%04d-%02d-%02d %02d:%02d:%02d.%03d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec / 1000));
     } else {
-        ret = snprintf(buf + size, cap - size, "%04d-%02d-%02d %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        ret = snprintf(buf + size, cap - size, "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     }
     if (ret < 0) {
         /* TODO: Error Handling */
@@ -206,11 +206,20 @@ static ppe_bool ppe_log_flush_to(ppe_log_itf restrict log)
 
 PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict log, ppe_log_level level, const char * restrict where, const char * restrict fmt, va_list args)
 {
-    ppe_size size = ppe_log_format_tags(log, level, where, buffer_s, sizeof(buffer_s));
-    int ret = vsnprintf(buffer_s + size, sizeof(buffer_s) - size, fmt, args);
+    ppe_size size = 0;
+    int ret = 0;
+    
+    size = ppe_log_format_tags(log, level, where, buffer_s, sizeof(buffer_s));
+    ret = vsnprintf(buffer_s + size, sizeof(buffer_s) - size, fmt, args);
     if (ret < 0) {
-        /* TODO: PANIC */
-        return;
+        if (! ppe_log_output_to(log, buffer_s, size)) return;
+
+        size = 0;
+        ret = vsnprintf(buffer_s, sizeof(buffer_s), fmt, args);
+        if (ret < 0) {
+            /* TODO: Error Handling */
+            return;
+        }
     }
     size += ret;
 
