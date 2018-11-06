@@ -30,9 +30,13 @@ typedef struct _PPE_LOG
 
 #if defined(PPE_CFG_OS_WINDOWS)
 
+#define PPE_LOG_NEWLINE "\r\n"
+
 static const char newline_s[] = { '\r', '\n' };
 
 #else
+
+#define PPE_LOG_NEWLINE "\n"
 
 static const char newline_s[] = { '\n' };
 
@@ -73,7 +77,7 @@ PPE_API void ppe_log_destroy(ppe_log restrict log)
     if (log && log != stderr_log_s) free(log);
 }
 
-PPE_API void ppe_log_set_flags(ppe_log restrict log, ppe_uint32 flags)
+PPE_API ppe_uint32 ppe_log_set_flags(ppe_log restrict log, ppe_uint32 flags)
 {
     ppe_uint32 last = 0;
 
@@ -135,7 +139,7 @@ PPE_API ppe_log_itf ppe_log_get_global_default(void)
     return default_logger_s;
 }
 
-static ppe_size ppe_log_format_tags(ppe_log restrict log, ppe_log_level level, const char * restrict where)
+static ppe_size ppe_log_format_tags(ppe_log_itf restrict itf, ppe_log restrict log, ppe_log_level level, const char * restrict where)
 {
     static const char * const level_tags_l[] = {
         "[DEBUG]",
@@ -152,6 +156,17 @@ static ppe_size ppe_log_format_tags(ppe_log restrict log, ppe_log_level level, c
         strlen(level_tags_l[PPE_LOG_FATAL])
     };
 
+    static const char * const error_msgs_l[] = {
+        "gettimeofday() failed." PPE_LOG_NEWLINE,
+        "gmtime_r() failed." PPE_LOG_NEWLINE,
+        "snprintf() failed." PPE_LOG_NEWLINE
+    };
+    static const ppe_size error_msgs_size_l[] = {
+        strlen(error_msgs_l[0]),
+        strlen(error_msgs_l[1]),
+        strlen(error_msgs_l[2])
+    };
+
     ppe_size size = 0;
     ppe_size len = 0;
     char * pos = NULL;
@@ -162,11 +177,11 @@ static ppe_size ppe_log_format_tags(ppe_log restrict log, ppe_log_level level, c
     /* Timestamp Tag */
     ret = gettimeofday(&tv, NULL);
     if (ret < 0) {
-        /* TODO: Error Handling */
+        log->write(itf, error_msgs_l[0], error_msgs_size_l[0]);
         return size;
     }
     if (! gmtime_r(&tv.tv_sec, &tm)) {
-        /* TODO: Error Handling */
+        log->write(itf, error_msgs_l[1], error_msgs_size_l[1]);
         return size;
     }
 
@@ -176,7 +191,7 @@ static ppe_size ppe_log_format_tags(ppe_log restrict log, ppe_log_level level, c
         ret = snprintf(log->buf + size, log->buf_cap - size, "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     }
     if (ret < 0) {
-        /* TODO: Error Handling */
+        log->write(itf, error_msgs_l[2], error_msgs_size_l[2]);
         return size;
     }
     size += ret;
@@ -184,23 +199,25 @@ static ppe_size ppe_log_format_tags(ppe_log restrict log, ppe_log_level level, c
     /* TODO: Thread ID Tag */
 
     /* Where Tag */
-    if (! (log->flags & PPE_LOG_LONG_FILENAME)) {
+    if (where) {
+        if (! (log->flags & PPE_LOG_LONG_FILENAME)) {
 #if defined(PPE_CFG_OS_WINDOWS)
-        pos = strrchr(where, '\\');
-        if (! pos) = strrchr(where, '/');
+            pos = strrchr(where, '\\');
+            if (! pos) = strrchr(where, '/');
 #else
-        pos = strrchr(where, '/');
+            pos = strrchr(where, '/');
 #endif
 
-        if (pos) where = pos;
+            if (pos) where = pos;
+        }
+
+        len = strlen(where);
+        if (size + len >= log->buf_cap - 1) return size;
+
+        memcpy(log->buf + size, where, len);
+        size += len;
+        log->buf[size++] = ' ';
     }
-
-    len = strlen(where);
-    if (size + len >= log->buf_cap - 1) return size;
-
-    memcpy(log->buf + size, where, len);
-    size += len;
-    log->buf[size++] = ' ';
 
     /* Level Tag */
     if (size + level_tags_size_l[level] >= log->buf_cap - 1) return size;
@@ -217,16 +234,15 @@ PPE_API void ppe_log_write_to(ppe_log_itf restrict itf, ppe_log_level level, con
     ppe_log log = NULL;
     ppe_size tags_size = 0;
 
-    assert(where);
     assert(PPE_LOG_DEBUG <= level && level <= PPE_LOG_FATAL);
     assert(msg);
 
-    if (! itf) itf = ppe_log_get_default();
+    if (! itf) itf = ppe_log_get_global_default();
     log = *itf;
 
     if (level < log->threshold) return;
 
-    tags_size = ppe_log_format_tags(log, level, where);
+    tags_size = ppe_log_format_tags(itf, log, level, where);
     if (! log->write(itf, log->buf, tags_size)) return;
 
     if (! log->write(itf, msg, size > 0 ? size : strlen(msg))) return;
@@ -237,30 +253,43 @@ PPE_API void ppe_log_write_to(ppe_log_itf restrict itf, ppe_log_level level, con
 
 PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * restrict fmt, va_list args)
 {
+
+    static const char * const error_msgs_l[] = {
+        "vsnprintf() failed." PPE_LOG_NEWLINE
+    };
+    static const ppe_size error_msgs_size_l[] = {
+        strlen(error_msgs_l[0])
+    };
+
     ppe_log log = NULL;
     ppe_size size = 0;
     int ret = 0;
 
-    assert(where);
     assert(PPE_LOG_DEBUG <= level && level <= PPE_LOG_FATAL);
     assert(fmt && strchr(fmt, '%'));
 
-    if (! itf) itf = ppe_log_get_default();
+    if (! itf) itf = ppe_log_get_global_default();
     log = *itf;
 
     if (level < log->threshold) return;
     
-    size = ppe_log_format_tags(log, level, where);
+    size = ppe_log_format_tags(itf, log, level, where);
     ret = vsnprintf(log->buf + size, log->buf_cap - size, fmt, args);
     if (ret < 0) {
+        log->write(itf, error_msgs_l[0], error_msgs_size_l[0]);
+        return;
+    }
+    if (ret >= log->buf_cap - size) {
+        /* -- Exceeded the capacity of the remainder space -- */
         if (! log->write(itf, log->buf, size)) return;
 
         size = 0;
         ret = vsnprintf(log->buf, log->buf_cap, fmt, args);
         if (ret < 0) {
-            /* TODO: Error Handling */
+            log->write(itf, error_msgs_l[0], error_msgs_size_l[0]);
             return;
         }
+        if (ret > log->buf_cap) ret = log->buf_cap;
     }
     size += ret;
 
