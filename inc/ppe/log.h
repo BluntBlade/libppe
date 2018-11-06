@@ -11,6 +11,8 @@ extern "C"
 {
 #endif
 
+/* ==== Declaration ==== */
+
 /* ---- Types ---- */
 
 struct PPE_LOG;
@@ -33,7 +35,7 @@ enum
     PPE_LOG_MILLISECOND = 0x2
 };
 
-/* ---- Preset Values ---- */
+/* ---- Macros ---- */
 
 #define PPE_LOG_FILE_LOCATION (__FILE__ ## ":" ## #__LINE__)
 
@@ -46,13 +48,17 @@ typedef ppe_bool (*ppe_log_flush_vfn)(ppe_log_itf restrict itf);
 
 /* ---- Functions ---- */
 
+/* -- Create & Destroy -- */
 PPE_API extern ppe_log ppe_log_create(ppe_size buf_cap, ppe_log_level threshold, ppe_uint32 flags, ppe_log_write_vfn write, ppe_log_flush_vfn flush);
 PPE_API extern void ppe_log_destroy(ppe_log restrict log);
 
+/* -- Property -- */
 PPE_API extern ppe_log_level ppe_log_set_threshold(ppe_log restrict log, ppe_log_level level);
 PPE_API extern ppe_log_level ppe_log_get_threshold(ppe_log restrict log);
 PPE_API extern ppe_uint32 ppe_log_set_flags(ppe_log restrict log, ppe_uint32 flags);
 PPE_API extern ppe_uint32 ppe_log_get_flags(ppe_log restrict log);
+
+/* -- Virtual -- */
 
 PPE_API extern void ppe_log_write_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * msg, ppe_size size);
 PPE_API extern void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * fmt, va_list args);
@@ -62,7 +68,7 @@ PPE_API extern ppe_log_itf ppe_log_get_stderr_logger(void);
 PPE_API extern ppe_log_itf ppe_log_set_global_default(ppe_log_itf restrict itf);
 PPE_API extern ppe_log_itf ppe_log_get_global_default(void);
 
-/* ---- Wrappers ---- */
+/* -- Wrapper -- */
 
 static inline void ppe_log_printf_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * fmt, ...)
 {

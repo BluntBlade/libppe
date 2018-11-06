@@ -8,6 +8,8 @@ extern "C"
 {
 #endif
 
+/* ==== Declaration ==== */
+
 /* ---- Types ---- */
 
 #if !defined(PPE_CFG_LOG_BUFFER_SIZE) || (PPE_CFG_LOG_BUFFER_SIZE < 128)
@@ -26,34 +28,175 @@ typedef struct _PPE_LOG
     char buf[PPE_CFG_LOG_BUFFER_SIZE];
 } ppe_log_st;
 
-/* ---- Preset Values ---- */
+/* ---- Macros ---- */
 
 #if defined(PPE_CFG_OS_WINDOWS)
-
 #define PPE_LOG_NEWLINE "\r\n"
-
-static const char newline_s[] = { '\r', '\n' };
-
 #else
-
 #define PPE_LOG_NEWLINE "\n"
-
-static const char newline_s[] = { '\n' };
-
 #endif
 
-static ppe_log_st stderr_logger_s = {
-    &ppe_log_write_cfn,
-    &ppe_log_flush_cfn,
+/* ---- Functions ---- */
+
+static ppe_bool log_stderr_write(ppe_log_itf restrict itf, const char * buf, ppe_size size)
+static ppe_bool log_stderr_flush(ppe_log_itf restrict itf);
+
+static ppe_size log_format_tags(ppe_log_itf restrict itf, ppe_log restrict log, ppe_log_level level, const char * restrict where);
+
+/* ---- Preset Values ---- */
+
+static const char * log_newline_s = PPE_LOG_NEWLINE;
+static const ppe_size log_newline_size_s = strlen(log_newline_s);
+
+static ppe_log_st log_stderr_s = {
+    &log_stderr_write,
+    &log_stderr_flush,
     PPE_LOG_WARN,
     PPE_LOG_DEFAULT_FORMAT,
     PPE_CFG_LOG_BUFFER_SIZE,
     ""
 };
 
-static ppe_log stderr_log_s = &stderr_logger_s;
+static ppe_log log_stderr_logger_s = &log_stderr_s;
 
-/* ---- Functions ---- */
+static ppe_log_itf log_default_logger_s = &log_stderr_logger_s;
+
+/* ==== Definitions ==== */
+
+/* -- Internals -- */
+
+static ppe_bool log_stderr_write(ppe_log_itf restrict itf, const char * buf, ppe_size size)
+{
+    if (size == 0) return ppe_true;
+    return fwrite(stderr, buf, size) == size;
+}
+
+static ppe_bool log_stderr_flush(ppe_log_itf restrict itf)
+{
+    return fflush(stderr) == EOF;
+}
+
+static ppe_size log_format_tags(ppe_log_itf restrict itf, ppe_log restrict log, ppe_log_level level, const char * restrict where)
+{
+    static const char * const level_tags_l[] = {
+        "[DEBUG]",
+        "[INFO]",
+        "[WARN]",
+        "[ERROR]",
+        "[FATAL]"
+    };
+    static const ppe_size level_tags_size_l[] = {
+        strlen(level_tags_l[PPE_LOG_DEBUG]),
+        strlen(level_tags_l[PPE_LOG_INFO]),
+        strlen(level_tags_l[PPE_LOG_WARN]),
+        strlen(level_tags_l[PPE_LOG_ERROR]),
+        strlen(level_tags_l[PPE_LOG_FATAL])
+    };
+
+#define LOG_ERR_GETTIMEOFDAY 0
+#define LOG_ERR_GMTIME_R 1
+#define LOG_ERR_SNPRINTF 2
+#define LOG_ERR_NOSPACE_TIMESTAMP 3
+#define LOG_ERR_NOSPACE_LEVEL 4
+#define LOG_ERR_NOSPACE_WHERE 5
+    static const char * const error_msgs_l[] = {
+        "gettimeofday() failed." PPE_LOG_NEWLINE,
+        "gmtime_r() failed." PPE_LOG_NEWLINE,
+        "snprintf() failed." PPE_LOG_NEWLINE,
+        "No space for the timestamp tag." PPE_LOG_NEWLINE,
+        "No space for the level tag." PPE_LOG_NEWLINE,
+        "No space for the where tag." PPE_LOG_NEWLINE
+    };
+    static const ppe_size error_msgs_size_l[] = {
+        strlen(error_msgs_l[LOG_ERR_GETTIMEOFDAY]),
+        strlen(error_msgs_l[LOG_ERR_GMTIME_R]),
+        strlen(error_msgs_l[LOG_ERR_SNPRINTF]),
+        strlen(error_msgs_l[LOG_ERR_NOSPACE_TIMESTAMP]),
+        strlen(error_msgs_l[LOG_ERR_NOSPACE_LEVEL]),
+        strlen(error_msgs_l[LOG_ERR_NOSPACE_WHERE])
+    };
+
+    ppe_size size = 0;
+    ppe_size len = 0;
+    char * pos = NULL;
+    struct timeval tv;
+    struct tm tm;
+    int ret = 0;
+
+    /* Default format of the tags: */
+    /* "<Timestamp> [Thread-ID] <Level> [Where] <message>" */
+
+    /* Timestamp Tag */
+    {
+        ret = gettimeofday(&tv, NULL);
+        if (ret < 0) {
+            log->write(itf, error_msgs_l[LOG_ERR_GETTIMEOFDAY], error_msgs_size_l[LOG_ERR_GETTIMEOFDAY]);
+            return 0;
+        }
+        if (! gmtime_r(&tv.tv_sec, &tm)) {
+            log->write(itf, error_msgs_l[LOG_ERR_GMTIME_R], error_msgs_size_l[LOG_ERR_GMTIME_R]);
+            return 0;
+        }
+
+        if (log->flags & PPE_LOG_MILLISECOND) {
+            ret = snprintf(log->buf, log->buf_cap, "%04d-%02d-%02d %02d:%02d:%02d.%03d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec / 1000));
+        } else {
+            ret = snprintf(log->buf, log->buf_cap, "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        }
+        if (ret < 0) {
+            log->write(itf, error_msgs_l[LOG_ERR_SNPRINTF], error_msgs_size_l[LOG_ERR_SNPRINTF]);
+            return 0;
+        } else if (ret >= log->buf_cap) {
+            log->write(itf, error_msgs_l[LOG_ERR_NOSPACE_TIMESTAMP], error_msgs_size_l[LOG_ERR_NOSPACE_TIMESTAMP]);
+            return 0;
+        }
+        size += ret;
+    }
+
+    /* TODO: Thread ID Tag */
+
+    /* Level Tag */
+    {
+        if (size + level_tags_size_l[level] > log->buf_cap - 1) {
+            if (! log->write(itf, log->buf, size)) return 0;
+            log->write(itf, error_msgs_l[3], error_msgs_size_l[3]);
+            return 0;
+        }
+
+        memcpy(log->buf + size, level_tags_l[level], level_tags_size_l[level]);
+        size += level_tags_size_l[level];
+        log->buf[size++] = ' ';
+    }
+
+    /* Where Tag */
+    if (where) {
+        if (! (log->flags & PPE_LOG_LONG_FILENAME)) {
+#if defined(PPE_CFG_OS_WINDOWS)
+            pos = strrchr(where, '\\');
+            if (! pos) = strrchr(where, '/');
+#else
+            pos = strrchr(where, '/');
+#endif
+
+            if (pos) where = pos;
+        }
+
+        len = strlen(where);
+        if (size + len > log->buf_cap - 1) {
+            if (! log->write(itf, log->buf, size)) return 0;
+            log->write(itf, error_msgs_l[4], error_msgs_size_l[4]);
+            return 0;
+        }
+
+        memcpy(log->buf + size, where, len);
+        size += len;
+        log->buf[size++] = ' ';
+    }
+
+    return size;
+}
+
+/* -- Create & Destroy -- */
 
 PPE_API ppe_log ppe_log_create(ppe_size buf_cap, ppe_log_level threshold, ppe_uint32 flags, ppe_log_write_vfn write, ppe_log_flush_vfn flush)
 {
@@ -74,8 +217,10 @@ PPE_API ppe_log ppe_log_create(ppe_size buf_cap, ppe_log_level threshold, ppe_ui
 
 PPE_API void ppe_log_destroy(ppe_log restrict log)
 {
-    if (log && log != stderr_log_s) free(log);
+    if (log && log != log_stderr_logger_s) free(log);
 }
+
+/* -- Property -- */
 
 PPE_API ppe_uint32 ppe_log_set_flags(ppe_log restrict log, ppe_uint32 flags)
 {
@@ -109,130 +254,29 @@ PPE_API ppe_log_level ppe_log_get_threshold(ppe_log restrict log)
     return log->threshold;
 }
 
-static ppe_bool ppe_log_write_cfn(ppe_log_itf restrict itf, const char * buf, ppe_size size)
-{
-    if (size == 0) return ppe_true;
-    return fwrite(stderr, buf, size) == size;
-}
-
-static ppe_bool ppe_log_flush_cfn(ppe_log_itf restrict itf)
-{
-    return fflush(stderr) == EOF;
-}
-
 PPE_API ppe_log_itf ppe_log_get_stderr_logger(void)
 {
-    return &stderr_log_s;
+    return &log_stderr_logger_s;
 }
-
-static ppe_log_itf default_logger_s = &stderr_log_s;
 
 PPE_API ppe_log_itf ppe_log_set_global_default(ppe_log_itf restrict itf)
 {
-    ppe_log last = default_logger_s;
-    default_logger_s = itf;
+    ppe_log last = log_default_logger_s;
+    log_default_logger_s = itf;
     return last;
 }
 
 PPE_API ppe_log_itf ppe_log_get_global_default(void)
 {
-    return default_logger_s;
+    return log_default_logger_s;
 }
 
-static ppe_size ppe_log_format_tags(ppe_log_itf restrict itf, ppe_log restrict log, ppe_log_level level, const char * restrict where)
-{
-    static const char * const level_tags_l[] = {
-        "[DEBUG]",
-        "[INFO]",
-        "[WARN]",
-        "[ERROR]",
-        "[FATAL]"
-    };
-    static const ppe_size level_tags_size_l[] = {
-        strlen(level_tags_l[PPE_LOG_DEBUG]),
-        strlen(level_tags_l[PPE_LOG_INFO]),
-        strlen(level_tags_l[PPE_LOG_WARN]),
-        strlen(level_tags_l[PPE_LOG_ERROR]),
-        strlen(level_tags_l[PPE_LOG_FATAL])
-    };
+/* -- Virtual  -- */
 
-    static const char * const error_msgs_l[] = {
-        "gettimeofday() failed." PPE_LOG_NEWLINE,
-        "gmtime_r() failed." PPE_LOG_NEWLINE,
-        "snprintf() failed." PPE_LOG_NEWLINE
-    };
-    static const ppe_size error_msgs_size_l[] = {
-        strlen(error_msgs_l[0]),
-        strlen(error_msgs_l[1]),
-        strlen(error_msgs_l[2])
-    };
-
-    ppe_size size = 0;
-    ppe_size len = 0;
-    char * pos = NULL;
-    struct timeval tv;
-    struct tm tm;
-    int ret = 0;
-
-    /* Timestamp Tag */
-    ret = gettimeofday(&tv, NULL);
-    if (ret < 0) {
-        log->write(itf, error_msgs_l[0], error_msgs_size_l[0]);
-        return size;
-    }
-    if (! gmtime_r(&tv.tv_sec, &tm)) {
-        log->write(itf, error_msgs_l[1], error_msgs_size_l[1]);
-        return size;
-    }
-
-    if (log->flags & PPE_LOG_MILLISECOND) {
-        ret = snprintf(log->buf + size, log->buf_cap - size, "%04d-%02d-%02d %02d:%02d:%02d.%03d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec / 1000));
-    } else {
-        ret = snprintf(log->buf + size, log->buf_cap - size, "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-    }
-    if (ret < 0) {
-        log->write(itf, error_msgs_l[2], error_msgs_size_l[2]);
-        return size;
-    }
-    size += ret;
-
-    /* TODO: Thread ID Tag */
-
-    /* Where Tag */
-    if (where) {
-        if (! (log->flags & PPE_LOG_LONG_FILENAME)) {
-#if defined(PPE_CFG_OS_WINDOWS)
-            pos = strrchr(where, '\\');
-            if (! pos) = strrchr(where, '/');
-#else
-            pos = strrchr(where, '/');
-#endif
-
-            if (pos) where = pos;
-        }
-
-        len = strlen(where);
-        if (size + len >= log->buf_cap - 1) return size;
-
-        memcpy(log->buf + size, where, len);
-        size += len;
-        log->buf[size++] = ' ';
-    }
-
-    /* Level Tag */
-    if (size + level_tags_size_l[level] >= log->buf_cap - 1) return size;
-
-    memcpy(log->buf + size, level_tags_l[level], level_tags_size_l[level]);
-    size += level_tags_size_l[level];
-    log->buf[size++] = ' ';
-
-    return size;
-}
-
-PPE_API void ppe_log_write_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * msg, ppe_size size)
+PPE_API void ppe_log_write_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * msg, ppe_size msg_size)
 {
     ppe_log log = NULL;
-    ppe_size tags_size = 0;
+    ppe_size size = 0;
 
     assert(PPE_LOG_DEBUG <= level && level <= PPE_LOG_FATAL);
     assert(msg);
@@ -242,18 +286,17 @@ PPE_API void ppe_log_write_to(ppe_log_itf restrict itf, ppe_log_level level, con
 
     if (level < log->threshold) return;
 
-    tags_size = ppe_log_format_tags(itf, log, level, where);
-    if (! log->write(itf, log->buf, tags_size)) return;
+    size = log_format_tags(itf, log, level, where);
+    if (size > 0 && ! log->write(itf, log->buf, size)) return;
 
-    if (! log->write(itf, msg, size > 0 ? size : strlen(msg))) return;
-    if (! log->write(itf, newline_s, sizeof(newline_s))) return;
+    if (! log->write(itf, msg, msg_size > 0 ? msg_size : strlen(msg))) return;
+    if (! log->write(itf, log_newline_s, log_newline_size_s)) return;
 
     log->flush(itf);
 }
 
 PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * restrict fmt, va_list args)
 {
-
     static const char * const error_msgs_l[] = {
         "vsnprintf() failed." PPE_LOG_NEWLINE
     };
@@ -266,30 +309,43 @@ PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, c
     int ret = 0;
 
     assert(PPE_LOG_DEBUG <= level && level <= PPE_LOG_FATAL);
-    assert(fmt && strchr(fmt, '%'));
+    assert(fmt && strlen(fmt) > 0 && strchr(fmt, '%'));
 
     if (! itf) itf = ppe_log_get_global_default();
     log = *itf;
 
     if (level < log->threshold) return;
     
-    size = ppe_log_format_tags(itf, log, level, where);
+    size = log_format_tags(itf, log, level, where);
+
+    /* Format the message. */
     ret = vsnprintf(log->buf + size, log->buf_cap - size, fmt, args);
     if (ret < 0) {
-        log->write(itf, error_msgs_l[0], error_msgs_size_l[0]);
+        if (size > 0 && ! log->write(itf, log->buf, size)) return;
+        if (! log->write(itf, error_msgs_l[0], error_msgs_size_l[0])) return;
+        log->flush(itf);
         return;
-    }
-    if (ret >= log->buf_cap - size) {
-        /* -- Exceeded the capacity of the remainder space -- */
+    } else if (ret == 0) {
+        /* No message to write. */
+        return;
+    } else if (ret >= log_>buf_cap - size ) {
+        /* Exceeded the capacity of the remainder space. */
+        /* Write the tags and then reformat the message. */
         if (! log->write(itf, log->buf, size)) return;
 
         size = 0;
         ret = vsnprintf(log->buf, log->buf_cap, fmt, args);
         if (ret < 0) {
-            log->write(itf, error_msgs_l[0], error_msgs_size_l[0]);
+            if (size > 0 && ! log->write(itf, log->buf, size)) return;
+            if (! log->write(itf, error_msgs_l[0], error_msgs_size_l[0])) return;
+            log->flush(itf);
             return;
         }
-        if (ret > log->buf_cap) ret = log->buf_cap;
+        if (ret > log->buf_cap) {
+            /* Exceeded the capacity of the remainder space. */
+            /* Truncate the message. */
+            ret = log->buf_cap;
+        }
     }
     size += ret;
 
@@ -299,7 +355,6 @@ PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, c
         log->buf[size++] = '\r';
         log->buf[size++] = '\n';
         if (! log->write(itf, log->buf, size)) return;
-
         log->flush(itf);
         return;
     }
@@ -309,7 +364,6 @@ PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, c
     if (size < log->buf_cap) {
         log->buf[size++] = '\n';
         if (! log->write(itf, log->buf, size)) return;
-
         log->flush(itf);
         return;
     }
@@ -317,12 +371,9 @@ PPE_API void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, c
 #endif
 
     if (! log->write(itf, log->buf, size)) return;
-    if (! log->write(itf, newline_s, sizeof(newline_s))) return;
+    if (! log->write(itf, log_newline_s, log_newline_size_s)) return;
     log->flush(itf);
-    return;
 }
-
-/* ---- Wrappers ---- */
 
 #ifdef __cplusplus
 }
