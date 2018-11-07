@@ -49,19 +49,19 @@ typedef ppe_bool (*ppe_log_flush_vfn)(ppe_log_itf restrict itf);
 /* ---- Functions ---- */
 
 /* -- Create & Destroy -- */
-PPE_API extern ppe_log ppe_log_create(ppe_size buf_cap, ppe_log_level threshold, ppe_uint32 flags, ppe_log_write_vfn write, ppe_log_flush_vfn flush);
+PPE_API extern ppe_log ppe_log_create(ppe_size buf_cap, ppe_log_level threshold, ppe_uint flags, ppe_log_write_vfn write, ppe_log_flush_vfn flush);
 PPE_API extern void ppe_log_destroy(ppe_log restrict log);
 
 /* -- Property -- */
 PPE_API extern ppe_log_level ppe_log_set_threshold(ppe_log restrict log, ppe_log_level level);
 PPE_API extern ppe_log_level ppe_log_get_threshold(ppe_log restrict log);
-PPE_API extern ppe_uint32 ppe_log_set_flags(ppe_log restrict log, ppe_uint32 flags);
-PPE_API extern ppe_uint32 ppe_log_get_flags(ppe_log restrict log);
+PPE_API extern ppe_uint ppe_log_set_flags(ppe_log restrict log, ppe_uint flags);
+PPE_API extern ppe_uint ppe_log_get_flags(ppe_log restrict log);
 
 /* -- Virtual -- */
 
-PPE_API extern void ppe_log_write_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * msg, ppe_size size);
-PPE_API extern void ppe_log_vprintf_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * fmt, va_list args);
+PPE_API extern void ppe_log_write_to(ppe_log_itf restrict itf, const char * restrict where, ppe_log_level level, const char * msg, ppe_size size);
+PPE_API extern void ppe_log_vprintf_to(ppe_log_itf restrict itf, const char * restrict where, ppe_log_level level, const char * fmt, va_list args);
 
 PPE_API extern ppe_log_itf ppe_log_get_stderr_logger(void);
 
@@ -70,12 +70,12 @@ PPE_API extern ppe_log_itf ppe_log_get_global_default(void);
 
 /* -- Wrapper -- */
 
-static inline void ppe_log_printf_to(ppe_log_itf restrict itf, ppe_log_level level, const char * restrict where, const char * fmt, ...)
+static inline void ppe_log_printf_to(ppe_log_itf restrict itf, const char * restrict where, ppe_log_level level, const char * fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    ppe_log_vprintf_to(itf, level, fmt, args);
-    va_end(args, fmt);
+    ppe_log_vprintf_to(itf, where, level, fmt, args);
+    va_end(args);
 }
 
 static inline void ppe_log_debug(const char * restrict where, const char * msg, ppe_size size)
@@ -107,40 +107,40 @@ static inline void ppe_log_debugf(const char * restrict where, const char * fmt,
 {
     va_list args;
     va_start(args, fmt);
-    ppe_log_vprintf_to(NULL, PPE_LOG_DEBUG, where, fmt, args);
-    va_end(args, fmt);
+    ppe_log_vprintf_to(NULL, where, PPE_LOG_DEBUG, fmt, args);
+    va_end(args);
 }
 
 static inline void ppe_log_infof(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    ppe_log_vprintf_to(NULL, PPE_LOG_INFO, where, fmt, args);
-    va_end(args, fmt);
+    ppe_log_vprintf_to(NULL, where, PPE_LOG_INFO, fmt, args);
+    va_end(args);
 }
 
 static inline void ppe_log_warnf(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    ppe_log_vprintf_to(NULL, PPE_LOG_WARN, where, fmt, args);
-    va_end(args, fmt);
+    ppe_log_vprintf_to(NULL, where, PPE_LOG_WARN, fmt, args);
+    va_end(args);
 }
 
 static inline void ppe_log_errorf(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    ppe_log_vprintf_to(NULL, PPE_LOG_ERROR, where, fmt, args);
-    va_end(args, fmt);
+    ppe_log_vprintf_to(NULL, where, PPE_LOG_ERROR, fmt, args);
+    va_end(args);
 }
 
 static inline void ppe_log_fatalf(const char * restrict where, const char * fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    ppe_log_vprintf_to(NULL, PPE_LOG_FATAL, where, fmt, args);
-    va_end(args, fmt);
+    ppe_log_vprintf_to(NULL, where, PPE_LOG_FATAL, fmt, args);
+    va_end(args);
 }
 
 #ifdef __cplusplus
