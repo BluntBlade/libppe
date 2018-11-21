@@ -49,10 +49,12 @@ typedef ppe_bool (*ppe_log_flush_vfn)(ppe_log_itf restrict itf);
 /* ---- Functions ---- */
 
 /* -- Create & Destroy -- */
+
 PPE_API extern ppe_log ppe_log_create(ppe_size buf_cap, ppe_log_level threshold, ppe_uint flags, ppe_log_write_vfn write, ppe_log_flush_vfn flush);
 PPE_API extern void ppe_log_destroy(ppe_log restrict log);
 
 /* -- Property -- */
+
 PPE_API extern ppe_log_level ppe_log_set_threshold(ppe_log restrict log, ppe_log_level level);
 PPE_API extern ppe_log_level ppe_log_get_threshold(ppe_log restrict log);
 PPE_API extern ppe_uint ppe_log_set_flags(ppe_log restrict log, ppe_uint flags);
