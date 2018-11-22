@@ -43,7 +43,7 @@ enum
 
 /* ---- Interfaces ---- */
 
-typedef ppe_bool (*ppe_log_write_vfn)(ppe_log_itf restrict itf, const char * msg, ppe_size size);
+typedef ppe_bool (*ppe_log_write_vfn)(ppe_log_itf restrict itf, const char * restrict msg, ppe_size size);
 typedef ppe_bool (*ppe_log_flush_vfn)(ppe_log_itf restrict itf);
 
 /* ---- Functions ---- */
