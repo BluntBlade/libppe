@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "ppe/errors.h"
+#include "ppe/error.h"
 
 #ifdef __cplusplus
 extern "C"

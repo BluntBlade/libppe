@@ -1,5 +1,5 @@
-#ifndef PPE_ERRORS_H
-#define PPE_ERRORS_H 1
+#ifndef PPE_ERROR_H
+#define PPE_ERROR_H 1
 
 #include "ppe/types.h"
 #include "ppe/macros.h"
@@ -33,5 +33,5 @@ PPE_API extern const ppe_char * ppe_err_get_message(void);
 }
 #endif
 
-#endif /* PPE_ERRORS_H */
+#endif /* PPE_ERROR_H */
 

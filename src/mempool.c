@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ppe/errors.h"
+#include "ppe/error.h"
 #include "ppe/mempool.h"
 
 #ifdef __cplusplus
