@@ -28,6 +28,10 @@ typedef struct ppe_string_st * ppe_string;
 
 /* ---- Functions ---- */
 
+/* -- Preset values -- */
+
+PPE_API extern const ppe_string ppe_str_get_empty(void);
+
 /* -- Create & Destroy -- */
 
 PPE_API extern ppe_string ppe_cs_clone(const ppe_char * restrict src, const ppe_size len);
@@ -45,12 +49,16 @@ PPE_API extern ppe_string ppe_str_join_2(const char * restrict deli, const ppe_s
 
 PPE_API extern void ppe_str_destroy(ppe_string restrict src);
 
-PPE_API extern const ppe_string ppe_str_get_empty(void);
-
 /* -- Property -- */
 
 PPE_API extern const char * ppe_str_cstr(ppe_string restrict str);
 PPE_API extern ppe_size ppe_str_size(ppe_string restrict str);
+
+/* -- Comparison -- */
+
+PPE_API extern ppe_bool ppe_str_equals(void * restrict str1, void * restrict str2);
+PPE_API extern ppe_bool ppe_str_less_than(void * restrict str1, void * restrict str2);
+PPE_API extern ppe_bool ppe_str_greater_than(void * restrict str1, void * restrict str2);
 
 /* -- Wrapper -- */
 

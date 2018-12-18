@@ -1,5 +1,4 @@
-#include <assert.h>
-
+#include "ppe/mempool.h"
 #include "ppe/string.h"
 
 #ifdef __cplusplus
@@ -87,6 +86,13 @@ static ppe_string ppe_cs_join_2_imp(const char * restrict deli, ppe_size deli_le
 
     new_str->buf[new_str->len] = '\0';
     return new_str;
+}
+
+/* -- Preset values -- */
+
+PPE_API const ppe_string ppe_str_get_empty(void)
+{
+    return &str_empty_s;
 }
 
 /* -- Create & Destroy -- */
@@ -368,11 +374,6 @@ PPE_API void ppe_str_destroy(ppe_string restrict str)
     if (str && str != &str_empty_s) ppe_mp_free(str);
 }
 
-PPE_API const ppe_string ppe_str_get_empty(void)
-{
-    return &str_empty_s;
-}
-
 /* -- Property -- */
 
 PPE_API const char * ppe_str_cstr(ppe_string restrict str)
@@ -391,6 +392,23 @@ PPE_API ppe_size ppe_str_size(ppe_string restrict str)
         return PPE_STR_INVALID_LENGTH;
     }
     return str->len;
+}
+
+/* -- Comparison -- */
+
+PPE_API ppe_bool ppe_str_equals(void * restrict str1, void * restrict str2)
+{
+    return strcmp(((ppe_string)str1)->buf, ((ppe_string)str2)->buf) == 0;
+}
+
+PPE_API ppe_bool ppe_str_less_than(void * restrict str1, void * restrict str2)
+{
+    return strcmp(((ppe_string)str1)->buf, ((ppe_string)str2)->buf) < 0;
+}
+
+PPE_API ppe_bool ppe_str_greater_than(void * restrict str1, void * restrict str2)
+{
+    return strcmp(((ppe_string)str1)->buf, ((ppe_string)str2)->buf) > 0;
 }
 
 /* ==== Definitions : String Joiner ==== */
