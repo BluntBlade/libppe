@@ -6,6 +6,16 @@ extern "C"
 {
 #endif
 
+/* ==== Declaration : String Common ==== */
+
+/* ---- Types ---- */
+
+typedef struct PPE_STR_POSITION
+{
+    const char * pos;
+    ppe_size len;
+} ppe_str_position_st, *ppe_str_position;
+
 /* ==== Declaration : String ==== */
 
 /* ---- Types ---- */
@@ -60,16 +70,16 @@ static ppe_string_st str_empty_s = { 0, {""} };
 
 /* -- Internals -- */
 
-static ppe_string ppe_cs_join_2_imp(const char * restrict deli, ppe_size deli_len, const char * restrict src1, const ppe_size len1, const char * restrict src2, const ppe_size len2)
+static ppe_string ppe_cs_join_2_imp(const char * restrict deli, ppe_size deli_len, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
     ppe_string new_str = NULL;
     ppe_size remainder = PPE_STR_MAX_LENGTH;
 
-    if (len1 > 0 && ! ppe_cs_subtract_remainder(&remainder, len1)) {
+    if (sz1 > 0 && ! ppe_cs_subtract_remainder(&remainder, sz1)) {
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
         return NULL;
     }
-    if (len2 > 0 && ! ppe_cs_subtract_remainder(&remainder, len2)) {
+    if (sz2 > 0 && ! ppe_cs_subtract_remainder(&remainder, sz2)) {
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
         return NULL;
     }
@@ -84,17 +94,17 @@ static ppe_string ppe_cs_join_2_imp(const char * restrict deli, ppe_size deli_le
     new_str = ppe_str_malloc(PPE_STR_MAX_LENGTH - remainder, NULL);
     if (! new_str) return NULL;
 
-    if (len1 > 0) {
-        memcpy(new_str->buf + new_str->len, src1, len1);
-        new_str->len += len1;
+    if (sz1 > 0) {
+        memcpy(new_str->buf + new_str->len, s1, sz1);
+        new_str->len += sz1;
     }
     if (deli_len > 0) {
         memcpy(new_str->buf + new_str->len, deli, deli_len);
         new_str->len += deli_len;
     }
-    if (len2 > 0) {
-        memcpy(new_str->buf + new_str->len, src2, len2);
-        new_str->len += len2;
+    if (sz2 > 0) {
+        memcpy(new_str->buf + new_str->len, s2, sz2);
+        new_str->len += sz2;
     }
 
     new_str->buf[new_str->len] = '\0';
@@ -200,14 +210,14 @@ PPE_API ppe_string ppe_cs_clone(const ppe_char * restrict src, const ppe_size le
     return new_str;
 }
 
-PPE_API ppe_string ppe_cs_join_cstr_var(const char * restrict deli, const ppe_size deli_len, const char * restrict src1, const char * restrict src2, va_list args)
+PPE_API ppe_string ppe_cs_join_cstr_var(const char * restrict deli, const ppe_size deli_len, const char * restrict s1, const char * restrict s2, va_list args)
 {
     va_list ap;
     const char * src = NULL;
     ppe_uint n = 0;
     ppe_text_st tmp_srcs[PPE_STR_MAX_INPUT_N];
 
-    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(src1) || ! ppe_str_is_valid(src2)) {
+    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -224,14 +234,14 @@ PPE_API ppe_string ppe_cs_join_cstr_var(const char * restrict deli, const ppe_si
     if (src == PPE_STR_ARG_END) {
         /* Only two strings to join. */
         va_end(ap);
-        return ppe_cs_join_2_imp(deli, deli_len, src1, strlen(src1), src2, strlen(src2));
+        return ppe_cs_join_2_imp(deli, deli_len, s1, strlen(s1), s2, strlen(s2));
     }
 
     /* -- Prepare operands. -- */
-    tmp_srcs[0].buf = src1;
-    tmp_srcs[0].len = strlen(src1);
-    tmp_srcs[1].buf = src2;
-    tmp_srcs[1].len = strlen(src2);
+    tmp_srcs[0].buf = s1;
+    tmp_srcs[0].len = strlen(s1);
+    tmp_srcs[1].buf = s2;
+    tmp_srcs[1].len = strlen(s2);
     n = 2;
 
     do {
@@ -284,7 +294,7 @@ PPE_API ppe_string ppe_cs_join_cstr_list(const char * restrict deli, const ppe_s
     return ppe_cs_join_text_list_imp(deli, deli_len, tmp_srcs, n);
 }
 
-PPE_API ppe_string ppe_cs_join_text_var(const char * restrict deli, const ppe_size deli_len, const char * restrict src1, const ppe_size len1, const char * restrict src2, const ppe_size len2, va_list args)
+PPE_API ppe_string ppe_cs_join_text_var(const char * restrict deli, const ppe_size deli_len, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, va_list args)
 {
     va_list ap;
     const char * src = NULL;
@@ -292,7 +302,7 @@ PPE_API ppe_string ppe_cs_join_text_var(const char * restrict deli, const ppe_si
     ppe_uint n = 0;
     ppe_text_st tmp_srcs[PPE_STR_MAX_INPUT_N];
 
-    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(src1) || ! ppe_str_is_valid(src2)) {
+    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -309,14 +319,14 @@ PPE_API ppe_string ppe_cs_join_text_var(const char * restrict deli, const ppe_si
     if (src == PPE_STR_ARG_END) {
         /* Only two strings to join. */
         va_end(ap);
-        return ppe_cs_join_2_imp(deli, deli_len, src1, ppe_cs_detect_size(src1, len1), src2, ppe_cs_detect_size(src2, len2));
+        return ppe_cs_join_2_imp(deli, deli_len, s1, ppe_cs_detect_size(s1, sz1), s2, ppe_cs_detect_size(s2, sz2));
     }
 
     /* -- Prepare operands. -- */
-    tmp_srcs[0].buf = src1;
-    tmp_srcs[0].len = ppe_cs_detect_size(src1, len1);
-    tmp_srcs[1].buf = src2;
-    tmp_srcs[1].len = ppe_cs_detect_size(src2, len2);
+    tmp_srcs[0].buf = s1;
+    tmp_srcs[0].len = ppe_cs_detect_size(s1, sz1);
+    tmp_srcs[1].buf = s2;
+    tmp_srcs[1].len = ppe_cs_detect_size(s2, sz2);
     n = 2;
 
     do {
@@ -364,14 +374,14 @@ PPE_API ppe_string ppe_cs_join_text_list(const char * restrict deli, const ppe_s
     return ppe_cs_join_text_list_imp(deli, deli_len, tmp_srcs, n);
 }
 
-PPE_API ppe_string ppe_cs_join_string_var(const char * restrict deli, const ppe_size deli_len, const ppe_string restrict src1, const ppe_string restrict src2, va_list args)
+PPE_API ppe_string ppe_cs_join_var(const char * restrict deli, const ppe_size deli_len, const ppe_string restrict s1, const ppe_string restrict s2, va_list args)
 {
     va_list ap;
     const ppe_string src = NULL;
     ppe_uint n = 0;
     ppe_text_st tmp_srcs[PPE_STR_MAX_INPUT_N];
 
-    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(src1) || ! ppe_str_is_valid(src2)) {
+    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -388,14 +398,14 @@ PPE_API ppe_string ppe_cs_join_string_var(const char * restrict deli, const ppe_
     if (src == PPE_STR_ARG_END) {
         /* Only two strings to join. */
         va_end(ap);
-        return ppe_cs_join_2_imp(deli, deli_len, src1->buf, src1->len, src2->buf, src2->len);
+        return ppe_cs_join_2_imp(deli, deli_len, s1->buf, s1->len, s2->buf, s2->len);
     }
 
     /* -- Prepare operands. -- */
-    tmp_srcs[0].buf = src1->buf;
-    tmp_srcs[0].len = src1->len;
-    tmp_srcs[1].buf = src2->buf;
-    tmp_srcs[1].len = src2->len;
+    tmp_srcs[0].buf = s1->buf;
+    tmp_srcs[0].len = s1->len;
+    tmp_srcs[1].buf = s2->buf;
+    tmp_srcs[1].len = s2->len;
     n = 2;
 
     do {
@@ -422,7 +432,7 @@ PPE_API ppe_string ppe_cs_join_string_var(const char * restrict deli, const ppe_
     return ppe_cs_join_text_list_imp(deli, deli_len, tmp_srcs, n);
 }
 
-PPE_API ppe_string ppe_cs_join_string_list(const char * restrict deli, const ppe_size deli_len, const ppe_string * restrict srcs, const ppe_uint n)
+PPE_API ppe_string ppe_cs_join_list(const char * restrict deli, const ppe_size deli_len, const ppe_string * restrict srcs, const ppe_uint n)
 {
     ppe_uint i = 0;
     ppe_text_st tmp_srcs[PPE_STR_MAX_INPUT_N];
@@ -442,15 +452,15 @@ PPE_API ppe_string ppe_cs_join_string_list(const char * restrict deli, const ppe
     return ppe_cs_join_text_list_imp(deli, deli_len, tmp_srcs, n);
 }
 
-PPE_API ppe_string ppe_cs_join_2(const char * restrict deli, const ppe_size deli_len, const char * restrict src1, const ppe_size len1, const char * restrict src2, const ppe_size len2)
+PPE_API ppe_string ppe_cs_join_2(const char * restrict deli, const ppe_size deli_len, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
-    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(src1) || ! ppe_str_is_valid(src2)) {
+    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    len1 = ppe_cs_detect_size(src1, len1);
-    len2 = ppe_cs_detect_size(src2, len2);
-    return ppe_cs_join_2_imp(deli, deli_len, src1, len1, src2, len2);
+    sz1 = ppe_cs_detect_size(s1, sz1);
+    sz2 = ppe_cs_detect_size(s2, sz2);
+    return ppe_cs_join_2_imp(deli, deli_len, s1, sz1, s2, sz2);
 }
 
 PPE_API ppe_string ppe_cs_vsprintf(const char * restrict fmt, va_list args)
@@ -466,13 +476,13 @@ PPE_API ppe_string ppe_str_clone(const ppe_string restrict src)
     return ppe_cs_clone(src->buf, src->len);
 }
 
-PPE_API ppe_string ppe_str_join_cstr_var(const ppe_string restrict deli, const char * restrict src1, const char * restrict src2, va_list args)
+PPE_API ppe_string ppe_str_join_cstr_var(const ppe_string restrict deli, const char * restrict s1, const char * restrict s2, va_list args)
 {
     if (! ppe_str_is_valid(deli)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_join_cstr_var(deli->buf, deli->len, src1, src2, args);
+    return ppe_cs_join_cstr_var(deli->buf, deli->len, s1, s2, args);
 }
 
 PPE_API ppe_string ppe_str_join_cstr_list(const ppe_string restrict deli, const char ** restrict srcs, const ppe_uint n)
@@ -484,13 +494,13 @@ PPE_API ppe_string ppe_str_join_cstr_list(const ppe_string restrict deli, const 
     return ppe_cs_join_cstr_list(deli->buf, deli->len, srcs, n);
 }
 
-PPE_API ppe_string ppe_str_join_text_var(const ppe_string restrict deli, const char * restrict src1, const ppe_size len1, const char * restrict src2, const ppe_size len2, va_list args)
+PPE_API ppe_string ppe_str_join_text_var(const ppe_string restrict deli, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, va_list args)
 {
     if (! ppe_str_is_valid(deli)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_join_text_var(deli->buf, deli->len, src1, len1, src2, len2, args);
+    return ppe_cs_join_text_var(deli->buf, deli->len, s1, sz1, s2, sz2, args);
 }
 
 PPE_API ppe_string ppe_str_join_text_list(const ppe_string restrict deli, const ppe_text_st * restrict srcs, const ppe_uint n)
@@ -502,31 +512,31 @@ PPE_API ppe_string ppe_str_join_text_list(const ppe_string restrict deli, const 
     return ppe_cs_join_cstr_list(deli->buf, deli->len, srcs, n);
 }
 
-PPE_API ppe_string ppe_str_join_string_var(const ppe_string restrict deli, const ppe_string restrict src1, const ppe_string restrict src2, va_list args)
+PPE_API ppe_string ppe_str_join_var(const ppe_string restrict deli, const ppe_string restrict s1, const ppe_string restrict s2, va_list args)
 {
     if (! ppe_str_is_valid(deli)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_join_string_var(deli->buf, deli->len, src1, src2, args);
+    return ppe_cs_join_var(deli->buf, deli->len, s1, s2, args);
 }
 
-PPE_API ppe_string ppe_str_join_string_list(const ppe_string restrict deli, const ppe_string * restrict srcs, const ppe_uint n)
+PPE_API ppe_string ppe_str_join_list(const ppe_string restrict deli, const ppe_string * restrict srcs, const ppe_uint n)
 {
     if (! ppe_str_is_valid(deli)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_join_string_list(deli->buf, deli->len, srcs, n);
+    return ppe_cs_join_list(deli->buf, deli->len, srcs, n);
 }
 
-PPE_API ppe_string ppe_str_join_2(const ppe_string restrict deli, const ppe_string restrict src1, const ppe_string restrict src2)
+PPE_API ppe_string ppe_str_join_2(const ppe_string restrict deli, const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(src1) || ! ppe_str_is_valid(src2)) {
+    if (! ppe_str_is_valid(deli) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_join_2_imp(deli->buf, deli->len, src1->buf, src1->len, src2->buf, src2->len);
+    return ppe_cs_join_2_imp(deli->buf, deli->len, s1->buf, s1->len, s2->buf, s2->len);
 }
 
 PPE_API void ppe_str_destroy(ppe_string restrict str)
@@ -582,6 +592,353 @@ PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict str1, const ppe_
     }
     return strcmp(((ppe_string)str1)->buf, ((ppe_string)str2)->buf) > 0;
 }
+
+/* ==== Declaration : String Tracer ==== */
+
+/* ---- Types ---- */
+
+typedef struct PPE_STR_TRACER
+{
+    const char * pos;
+
+    struct {
+        const char * str;
+        ppe_size len;
+    } s;
+
+    struct {
+        ppe_int cnt;
+        ppe_str_position_st matches[64];
+    } d;
+} ppe_str_tracer_st;
+
+/* ---- Functions ---- */
+
+/* -- Internals -- */
+
+static ppe_int ppe_stc_find_imp(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len)
+{
+    const char pos = NULL;
+    ppe_size rem = 0;
+
+    assert(trc->pos > trc->s.str);
+
+    if (trc->d.cnt == 64) {
+        ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+        return -1;
+    }
+    
+    rem = trc->s.len - (trc->pos - trc->s.str);
+    if (rem < len) return 0;
+
+    pos = memchr(trc->pos, sub[0], rem);
+    if (! pos || memcmp(pos, sub, len) != 0) return 0;
+
+    trc->d.matches[trc->d.cnt].str = pos;
+    trc->d.matches[trc->d.cnt].len = len;
+    trc->d.cnt += 1;
+
+    trc->pos = pos + len;
+    return 1;
+}
+
+/* -- Create & Destroy -- */
+
+PPE_API ppe_str_tracer ppe_stc_create_for_text(const char * restrict str, const ppe_size len)
+{
+    ppe_tracer new_trc = NULL;
+
+    if (! ppe_str_is_valid(str)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    new_trc = ppe_mp_calloc(1, sizeof(ppe_tracer_st));
+    if (! new_trc) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    new_trc->s.str = str;
+    new_trc->s.len = len;
+
+    new_trc->pos = new_trc->s.str;
+    return new_trc;
+}
+
+PPE_API ppe_str_tracer ppe_stc_create(const ppe_string restrict str)
+{
+    ppe_tracer new_trc = NULL;
+
+    if (! ppe_str_is_valid(str)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    new_trc = ppe_mp_calloc(1, sizeof(ppe_tracer_st));
+    if (! new_trc) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    new_trc->s.str = str->buf;
+    new_trc->s.len = str->len;
+
+    new_trc->pos = new_trc->s.str;
+    return new_trc;
+}
+
+PPE_API ppe_bool ppe_stc_reset_for_text(ppe_str_tracer restrict trc, const char * restrict str, const ppe_size len)
+{
+    if (! trc || ! ppe_str_is_valid(str)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    memset(&trc->d, 0, sizeof(trc->d));
+    trc->s.str = str;
+    trc->s.len = len;
+
+    trc->pos = trc->s.str;
+    return ppe_true;
+}
+
+PPE_API ppe_bool ppe_stc_reset(ppe_str_tracer restrict trc, const ppe_string restrict str)
+{
+    if (! trc || ! ppe_str_is_valid(str)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    memset(&trc->d, 0, sizeof(trc->d));
+
+    trc->s.str = str->buf;
+    trc->s.len = str->len;
+
+    trc->pos = trc->s.str;
+    return ppe_true;
+}
+
+PPE_API void ppe_stc_destroy(ppe_str_tracer restrict trc)
+{
+    if (trc) ppe_mp_free(trc);
+}
+
+/* -- Finding -- */
+
+PPE_API ppe_int ppe_stc_find_next_str(ppe_str_tracer restrict trc, const ppe_string restrict sub)
+{
+    if (! trc || ! ppe_str_is_valid(sub) || sub->len == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+    return ppe_stc_find_imp(trc, sub->buf, sub->len);
+}
+
+PPE_API ppe_int ppe_stc_find_next_text(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len)
+{
+    if (! trc || ! ppe_str_is_valid(sub) || len == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+    return ppe_stc_find_imp(trc, sub, len);
+}
+
+PPE_API ppe_int ppe_stc_find_str(ppe_str_tracer restrict trc, const ppe_string restrict sub, const ppe_uint first_n)
+{
+    ppe_int ret = 0;
+    ppe_int cnt = 0;
+    ppe_uint i = 0;
+    ppe_uint n = 0;
+
+    if (! trc || ! ppe_str_is_valid(sub) || sub->len == 0 || first_n == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+
+    n = (sizeof(trc->d.matches) / sizeof(trc->d.matches[0])) - trc->d.cnt;
+    if (first_n < n) n = first_n;
+
+    for (i = 0; i < n; i += 1) {
+        ret = ppe_stc_find_imp(trc, sub->buf, sub->len);
+        if (ret <= 0) return cnt;
+        cnt += 1;
+    }
+    return cnt;
+}
+
+PPE_API ppe_int ppe_stc_find_text(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len, const ppe_uint first_n)
+{
+    ppe_int ret = 0;
+    ppe_int cnt = 0;
+    ppe_uint i = 0;
+    ppe_uint n = 0;
+
+    if (! trc || ! ppe_str_is_valid(sub) || len == 0 || first_n == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+
+    n = (sizeof(trc->d.matches) / sizeof(trc->d.matches[0])) - trc->d.cnt;
+    if (first_n < n) n = first_n;
+
+    for (i = 0; i < n; i += 1) {
+        ret = ppe_stc_find_imp(trc, sub, len);
+        if (ret <= 0) return cnt;
+        cnt += 1;
+    }
+    return cnt;
+}
+
+/* PPE_API extern ppe_int ppe_stc_find_matches(ppe_str_tracer restrict trc, const ppe_regex restrict re, const ppe_uint first_n); */
+/* PPE_API extern ppe_int ppe_stc_find_next_match(ppe_str_tracer restrict trc, const ppe_regex restrict re); */
+
+/* -- Slice & Split -- */
+
+PPE_API ppe_string ppe_stc_slice(ppe_str_tracer restrict trc, const ppe_int idx)
+{
+    if (! trc || idx < 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (trc->d.cnt == 0 || idx >= trc->d.cnt) {
+        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
+        return NULL;
+    }
+    return ppe_cs_clone(trc->d.matches[idx].str, trc->d.matches[idx].len);
+}
+
+PPE_API ppe_string * ppe_stc_slice_all(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_int * restrict done_cnt)
+{
+    ppe_string * arr = NULL;
+    ppe_int i = 0;
+    ppe_int n = 0;
+
+    if (! trc || idx < 0 || cnt <= 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (trc->d.cnt == 0 || idx >= trc->d.cnt) {
+        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
+        return NULL;
+    }
+
+    n = trc->d.cnt - idx;
+    if (cnt < n) n = cnt;
+
+    arr = (ppe_string *) ppe_mp_calloc(n + 1, sizeof(ppe_string));
+    if (! arr) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    for (i = 0; i < n; i += 1) {
+        arr[i] = ppe_cs_clone(trc->d.matches[idx + i].str, trc->d.matches[idx + i].len);
+        if (! arr[i]) {
+            while (--i >= 0) ppe_str_destroy(arr[i]);
+            ppe_mp_free(arr);
+            return NULL;
+        }
+    }
+
+    if (done_cnt) *done_cnt = n;
+    return arr;
+}
+
+static void ppe_stc_locate_section(ppe_str_tracer restrict trc, const ppe_int idx, const char ** restrict str, ppe_size * restrict len)
+{
+    if (idx == 0) {
+        *str = trc->s.str;
+        *len = trc->d.matches[0].str - trc->s.str;
+    } else if (idx == trc->d.cnt) {
+        *str = trc->d.matches[idx - 1].str + trc->d.matches[idx - 1].len;
+        *len = trc->len - (trc->d.matches[idx - 1].str - trc->s.str) - trc->d.matches[idx - 1].len;
+    } else {
+        *len = trc->d.matches[idx - 1] - trc->d.matches[idx].str - trc->d.matches[idx - 1].len;
+        *str = trc->d.matches[idx].str - len;
+    }
+}
+
+PPE_API ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_int idx)
+{
+    const char * str = NULL;
+    ppe_size len = 0;
+
+    if (! trc || idx < 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (trc->d.cnt == 0 || idx > trc->d.cnt) {
+        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
+        return NULL;
+    }
+
+    ppe_stc_locate_section(trc, idx, &str, &len);
+    return ppe_cs_clone(str, len);
+}
+
+PPE_API ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_int * restrict done_cnt)
+{
+    ppe_string * arr = NULL;
+    const char * str = NULL;
+    ppe_size len = 0;
+    ppe_int i = 0;
+    ppe_int n = 0;
+
+    if (! trc || idx < 0 || cnt <= 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (trc->d.cnt == 0 || idx > trc->d.cnt) {
+        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
+        return NULL;
+    }
+
+    n = trc->d.cnt - idx + 1;
+    if (cnt < n) n = cnt;
+
+    arr = (ppe_string *) ppe_mp_calloc(n + 1, sizeof(ppe_string));
+    if (! arr) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    ppe_stc_locate_section(trc, idx, &str, &len);
+    while (1) {
+        arr[i] = ppe_cs_clone(str, len);
+        if (! arr[i]) {
+            while (--i >= 0) ppe_str_destroy(arr[i]);
+            ppe_mp_free(arr);
+            return NULL;
+        }
+
+        if (++i == n) break;
+
+        str += len + trc->d.matches[idx + i - 1].len;
+        len = (idx + i < trc->d.cnt) ? (trc->d.matches[idx + i].str - str) : ((trc->s.str + trc->s.len) - str);
+    }
+
+    if (done_cnt) *done_cnt = n;
+    return arr;
+}
+
+/* -- Property -- */
+
+PPE_API ppe_int ppe_stc_count(ppe_str_tracer restrict trc)
+{
+    if (! trc) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    return trc->d.cnt;
+}
+
+/* -- Operations -- */
+
+/* PPE_API extern ppe_bool ppe_stc_replace_with_str(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_string restrict str); */
+/* PPE_API extern ppe_bool ppe_stc_replace_with_text(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const char * restrict str, const ppe_size len); */
+/* PPE_API extern ppe_bool ppe_stc_remove(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt); */
+
+/* PPE_API extern ppe_string ppe_stc_operate(ppe_str_tracer restrict trc); */
 
 /* ==== Declaration : String Joiner ==== */
 
