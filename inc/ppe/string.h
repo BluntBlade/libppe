@@ -278,17 +278,19 @@ PPE_API extern ppe_bool ppe_stc_continue(ppe_str_tracer restrict trc);
 PPE_API extern ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_uint idx);
 PPE_API extern ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_uint * restrict n);
 
+/* -- Replace -- */
+
+PPE_API extern ppe_string ppe_stc_replace_by_joiner(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_uint n, ppe_str_joiner restrict jnr);
+PPE_API extern ppe_string ppe_stc_replace_with_cstr(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_uint n, const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_string ppe_stc_replace(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_int cnt, const ppe_string restrict s);
+
+/* -- Remove -- */
+
+PPE_API extern ppe_string ppe_stc_remove(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_uint n);
+
 /* -- Property -- */
 
 PPE_API extern ppe_int ppe_stc_count(ppe_str_tracer restrict trc);
-
-/* -- Operations -- */
-
-/* PPE_API extern ppe_bool ppe_stc_replace_with_str(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_string restrict str); */
-/* PPE_API extern ppe_bool ppe_stc_replace_with_text(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const char * restrict str, const ppe_size len); */
-/* PPE_API extern ppe_bool ppe_stc_remove(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt); */
-
-/* PPE_API extern ppe_string ppe_stc_operate(ppe_str_tracer restrict trc); */
 
 /* ==== Declaration : String Joiner ==== */
 
