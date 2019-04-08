@@ -50,9 +50,8 @@ PPE_API extern ppe_string ppe_cs_clone(const ppe_char * restrict src, const ppe_
 
 /* split */
 
-PPE_API extern ppe_string * ppe_cs_split(const char * restrict deli, const ppe_size deli_len, const ppe_string restrict str, ppe_uint * restrict n);
-PPE_API extern ppe_string * ppe_cs_split_cstr(const char * restrict deli, const ppe_size deli_len, const char * restrict str, ppe_uint * restrict n);
-PPE_API extern ppe_string * ppe_cs_split_text(const char * restrict deli, const ppe_size deli_len, const char * restrict str, const ppe_size str_len, ppe_uint * restrict n);
+PPE_API extern ppe_string * ppe_cs_split(const char * restrict d, const ppe_size dsz, const ppe_string restrict s, ppe_uint * restrict n);
+PPE_API extern ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe_size dsz, const char * restrict s, const ppe_size sz, ppe_uint * restrict n);
 
 /* join */
 
@@ -260,29 +259,24 @@ typedef struct ppe_str_tracer_st * ppe_str_tracer;
 
 /* -- Create & Destroy -- */
 
-PPE_API extern ppe_str_tracer ppe_stc_create_for_text(const char * restrict str, const ppe_size len);
-PPE_API extern ppe_str_tracer ppe_stc_create(const ppe_string restrict str);
-PPE_API extern ppe_bool ppe_stc_reset_for_text(ppe_str_tracer restrict trc, const char * restrict str, const ppe_size len);
-PPE_API extern ppe_bool ppe_stc_reset(ppe_str_tracer restrict trc, const ppe_string restrict str);
+PPE_API extern ppe_str_tracer ppe_stc_create(const ppe_string restrict s);
+PPE_API extern ppe_str_tracer ppe_stc_create_for_cstr(const char * restrict s, const ppe_size sz);
+
+PPE_API extern ppe_bool ppe_stc_reset(ppe_str_tracer restrict trc, const ppe_string restrict s);
+PPE_API extern ppe_bool ppe_stc_reset_for_cstr(ppe_str_tracer restrict trc, const char * restrict s, const ppe_size sz);
+
 PPE_API extern void ppe_stc_destroy(ppe_str_tracer restrict trc);
 
 /* -- Finding -- */
 
-PPE_API extern ppe_int ppe_stc_find_str(ppe_str_tracer restrict trc, const ppe_string restrict sub, const ppe_uint first_n);
-PPE_API extern ppe_int ppe_stc_find_text(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len, const ppe_uint first_n);
-/* PPE_API extern ppe_int ppe_stc_find_matches(ppe_str_tracer restrict trc, const ppe_regex restrict re, const ppe_uint first_n); */
+PPE_API extern ppe_int ppe_stc_find(ppe_str_tracer restrict trc, const ppe_string restrict s, const ppe_uint n);
+PPE_API extern ppe_int ppe_stc_find_cstr(ppe_str_tracer restrict trc, const char * restrict s, const ppe_size sz, const ppe_uint n);
+PPE_API extern ppe_bool ppe_stc_continue(ppe_str_tracer restrict trc);
 
-PPE_API extern ppe_int ppe_stc_find_next_str(ppe_str_tracer restrict trc, const ppe_string restrict sub);
-PPE_API extern ppe_int ppe_stc_find_next_text(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len);
-/* PPE_API extern ppe_int ppe_stc_find_next_match(ppe_str_tracer restrict trc, const ppe_regex restrict re); */
+/* -- Split -- */
 
-/* -- Slice & Split -- */
-
-PPE_API extern ppe_string ppe_stc_slice(ppe_str_tracer restrict trc, const ppe_int idx);
-PPE_API extern ppe_string * ppe_stc_slice_all(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_int * restrict done_cnt);
-
-PPE_API extern ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_int idx);
-PPE_API extern ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_int * restrict done_cnt);
+PPE_API extern ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_uint idx);
+PPE_API extern ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_uint * restrict n);
 
 /* -- Property -- */
 
@@ -295,23 +289,6 @@ PPE_API extern ppe_int ppe_stc_count(ppe_str_tracer restrict trc);
 /* PPE_API extern ppe_bool ppe_stc_remove(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt); */
 
 /* PPE_API extern ppe_string ppe_stc_operate(ppe_str_tracer restrict trc); */
-
-/* ---- Wrappers ---- */
-
-static inline ppe_str_tracer ppe_stc_create_for_cstr(const char * restrict str)
-{
-    return ppe_stc_create_for_text(str, PPE_STR_DETECT_LENGTH);
-}
-
-static inline ppe_str_tracer ppe_stc_reset_for_cstr(const char * restrict str)
-{
-    return ppe_stc_reset_for_text(str, PPE_STR_DETECT_LENGTH);
-}
-
-static inline ppe_uint ppe_stc_find_cstr(const char * restrict str, const ppe_bool all)
-{
-    return ppe_stc_find_text(str, PPE_STR_DETECT_LENGTH, all);
-}
 
 /* ==== Declaration : String Joiner ==== */
 

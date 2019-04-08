@@ -8,14 +8,6 @@ extern "C"
 
 /* ==== Declaration : String Common ==== */
 
-/* ---- Types ---- */
-
-typedef struct PPE_STR_POSITION
-{
-    const char * pos;
-    ppe_size len;
-} ppe_str_position_st, *ppe_str_position;
-
 /* ==== Declaration : String ==== */
 
 /* ---- Types ---- */
@@ -69,6 +61,18 @@ static ppe_string_st str_empty_s = { 0, {""} };
 /* ---- Functions ---- */
 
 /* -- Internals -- */
+
+/* split */
+
+PPE_API ppe_string * ppe_cs_split(const char * restrict d, const ppe_size dsz, const ppe_string restrict s, ppe_uint * restrict n)
+{
+}
+
+PPE_API extern ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe_size dsz, const char * restrict s, const ppe_size sz, ppe_uint * restrict n)
+{
+}
+
+/* join */
 
 static ppe_string ppe_cs_join_2_imp(const char * restrict deli, ppe_size deli_len, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
@@ -601,54 +605,23 @@ typedef struct PPE_STR_TRACER
 {
     const char * pos;
 
-    struct {
-        const char * str;
-        ppe_size len;
-    } s;
+    ppe_text_st s;
 
     struct {
-        ppe_int cnt;
-        ppe_str_position_st matches[64];
+        ppe_uint cnt;
+        ppe_text_st matches[64];
     } d;
 } ppe_str_tracer_st;
 
 /* ---- Functions ---- */
 
-/* -- Internals -- */
-
-static ppe_int ppe_stc_find_imp(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len)
-{
-    const char pos = NULL;
-    ppe_size rem = 0;
-
-    assert(trc->pos > trc->s.str);
-
-    if (trc->d.cnt == 64) {
-        ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
-        return -1;
-    }
-    
-    rem = trc->s.len - (trc->pos - trc->s.str);
-    if (rem < len) return 0;
-
-    pos = memchr(trc->pos, sub[0], rem);
-    if (! pos || memcmp(pos, sub, len) != 0) return 0;
-
-    trc->d.matches[trc->d.cnt].str = pos;
-    trc->d.matches[trc->d.cnt].len = len;
-    trc->d.cnt += 1;
-
-    trc->pos = pos + len;
-    return 1;
-}
-
 /* -- Create & Destroy -- */
 
-PPE_API ppe_str_tracer ppe_stc_create_for_text(const char * restrict str, const ppe_size len)
+PPE_API ppe_str_tracer ppe_stc_create(const ppe_string restrict s)
 {
     ppe_tracer new_trc = NULL;
 
-    if (! ppe_str_is_valid(str)) {
+    if (! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -659,18 +632,18 @@ PPE_API ppe_str_tracer ppe_stc_create_for_text(const char * restrict str, const 
         return NULL;
     }
 
-    new_trc->s.str = str;
-    new_trc->s.len = len;
+    new_trc->s.buf = s->buf;
+    new_trc->s.len = s->len;
 
-    new_trc->pos = new_trc->s.str;
+    new_trc->pos = new_trc->s.buf;
     return new_trc;
 }
 
-PPE_API ppe_str_tracer ppe_stc_create(const ppe_string restrict str)
+PPE_API ppe_str_tracer ppe_stc_create_for_cstr(const char * restrict s, const ppe_size sz)
 {
     ppe_tracer new_trc = NULL;
 
-    if (! ppe_str_is_valid(str)) {
+    if (! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -681,40 +654,42 @@ PPE_API ppe_str_tracer ppe_stc_create(const ppe_string restrict str)
         return NULL;
     }
 
-    new_trc->s.str = str->buf;
-    new_trc->s.len = str->len;
+    new_trc->s.buf = s;
+    new_trc->s.len = sz;
 
-    new_trc->pos = new_trc->s.str;
+    new_trc->pos = new_trc->s.buf;
     return new_trc;
 }
 
-PPE_API ppe_bool ppe_stc_reset_for_text(ppe_str_tracer restrict trc, const char * restrict str, const ppe_size len)
+PPE_API ppe_bool ppe_stc_reset(ppe_str_tracer restrict trc, const ppe_string restrict s)
 {
-    if (! trc || ! ppe_str_is_valid(str)) {
+    if (! trc || ! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
 
-    memset(&trc->d, 0, sizeof(trc->d));
-    trc->s.str = str;
-    trc->s.len = len;
+    memset(&trc, 0, sizeof(trc));
 
-    trc->pos = trc->s.str;
+    trc->s.buf = s->buf;
+    trc->s.len = s->len;
+
+    trc->pos = trc->s.buf;
     return ppe_true;
 }
 
-PPE_API ppe_bool ppe_stc_reset(ppe_str_tracer restrict trc, const ppe_string restrict str)
+PPE_API ppe_bool ppe_stc_reset_for_cstr(ppe_str_tracer restrict trc, const char * restrict s, const ppe_size sz)
 {
-    if (! trc || ! ppe_str_is_valid(str)) {
+    if (! trc || ! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
+
     memset(&trc->d, 0, sizeof(trc->d));
 
-    trc->s.str = str->buf;
-    trc->s.len = str->len;
+    trc->s.buf = s;
+    trc->s.len = sz;
 
-    trc->pos = trc->s.str;
+    trc->pos = trc->s.buf;
     return ppe_true;
 }
 
@@ -724,146 +699,117 @@ PPE_API void ppe_stc_destroy(ppe_str_tracer restrict trc)
 }
 
 /* -- Finding -- */
-
-PPE_API ppe_int ppe_stc_find_next_str(ppe_str_tracer restrict trc, const ppe_string restrict sub)
+static ppe_bool ppe_stc_find_imp(ppe_str_tracer restrict trc, const char * restrict s, const ppe_size sz)
 {
-    if (! trc || ! ppe_str_is_valid(sub) || sub->len == 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
-    }
-    return ppe_stc_find_imp(trc, sub->buf, sub->len);
-}
+    const char * p = NULL;
+    const char * e = NULL;
+    ppe_size r = 0;
 
-PPE_API ppe_int ppe_stc_find_next_text(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len)
-{
-    if (! trc || ! ppe_str_is_valid(sub) || len == 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
-    }
-    return ppe_stc_find_imp(trc, sub, len);
-}
+    assert(trc->pos > trc->s.buf);
 
-PPE_API ppe_int ppe_stc_find_str(ppe_str_tracer restrict trc, const ppe_string restrict sub, const ppe_uint first_n)
-{
-    ppe_int ret = 0;
-    ppe_int cnt = 0;
-    ppe_uint i = 0;
-    ppe_uint n = 0;
-
-    if (! trc || ! ppe_str_is_valid(sub) || sub->len == 0 || first_n == 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+    r = trc->s.len - (trc->pos - trc->s.buf);
+    if (r < sz) {
+        /* The part to search of the string is shorter than the target substring. */
+        return ppe_false;
     }
 
-    n = (sizeof(trc->d.matches) / sizeof(trc->d.matches[0])) - trc->d.cnt;
-    if (first_n < n) n = first_n;
+    if (sz == 1) {
+        if ((p = memchr(trc->poc, s[0], r))) {
+            trc->d.matches[trc->d.cnt].buf = p;
+            trc->d.matches[trc->d.cnt].len = sz;
+            trc->d.cnt += 1;
 
-    for (i = 0; i < n; i += 1) {
-        ret = ppe_stc_find_imp(trc, sub->buf, sub->len);
-        if (ret <= 0) return cnt;
-        cnt += 1;
-    }
-    return cnt;
-}
-
-PPE_API ppe_int ppe_stc_find_text(ppe_str_tracer restrict trc, const char * restrict sub, const ppe_size len, const ppe_uint first_n)
-{
-    ppe_int ret = 0;
-    ppe_int cnt = 0;
-    ppe_uint i = 0;
-    ppe_uint n = 0;
-
-    if (! trc || ! ppe_str_is_valid(sub) || len == 0 || first_n == 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
-    }
-
-    n = (sizeof(trc->d.matches) / sizeof(trc->d.matches[0])) - trc->d.cnt;
-    if (first_n < n) n = first_n;
-
-    for (i = 0; i < n; i += 1) {
-        ret = ppe_stc_find_imp(trc, sub, len);
-        if (ret <= 0) return cnt;
-        cnt += 1;
-    }
-    return cnt;
-}
-
-/* PPE_API extern ppe_int ppe_stc_find_matches(ppe_str_tracer restrict trc, const ppe_regex restrict re, const ppe_uint first_n); */
-/* PPE_API extern ppe_int ppe_stc_find_next_match(ppe_str_tracer restrict trc, const ppe_regex restrict re); */
-
-/* -- Slice & Split -- */
-
-PPE_API ppe_string ppe_stc_slice(ppe_str_tracer restrict trc, const ppe_int idx)
-{
-    if (! trc || idx < 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-    if (trc->d.cnt == 0 || idx >= trc->d.cnt) {
-        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
-        return NULL;
-    }
-    return ppe_cs_clone(trc->d.matches[idx].str, trc->d.matches[idx].len);
-}
-
-PPE_API ppe_string * ppe_stc_slice_all(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_int * restrict done_cnt)
-{
-    ppe_string * arr = NULL;
-    ppe_int i = 0;
-    ppe_int n = 0;
-
-    if (! trc || idx < 0 || cnt <= 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-    if (trc->d.cnt == 0 || idx >= trc->d.cnt) {
-        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
-        return NULL;
-    }
-
-    n = trc->d.cnt - idx;
-    if (cnt < n) n = cnt;
-
-    arr = (ppe_string *) ppe_mp_calloc(n + 1, sizeof(ppe_string));
-    if (! arr) {
-        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-        return NULL;
-    }
-
-    for (i = 0; i < n; i += 1) {
-        arr[i] = ppe_cs_clone(trc->d.matches[idx + i].str, trc->d.matches[idx + i].len);
-        if (! arr[i]) {
-            while (--i >= 0) ppe_str_destroy(arr[i]);
-            ppe_mp_free(arr);
-            return NULL;
+            trc->pos = p + sz; /* Stop at the start point of the next search. */
+            return ppe_true;
         }
+
+        return ppe_false;
     }
 
-    if (done_cnt) *done_cnt = n;
-    return arr;
+    p = trc->pos;
+    e = trc->pos + r;
+    while (p < e) {
+        p = memchr(p, s[0], r);
+        if (! p || memcmp(p, s, sz) != 0) {
+            p++;
+            continue;
+        }
+
+        trc->d.matches[trc->d.cnt].buf = p;
+        trc->d.matches[trc->d.cnt].len = sz;
+        trc->d.cnt += 1;
+
+        trc->pos = p + sz; /* Stop at the start point of the next search. */
+        return ppe_true;
+    } /* while */
+
+    return ppe_false;
 }
 
-static void ppe_stc_locate_section(ppe_str_tracer restrict trc, const ppe_int idx, const char ** restrict str, ppe_size * restrict len)
+PPE_API ppe_int ppe_stc_find_cstr(ppe_str_tracer restrict trc, const char * restrict s, const ppe_size sz, const ppe_uint n)
+{
+    ppe_int c = 0;
+    ppe_uint i = 0;
+    ppe_uint max = 0;
+
+    if (! trc || ! ppe_str_is_valid(s) || sz == 0 || n == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+
+    max = (sizeof(trc->d.matches) / sizeof(trc->d.matches[0])) - trc->d.cnt;
+    if (max == 0) {
+        ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+        return -1;
+    }
+
+    if (n < max) max = n;
+    for (i = 0; i < max && ppe_stc_find_imp(trc, s, sz); ++i, ++c);
+    return c;
+}
+
+PPE_API ppe_int ppe_stc_find(ppe_str_tracer restrict trc, const ppe_string restrict s, const ppe_uint n)
+{
+    if (! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+    return ppe_stc_find_cstr(trc, s->buf, s->len, n);
+}
+
+PPE_API ppe_bool ppe_stc_continue(ppe_str_tracer restrict trc)
+{
+    if (! trc) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    memset(&trc->d, 0, sizeof(trc->d));
+    return ppe_true;
+}
+
+/* -- Split -- */
+
+static void ppe_stc_locate_section(ppe_str_tracer restrict trc, const ppe_int idx, const char ** restrict s, ppe_size * restrict sz)
 {
     if (idx == 0) {
-        *str = trc->s.str;
-        *len = trc->d.matches[0].str - trc->s.str;
+        *s = trc->s.buf;
+        *sz = trc->d.matches[0].buf - trc->s.buf;
     } else if (idx == trc->d.cnt) {
-        *str = trc->d.matches[idx - 1].str + trc->d.matches[idx - 1].len;
-        *len = trc->len - (trc->d.matches[idx - 1].str - trc->s.str) - trc->d.matches[idx - 1].len;
+        *s = trc->d.matches[idx - 1].buf + trc->d.matches[idx - 1].len;
+        *sz = trc->len - (trc->d.matches[idx - 1].buf - trc->s.buf) - trc->d.matches[idx - 1].len;
     } else {
-        *len = trc->d.matches[idx - 1] - trc->d.matches[idx].str - trc->d.matches[idx - 1].len;
-        *str = trc->d.matches[idx].str - len;
+        *s = trc->d.matches[idx - 1].buf + trc->d.matches[idx - 1].len;
+        *sz = trc->d.matches[idx].buf - *s;
     }
 }
 
-PPE_API ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_int idx)
+PPE_API ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_uint idx)
 {
-    const char * str = NULL;
-    ppe_size len = 0;
+    const char * s = NULL;
+    ppe_size sz = 0;
 
-    if (! trc || idx < 0) {
+    if (! trc) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -872,53 +818,50 @@ PPE_API ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_int idx)
         return NULL;
     }
 
-    ppe_stc_locate_section(trc, idx, &str, &len);
-    return ppe_cs_clone(str, len);
+    ppe_stc_locate_section(trc, idx, &s, &sz);
+    return ppe_cs_clone(s, sz);
 }
 
-PPE_API ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_int cnt, const ppe_int * restrict done_cnt)
+PPE_API ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, const ppe_int idx, const ppe_uint * restrict n)
 {
-    ppe_string * arr = NULL;
-    const char * str = NULL;
-    ppe_size len = 0;
-    ppe_int i = 0;
-    ppe_int n = 0;
+    ppe_string * a = NULL;
+    const char * s = NULL;
+    ppe_size sz = 0;
+    ppe_uint i = 0;
+    ppe_uint max = 0;
 
-    if (! trc || idx < 0 || cnt <= 0) {
+    if (! trc) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (trc->d.cnt == 0 || idx > trc->d.cnt) {
+    if (trc->d.cnt == 0 || trc->d.cnt < idx) {
         ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
         return NULL;
     }
 
-    n = trc->d.cnt - idx + 1;
-    if (cnt < n) n = cnt;
+    max = trc->d.cnt - idx;
+    if (n && *n < max) max = *n;
 
-    arr = (ppe_string *) ppe_mp_calloc(n + 1, sizeof(ppe_string));
-    if (! arr) {
+    a = (ppe_string *) ppe_mp_calloc(max + 1, sizeof(ppe_string));
+    if (! a) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
 
-    ppe_stc_locate_section(trc, idx, &str, &len);
-    while (1) {
-        arr[i] = ppe_cs_clone(str, len);
-        if (! arr[i]) {
-            while (--i >= 0) ppe_str_destroy(arr[i]);
-            ppe_mp_free(arr);
+    for (i = 0; i < max; ++i) {
+        ppe_stc_locate_section(trc, idx + i, &s, &sz);
+        a[i] = ppe_cs_clone(s, sz);
+        if (! a[i]) {
+            while (i > 0) {
+                ppe_str_destroy(a[--i]);
+            }
+            ppe_mp_free(a);
             return NULL;
         }
-
-        if (++i == n) break;
-
-        str += len + trc->d.matches[idx + i - 1].len;
-        len = (idx + i < trc->d.cnt) ? (trc->d.matches[idx + i].str - str) : ((trc->s.str + trc->s.len) - str);
     }
 
-    if (done_cnt) *done_cnt = n;
-    return arr;
+    if (n) *n = i;
+    return a;
 }
 
 /* -- Property -- */
