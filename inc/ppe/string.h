@@ -72,9 +72,8 @@ PPE_API extern ppe_string ppe_str_clone(const ppe_string restrict src);
 
 /* split */
 
-PPE_API extern ppe_string * ppe_str_split(const ppe_string restrict deli, const ppe_string restrict str, ppe_uint * restrict n);
-PPE_API extern ppe_string * ppe_str_split_cstr(const ppe_string restrict deli, const char * restrict str, ppe_uint * restrict n);
-PPE_API extern ppe_string * ppe_str_split_text(const ppe_string restrict deli, const char * restrict str, const ppe_size str_len, ppe_uint * restrict n);
+PPE_API extern ppe_string * ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, ppe_uint * restrict n);
+PPE_API extern ppe_string * ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_size sz, ppe_uint * restrict n);
 
 /* join */
 
@@ -275,8 +274,8 @@ PPE_API extern ppe_bool ppe_stc_continue(ppe_str_tracer restrict trc);
 
 /* -- Split -- */
 
-PPE_API extern ppe_string ppe_stc_split(ppe_str_tracer restrict trc, const ppe_uint idx);
-PPE_API extern ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_uint * restrict n);
+PPE_API extern ppe_string ppe_stc_split_one(ppe_str_tracer restrict trc, const ppe_uint idx);
+PPE_API extern ppe_string * ppe_stc_split(ppe_str_tracer restrict trc, const ppe_uint idx, const ppe_uint * restrict n);
 
 /* -- Replace -- */
 
@@ -292,6 +291,23 @@ PPE_API extern ppe_string ppe_stc_remove(ppe_str_tracer restrict trc, const ppe_
 
 PPE_API extern ppe_int ppe_stc_count(ppe_str_tracer restrict trc);
 
+/* -- Wrapper -- */
+static inline ppe_string * ppe_stc_split_all(ppe_str_tracer restrict trc, ppe_uint * restrict cnt)
+{
+    ppe_uint c = ppe_stc_count(trc) + 1;
+    ppe_string * arr = ppe_stc_split(trc, 0, &c);
+    if (arr && cnt) {
+        *cnt = c;
+    }
+    return arr;
+}
+
+static inline ppe_int ppe_stc_last_index(ppe_str_tracer restrict trc)
+{
+    ppe_int idx = ppe_stc_count(trc);
+    return (idx > 0) ? idx - 1 : idx;
+}
+
 /* ==== Declaration : String Joiner ==== */
 
 /* ---- Types ---- */
@@ -303,13 +319,46 @@ typedef struct ppe_str_joiner_st * ppe_str_joiner;
 
 /* -- Create & Destroy -- */
 
-PPE_API extern ppe_str_joiner ppe_sjn_create(const char * restrict deli);
+PPE_API extern ppe_str_joiner ppe_sjn_create_from_cstr(const char * restrict d);
+PPE_API extern ppe_str_joiner ppe_sjn_create_from(const char * restrict d);
+
 PPE_API extern void ppe_sjn_destroy(ppe_str_joiner restrict jnr);
 PPE_API extern void ppe_sjn_reset(ppe_str_joiner restrict jnr);
 
-PPE_API extern ppe_bool ppe_sjn_append(ppe_str_joiner restrict jnr, const ppe_string restrict src);
-PPE_API extern ppe_bool ppe_sjn_append_cstr(ppe_str_joiner restrict jnr, const char * restrict src, const ppe_size len);
-PPE_API extern ppe_string ppe_sjn_join(ppe_str_joiner restrict jnr, ppe_bool reset);
+PPE_API extern ppe_bool ppe_sjn_refer_to_cstr(ppe_str_joiner restrict jnr, const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_bool ppe_sjn_refer_to(ppe_str_joiner restrict jnr, const ppe_string restrict s);
+
+PPE_API extern ppe_bool ppe_sjn_copy_from_cstr(ppe_str_joiner restrict jnr, const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_bool ppe_sjn_copy_from(ppe_str_joiner restrict jnr, const ppe_string restrict s);
+
+PPE_API extern ppe_string ppe_sjn_join(ppe_str_joiner restrict jnr, const ppe_bool reset);
+
+/* ==== Declaration : String Bunch ==== */
+
+/* ---- Types ---- */
+
+struct ppe_str_bunch_st;
+typedef struct ppe_str_bunch_st * ppe_str_bunch;
+
+/* ---- Functions ---- */
+
+PPE_API extern ppe_str_bunch ppe_sbc_create(void);
+PPE_API extern void ppe_sbc_destroy(ppe_str_bunch restrict bc);
+PPE_API extern void ppe_sbc_reset(ppe_str_bunch restrict bc);
+
+PPE_API extern ppe_bool ppe_sbc_refer_to_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_string restrict s);
+
+PPE_API extern ppe_bool ppe_sbc_copy_from_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string restrict s);
+
+PPE_API extern ppe_string ppe_sbc_join_by_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string restrict s);
+
+PPE_API extern ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc);
+
+PPE_API extern ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz);
+PPE_API extern ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc);
 
 #ifdef __cplusplus
 }
