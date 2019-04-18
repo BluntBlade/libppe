@@ -46,7 +46,7 @@ PPE_API extern const ppe_string ppe_str_get_empty(void);
 
 /* _cs_ series */
 
-PPE_API extern ppe_string ppe_cs_clone(const ppe_char * restrict src, const ppe_size len);
+PPE_API extern ppe_string ppe_cs_clone(const ppe_char * restrict s, const ppe_size sz);
 
 /* split */
 
@@ -307,31 +307,6 @@ static inline ppe_int ppe_stc_last_index(ppe_str_tracer restrict trc)
     ppe_int idx = ppe_stc_count(trc);
     return (idx > 0) ? idx - 1 : idx;
 }
-
-/* ==== Declaration : String Joiner ==== */
-
-/* ---- Types ---- */
-
-struct ppe_str_joiner_st;
-typedef struct ppe_str_joiner_st * ppe_str_joiner;
-
-/* ---- Functions ---- */
-
-/* -- Create & Destroy -- */
-
-PPE_API extern ppe_str_joiner ppe_sjn_create_from_cstr(const char * restrict d);
-PPE_API extern ppe_str_joiner ppe_sjn_create_from(const char * restrict d);
-
-PPE_API extern void ppe_sjn_destroy(ppe_str_joiner restrict jnr);
-PPE_API extern void ppe_sjn_reset(ppe_str_joiner restrict jnr);
-
-PPE_API extern ppe_bool ppe_sjn_refer_to_cstr(ppe_str_joiner restrict jnr, const char * restrict s, const ppe_size sz);
-PPE_API extern ppe_bool ppe_sjn_refer_to(ppe_str_joiner restrict jnr, const ppe_string restrict s);
-
-PPE_API extern ppe_bool ppe_sjn_copy_from_cstr(ppe_str_joiner restrict jnr, const char * restrict s, const ppe_size sz);
-PPE_API extern ppe_bool ppe_sjn_copy_from(ppe_str_joiner restrict jnr, const ppe_string restrict s);
-
-PPE_API extern ppe_string ppe_sjn_join(ppe_str_joiner restrict jnr, const ppe_bool reset);
 
 /* ==== Declaration : String Bunch ==== */
 
