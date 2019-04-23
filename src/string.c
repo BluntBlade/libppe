@@ -1603,20 +1603,156 @@ PPE_API ppe_bool ppe_sfd_reset_for(ppe_str_finder restrict fd, const ppe_string 
     return ppe_true;
 }
 
-PPE_API ppe_int ppe_sfd_find_component_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, const ppe_uint n, ppe_str_bunch restrict bc)
+static const char * ppe_sfd_find_imp(ppe_str_finder restrict fd, const char * restrict s, const ppe_size sz)
 {
+    const char * pos = NULL;
+    ppe_size rem = 0;
+
+    assert(fd->pos <= fd->end);
+
+    rem = fd->end - fd->pos;
+    if (rem < sz) {
+        /* The part to search of the string is shorter than the target substring. */
+        return NULL;
+    }
+
+    /* If the search failed, don't consume any characters and leave them for the next search of other substrings. */
+
+    if (sz == 1) {
+        if ((pos = memchr(fd->pos, s[0], rem))) {
+            fd->pos = pos + sz; /* Stop at the start point of the next search. */
+            return pos;
+        }
+        return NULL;
+    }
+
+    for (pos = fd->pos; sz <= rem; ++pos, --rem) {
+        pos = memchr(pos, s[0], rem);
+        if (! pos) {
+            return NULL;
+        }
+
+        if (memcmp(pos, s, sz) == 0) {
+            fd->pos = pos + sz; /* Stop at the start point of the next search. */
+            return pos;
+        }
+    } /* while */
+
+    return NULL;
 }
 
-PPE_API ppe_int ppe_sfd_find_component_by(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_uint n, ppe_str_bunch restrict bc)
+PPE_API ppe_bool ppe_sfd_find_component_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, ppe_uint * restrict n, ppe_str_bunch restrict bc)
 {
+    const char * begin = NULL;
+    const char * pos = NULL;
+    ppe_uint i = 0;
+    ppe_uint max = ~0L;
+
+    if (! fd || ! ppe_str_is_valid(s) || sz == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    if (n) {
+        if (*n == 0) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return ppe_false;
+        }
+        if(*n < max) {
+            max = *n;
+        }
+    }
+
+    for (i = 0; i < max; ++i) {
+        begin = fd->pos;
+
+        pos = ppe_sfd_find_imp(fd, s, sz);
+        if (! pos) {
+            break;
+        }
+
+        if (bc) {
+            if (! ppe_sbc_refer_to_cstr(bc, begin, pos - begin)) {
+                if (n) {
+                    *n = i;
+                }
+                return ppe_false;
+            }
+        }
+    } /* for */
+    if (n) {
+        *n = i;
+    }
+    return ppe_true;
 }
 
-PPE_API ppe_int ppe_sfd_find_substring_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, const ppe_uint n, ppe_str_bunch restrict bc)
+PPE_API ppe_bool ppe_sfd_find_component_by(ppe_str_finder restrict fd, const ppe_string restrict s, ppe_uint * restrict n, ppe_str_bunch restrict bc)
 {
+    if (! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sfd_find_component_by_cstr(fd, s->buf, s->len, n, bc);
 }
 
-PPE_API ppe_int ppe_sfd_find_substring_by(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_uint n, ppe_str_bunch restrict bc)
+PPE_API ppe_bool ppe_sfd_refer_last_component(ppe_str_finder restrict fd, ppe_str_bunch restrict bc)
 {
+    if (! fd || ! bc) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sbc_refer_to_cstr(bc, fd->pos, fd->end - fd->pos);
+}
+
+PPE_API ppe_bool ppe_sfd_find_substring_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, ppe_uint * restrict n, ppe_str_bunch restrict bc)
+{
+    const char * pos = NULL;
+    ppe_uint i = 0;
+    ppe_uint max = ~0L;
+
+    if (! fd || ! ppe_str_is_valid(s) || sz == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    if (n) {
+        if (*n == 0) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return ppe_false;
+        }
+        if(*n < max) {
+            max = *n;
+        }
+    }
+
+    for (i = 0; i < max; ++i) {
+        pos = ppe_sfd_find_imp(fd, s, sz);
+        if (! pos) {
+            break;
+        }
+
+        if (bc) {
+            if (! ppe_sbc_refer_to_cstr(bc, pos, sz)) {
+                if (n) {
+                    *n = i;
+                }
+                return ppe_false;
+            }
+        }
+    } /* for */
+    if (n) {
+        *n = i;
+    }
+    return ppe_true;
+}
+
+PPE_API ppe_bool ppe_sfd_find_substring_by(ppe_str_finder restrict fd, const ppe_string restrict s, ppe_uint * restrict n, ppe_str_bunch restrict bc)
+{
+    if (! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sfd_find_substring_by_cstr(fd, s->buf, s->len, n, bc);
 }
 
 #ifdef __cplusplus
