@@ -335,6 +335,28 @@ PPE_API extern ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc);
 PPE_API extern ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz);
 PPE_API extern ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc);
 
+/* ==== Declaration : String Finder ==== */
+
+/* ---- Types ---- */
+
+struct ppe_str_finder_st;
+typedef struct ppe_str_finder_st * ppe_str_finder;
+
+/* ---- Functions ---- */
+
+PPE_API extern ppe_str_finder ppe_sfd_create_for_cstr(const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_str_finder ppe_sfd_create_for(const ppe_string restrict s);
+PPE_API extern void ppe_sfd_destroy(ppe_str_finder restrict fd);
+
+PPE_API extern ppe_bool ppe_sfd_reset_for_cstr(ppe_str_finder restrict fd, const char * restrict s, const ppe_size sz);
+PPE_API extern ppe_bool ppe_sfd_reset_for(ppe_str_finder restrict fd, const ppe_string restrict s);
+
+PPE_API extern ppe_int ppe_sfd_find_component_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, const ppe_uint n, ppe_str_bunch restrict bc);
+PPE_API extern ppe_int ppe_sfd_find_component_by(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_uint n, ppe_str_bunch restrict bc);
+
+PPE_API extern ppe_int ppe_sfd_find_substring_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, const ppe_uint n, ppe_str_bunch restrict bc);
+PPE_API extern ppe_int ppe_sfd_find_substring_by(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_uint n, ppe_str_bunch restrict bc);
+
 #ifdef __cplusplus
 }
 #endif

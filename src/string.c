@@ -50,11 +50,9 @@ static ppe_string str_empty_array_s[2] = { &str_empty_s, NULL };
 
 /* ---- Functions ---- */
 
-/* -- Internals -- */
-
 /* split */
 
-PPE_API ppe_string * ppe_cs_split(const char * restrict d, const ppe_size dsz, const ppe_string restrict s, ppe_uint * restrict n)
+static ppe_string * ppe_cs_split_imp(const char * restrict d, const ppe_size dsz, const char * restrict s, const ppe_size sz, ppe_uint * restrict n)
 {
 }
 
@@ -62,51 +60,55 @@ PPE_API extern ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe
 {
 }
 
+PPE_API ppe_string * ppe_cs_split(const char * restrict d, const ppe_size dsz, const ppe_string restrict s, ppe_uint * restrict n)
+{
+}
+
 /* join */
 
-static ppe_string ppe_cs_join_2_imp(const char * restrict deli, ppe_size deli_len, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
+static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
-    ppe_string new_str = NULL;
-    ppe_size remainder = PPE_STR_MAX_LENGTH;
+    ppe_string nw = NULL;
+    ppe_size rem = PPE_STR_MAX_LENGTH;
 
-    if (sz1 > 0 && ! ppe_cs_subtract_remainder(&remainder, sz1)) {
+    if (sz1 > 0 && ! ppe_cs_subtract_remainder(&rem, sz1)) {
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
         return NULL;
     }
-    if (sz2 > 0 && ! ppe_cs_subtract_remainder(&remainder, sz2)) {
-        ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
-        return NULL;
-    }
-
-    if (remainder == PPE_STR_MAX_LENGTH) return (deli_len > 0) ? ppe_cs_clone(deli, deli_len) : &str_empty_s;
-
-    if (deli_len > 0 && ! ppe_cs_subtract_remainder(&remainder, deli_len)) {
+    if (sz2 > 0 && ! ppe_cs_subtract_remainder(&rem, sz2)) {
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
         return NULL;
     }
 
-    new_str = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + PPE_STR_MAX_LENGTH - remainder);
-    if (! new_str) {
+    if (rem == PPE_STR_MAX_LENGTH) return (dsz > 0) ? ppe_cs_clone(d, dsz) : &str_empty_s;
+
+    if (dsz > 0 && ! ppe_cs_subtract_remainder(&rem, dsz)) {
+        ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
+        return NULL;
+    }
+
+    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + PPE_STR_MAX_LENGTH - rem);
+    if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
-    new_str->len = 0;
+    nw->len = 0;
 
     if (sz1 > 0) {
-        memcpy(new_str->buf + new_str->len, s1, sz1);
-        new_str->len += sz1;
+        memcpy(nw->buf + nw->len, s1, sz1);
+        nw->len += sz1;
     }
-    if (deli_len > 0) {
-        memcpy(new_str->buf + new_str->len, deli, deli_len);
-        new_str->len += deli_len;
+    if (dsz > 0) {
+        memcpy(nw->buf + nw->len, d, dsz);
+        nw->len += dsz;
     }
     if (sz2 > 0) {
-        memcpy(new_str->buf + new_str->len, s2, sz2);
-        new_str->len += sz2;
+        memcpy(nw->buf + nw->len, s2, sz2);
+        nw->len += sz2;
     }
 
-    new_str->buf[new_str->len] = '\0';
-    return new_str;
+    nw->buf[nw->len] = '\0';
+    return nw;
 }
 
 static ppe_string ppe_cs_join_text_list_imp(const char * restrict deli, const ppe_size deli_len, ppe_text_st * restrict srcs, const ppe_uint n)
@@ -694,20 +696,471 @@ PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict str1, const ppe_
     return strcmp(((ppe_string)str1)->buf, ((ppe_string)str2)->buf) > 0;
 }
 
+
+/* ==== Definition : String Bunch ==== */
+
+/* ---- Types ---- */
+
+enum
+{
+    PPE_SBC_CSTR_REF = 0,   /* A reference to external C-style string. */
+    PPE_SBC_CSTR_DAT = 1,   /* A reference to internal C-style string holding in the buffer. */
+    PPE_SBC_STR_REF = 2     /* A reference to external string. */
+};
+
+typedef union PPE_SBC_ENTRY
+{
+    ppe_text_st t;
+    ppe_string * s;
+} ppe_sbc_entry_st, *ppe_sbc_entry;
+
+typedef struct PPE_SBC_BUFFER
+{
+    ppe_size rem;
+    char buf[1];
+} ppe_sbc_buffer_st, *ppe_sbc_buffer;
+
+typedef struct PPE_STR_BUNCH
+{
+    struct {
+        ppe_sbc_entry_st * ent;
+        ppe_uint cnt;
+        ppe_uint cap;           /* The total count of entries. */
+    } e;
+
+    struct {
+        ppe_uint * type;
+        ppe_uint cnt;
+        ppe_uint cap;           /* The total count of types. */
+    } t;
+
+    struct {
+        ppe_sbc_buffer * dat;
+        ppe_uint cnt;
+        ppe_size cap;           /* The total count of allocated buffers. */
+    } b;
+} ppe_str_bunch_st;
+
+/* ---- Functions ---- */
+
+#define PPE_SBC_BUFFER_SIZE 4096
+
+static inline void ppe_sbc_init(ppe_str_bunch restrict bc)
+{
+    memset(bc, 0, sizeof(ppe_str_bunch_st));
+    bc->b.cap = PPE_SBC_BUFFER_SIZE;
+}
+
+PPE_API ppe_str_bunch ppe_sbc_create(void)
+{
+    ppe_str_bunch bc = ppe_mp_malloc(sizeof(ppe_str_bunch_st));
+    if (! bc) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+    ppe_sbc_init(bc);
+    return bc;
+}
+
+static void ppe_sbc_clean(ppe_str_bunch restrict bc)
+{
+    while (bc->b.cap > 0) {
+        bc->b.cap -= 1;
+        ppe_mp_free(bc->b.dat[bc->b.cap]);
+    }
+    ppe_mp_free(bc->t.type);
+    ppe_mp_free(bc->e.ent);
+}
+
+PPE_API void ppe_sbc_destroy(ppe_str_bunch restrict bc)
+{
+    if (bc) {
+        ppe_sbc_clean(bc);
+        ppe_mp_free(bc);
+    }
+}
+
+PPE_API void ppe_sbc_reset(ppe_str_bunch restrict bc)
+{
+    if (bc) {
+        while (bc->b.cnt > 0) {
+            bc->b.dat[--bc->b.cnt]->rem = PPE_SBC_BUFFER_SIZE;
+        }
+        bc->t.cnt = 0;
+        bc->e.cnt = 0;
+    }
+}
+
+#define PPE_SBC_TYPE_CONTAINER_SIZE (sizeof(((ppe_sbc_bunch) 0)->t.type[0]))
+#define PPE_SBC_TYPE_CONTAINER_BITS (PPE_SBC_TYPE_CONTAINER_SIZE * 8)
+
+#define PPE_SBC_TYPE_BITS 2
+#define PPE_SBC_TYPE_COUNT_PER_CONTAINER (PPE_SBC_TYPE_CONTAINER_BITS / PPE_SBC_TYPE_BITS)
+
+static inline void ppe_sbc_set_type(ppe_str_bunch restrict bc, const ppe_uint idx, const ppe_uint type)
+{
+    ppe_uint p = idx / PPE_SBC_TYPE_COUNT_PER_CONTAINER;
+    ppe_uint q = idx % PPE_SBC_TYPE_COUNT_PER_CONTAINER;
+
+    bc->t.type[p] &= ~ (0x3 << (q * PPE_SBC_TYPE_BITS));        /* Clear bits. */
+    bc->t.type[p] |= (type & 0x3) << (q * PPE_SBC_TYPE_BITS);   /* Set bits. */
+}
+
+static ppe_bool ppe_sbc_augment_entries(ppe_str_bunch restrict bc)
+{
+    ppe_sbc_entry_st * nw = NULL;
+    ppe_uint cap = 0;
+
+    cap = (bc->e.cap > 0) ? (bc->e.cap + (bc->e.cap >> 1)) : 16; /* The new capacity is 1.5 times of the old one. */
+
+    nw = (ppe_sbc_entry_st *) ppe_mp_calloc(cap, sizeof(ppe_sbc_entry_st));
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return ppe_false;
+    }
+
+    if (bc->e.cnt > 0) {
+        memcpy(nw, bc->e.ent, bc->e.cnt * sizeof(ppe_sbc_entry_st));
+        ppe_mp_free(bc->e.ent);
+    }
+
+    bc->e.ent = nw;
+    bc->e.cap = cap;
+    return ppe_true;
+}
+
+static inline ppe_uint ppe_sbc_type_container_count(ppe_uint cap)
+{
+    cap *= 2; /* Turn to the count of bits. */
+    if (cap & (ppe_uint)(PPE_SBC_TYPE_CONTAINER_BITS - 1)) {
+        cap = (cap + PPE_SBC_TYPE_CONTAINER_BITS) & (~ (ppe_uint)(PPE_SBC_TYPE_CONTAINER_BITS - 1));
+    }
+    return cap / PPE_SBC_TYPE_CONTAINER_BITS; /* Turn back to the count of type containers. */
+}
+
+static ppe_bool ppe_sbc_augment_types(ppe_str_bunch restrict bc)
+{
+    ppe_uint * nw = NULL;
+    ppe_uint cap = 0;
+
+    cap = (bc->t.cap > 0) ? (bc->t.cap + (bc->t.cap >> 1)) : 128; /* The new capacity is 1.5 times of the old one. */
+
+    nw = (ppe_uint *) ppe_mp_calloc(ppe_sbc_type_container_count(cap), PPE_SBC_TYPE_CONTAINER_SIZE);
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return ppe_false;
+    }
+
+    if (bc->t.cnt > 0) {
+        memcpy(nw, bc->t.type, ppe_sbc_type_container_count(bc->t.cnt) * PPE_SBC_TYPE_CONTAINER_SIZE);
+        ppe_mp_free(bc->t.type);
+    }
+
+    bc->t.type = nw;
+    bc->t.cap = cap;
+    return ppe_true;
+}
+
+static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc)
+{
+    ppe_sbc_buffer * nw = NULL;
+    ppe_uint cap = 0;
+
+    if (bc->b.cnt == bc->b.cap) {
+        cap = (bc->b.cap > 0) ? (bc->b.cap + (bc->b.cap >> 1)) : 8; /* The new capacity is 1.5 times of the old one. */
+
+        nw = (ppe_sbc_buffer *) ppe_mp_calloc(cap, sizeof(ppe_sbc_buffer));
+        if (! nw) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return ppe_false;
+        }
+
+        if (bc->b.cnt > 0) {
+            memcpy(nw, bc->b.dat, bc->b.cnt * sizeof(ppe_sbc_buffer));
+            ppe_mp_free(bc->b.dat);
+        }
+
+        bc->b.dat = nw;
+        bc->b.cap = cap;
+    }
+
+    bc->bc.cnt += 1;
+    if (! bc->b.dat[bc->b.cnt]) {
+        bc->b.dat[bc->b.cnt] = (ppe_sbc_buffer) ppe_mp_malloc(PPE_SBC_BUFFER_SIZE);
+        if (! bc->b.dat[bc->b.cnt]) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            bc->bc.cnt -= 1;
+            return ppe_false;
+        }
+    }
+    bc->b.dat[bc->b.cnt]->rem = PPE_SBC_BUFFER_SIZE; /* TODO: Define a buffer size aligning to page size. */
+    return ppe_true;
+}
+
+PPE_API ppe_bool ppe_sbc_refer_to_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
+{
+    if (! bc || ! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    if (bc->e.cnt == bc->e.cap && ! ppe_sbc_augment_entries(bc)) {
+        return ppe_false;
+    }
+    if (bc->t.cnt == bc->t.cap && ! ppe_sbc_augment_types(bc)) {
+        return ppe_false;
+    }
+
+    bc->e.ent[bc->e.cnt].t.buf =  s;
+    bc->e.ent[bc->e.cnt].t.len =  sz;
+
+    ppe_sbc_set_type(bc, bc->t.cnt, PPE_SBC_CSTR_REF);
+
+    bc->e.cnt += 1;
+    bc->t.cnt += 1;
+    return ppe_true;
+}
+
+PPE_API ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_string restrict s)
+{
+    if (! bc || ! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    if (bc->e.cnt == bc->e.cap && ! ppe_sbc_augment_entries(bc)) {
+        return ppe_false;
+    }
+    if (bc->t.cnt == bc->t.cap && ! ppe_sbc_augment_types(bc)) {
+        return ppe_false;
+    }
+
+    /* TODO: Add reference counting. */
+    bc->e.ent[bc->e.cnt].s =  s;
+
+    ppe_sbc_set_type(bc, bc->t.cnt, PPE_SBC_STR_REF);
+
+    bc->e.cnt += 1;
+    bc->t.cnt += 1;
+    return ppe_true;
+}
+
+static ppe_bool ppe_sbc_copy_from_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
+{
+    if (bc->e.cnt == bc->e.cap && ! ppe_sbc_augment_entries(bc)) {
+        return ppe_false;
+    }
+    if (bc->t.cnt == bc->t.cap && ! ppe_sbc_augment_types(bc)) {
+        return ppe_false;
+    }
+    if (bc->b.cnt == 0 || bc->b.dat[bc->b.cnt - 1]->rem < sz) {
+        if (! ppe_sbc_augment_buffers(bc)) {
+            return ppe_false;
+        }
+    }
+
+    ppe_sbc_set_type(bc, bc->t.cnt, PPE_SBC_CSTR_DAT);
+
+    /* TODO: Align the start address to which copy the string. */
+    bc->e.ent[bc->e.cnt].t.buf = bc->b.dat[bc->b.cnt - 1]->buf + (PPE_SBC_BUFFER_SIZE - bc->b.dat[bc->b.cnt - 1]->rem);
+    bc->e.ent[bc->e.cnt].t.len = sz;
+    memcpy(bc->e.ent[bc->e.cnt].buf, s, sz);
+
+    bc->e.cnt += 1;
+    bc->t.cnt += 1;
+    bc->b.dat[bc->b.cnt - 1]->rem -= sz;
+    return ppe_true;
+}
+
+PPE_API ppe_bool ppe_sbc_copy_from_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
+{
+    if (! bc || ! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sbc_copy_from_imp(bc, s, sz);
+}
+
+PPE_API ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string restrict s)
+{
+    if (! bc || ! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sbc_copy_from_imp(bc, s->buf, s->len);
+}
+
+static ppe_string ppe_sbc_join_by_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
+{
+#define ppe_sbc_get_next_type(d, r, q, t) \
+    do { \
+        if (q == 0 || q == PPE_SBC_TYPE_COUNT_PER_CONTAINER) { \
+            r = *d; \
+            q = 0; \
+            d += 1; \
+        } \
+        t = r & 0x3; \
+        r >>= PPE_SBC_TYPE_BITS; \
+        q += 1; \
+    } while(0);
+
+    ppe_string nw = NULL;
+    ppe_size nwsz = 0;
+    ppe_uint * d = NULL;
+    ppe_uint r = 0;
+    ppe_uint q = 0;
+    ppe_uint t = 0;
+    ppe_uint i = 0;
+
+    if (bc->e.cnt == 0) {
+        return &str_empty_s;
+    }
+
+    d = bc->t.type;
+    r = 0;
+    q = 0;
+    t = 0;
+
+    if (bc->e.cnt == 1) {
+        ppe_sbc_get_next_type(d, r, q, t);
+        switch (t) {
+            case PPE_SBC_STR_REF:
+                return ppe_cs_close(bc->e.ent[0]->s.buf, bc->e.ent[0]->s.len);
+
+            default:
+                return ppe_cs_close(bc->e.ent[0]->t.buf, bc->e.ent[0]->t.len);
+        } /* switch */
+    }
+
+    for (i = 0; i < bc->e.cnt; i += 1) {
+        ppe_sbc_get_next_type(d, r, q, t);
+        switch (t) {
+            case PPE_SBC_STR_REF:
+                nwsz += bc->e.ent[i].s->len;
+                break;
+
+            default:
+                nwsz += bc->e.ent[i].t.len;
+                break;
+        }
+        nwsz += sz;
+    }
+    nwsz -= sz;
+
+    if (nwsz == 0) {
+        /* All the strings to join and the delimiter are empty. */
+        return &str_empty_s;
+    }
+
+    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + nwsz);
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    d = bc->t.type;
+    r = 0;
+    q = 0;
+    t = 0;
+    pos = nw->buf;
+    switch (t) {
+        case PPE_SBC_STR_REF:
+            memcpy(pos, bc->e.ent[i].s->buf, bc->e.ent[i].s->len);
+            pos += bc->e.ent[i].s->len;
+            break;
+
+        default:
+            memcpy(pos, bc->e.ent[i].t->buf, bc->e.ent[i].t->len);
+            pos += bc->e.ent[i].t->len;
+            break;
+    }
+
+    for (i = 1; i < bc->e.cnt; i += 1) {
+        memcpy(pos, s, sz);
+        pos += sz;
+
+        ppe_sbc_get_next_type(d, r, q, t);
+        switch (t) {
+            case PPE_SBC_STR_REF:
+                memcpy(pos, bc->e.ent[i].s->buf, bc->e.ent[i].s->len);
+                pos += bc->e.ent[i].s->len;
+                break;
+
+            default:
+                memcpy(pos, bc->e.ent[i].t->buf, bc->e.ent[i].t->len);
+                pos += bc->e.ent[i].t->len;
+                break;
+        }
+    }
+    *pos = '\0';
+    nw->len = nwsz;
+    return nw;
+
+#undef ppe_sbc_get_next_type
+}
+
+PPE_API ppe_string ppe_sbc_join_by_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
+{
+    if (! bc || ! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sbc_join_by_imp(bc, s, sz);
+}
+
+PPE_API ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string restrict s)
+{
+    if (! bc || ! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sbc_join_by_imp(bc, s->buf, s->len);
+}
+
+PPE_API ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc)
+{
+    if (! bc) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sbc_join_by_imp(bc, str_empty_s.buf, str_empty_s.len);
+}
+
+PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz)
+{
+    if (! bc || ! s || ! sz) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    if (bc->e.cnt <= idx) {
+        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
+        return ppe_false;
+    }
+    *s = bc->e.ent[idx].t.buf;
+    *sz = bc->e.ent[idx].t.len;
+    return ppe_true;
+}
+
+PPE_API ppe_int ppe_sbc_count(ppe_str_bunch restrict bc)
+{
+    if (! bc) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+    return (ppe_int) bc->e.cnt;
+}
+
 /* ==== Declaration : String Tracer ==== */
 
 /* ---- Types ---- */
 
 typedef struct PPE_STR_TRACER
 {
-    const char * pos; /* The start point of the next search. */
+    const char * pos;       /* The start point of the next search. */
+    ppe_text_st ref;        /* The sub string to search. */
 
-    ppe_text_st s; /* The target string to search in. */
-
-    struct {
-        ppe_uint cnt; /* The count of substring matches. */
-        ppe_text_st mtc[64]; /* Substring matches. */
-    } d;
+    ppe_str_bunch_st bc;    /* The string bunch object. */
+    ppe_string_st src;      /* The copy of the source string. If the size is zero, it holds no buffer and data. */
 } ppe_str_tracer_st;
 
 /* ---- Functions ---- */
@@ -716,24 +1169,24 @@ typedef struct PPE_STR_TRACER
 
 PPE_API ppe_str_tracer ppe_stc_create(const ppe_string restrict s)
 {
-    ppe_tracer new_trc = NULL;
+    ppe_tracer nw = NULL;
 
     if (! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
 
-    new_trc = ppe_mp_calloc(1, sizeof(ppe_tracer_st));
-    if (! new_trc) {
+    nw = ppe_mp_calloc(1, sizeof(ppe_tracer_st));
+    if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
 
-    new_trc->s.buf = s->buf;
-    new_trc->s.len = s->len;
+    nw->s.buf = s->buf;
+    nw->s.len = s->len;
 
-    new_trc->pos = new_trc->s.buf;
-    return new_trc;
+    nw->pos = nw->s.buf;
+    return nw;
 }
 
 PPE_API ppe_str_tracer ppe_stc_create_for_cstr(const char * restrict s, const ppe_size sz)
@@ -1072,442 +1525,98 @@ PPE_API ppe_int ppe_stc_count(ppe_str_tracer restrict trc)
     return trc->d.cnt;
 }
 
-/* ==== Definition : String Bunch ==== */
+/* ==== Definition : String Finder ==== */
 
 /* ---- Types ---- */
 
-enum
+typedef struct PPE_STR_FINDER
 {
-    PPE_SBC_CSTR_REF = 0,   /* A reference to external C-style string. */
-    PPE_SBC_CSTR_DAT = 1,   /* A reference to internal C-style string holding in the buffer. */
-    PPE_SBC_STR_REF = 2     /* A reference to external string. */
-};
-
-typedef union PPE_SBC_ENTRY
-{
-    ppe_text_st t;
-    ppe_string * s;
-} ppe_sbc_entry_st, *ppe_sbc_entry;
-
-typedef struct PPE_SBC_BUFFER
-{
-    ppe_size rem;
-    char buf[1];
-} ppe_sbc_buffer_st, *ppe_sbc_buffer;
-
-typedef struct PPE_STR_BUNCH
-{
-    struct {
-        ppe_sbc_entry_st * ent;
-        ppe_uint cnt;
-        ppe_uint cap;           /* The total count of entries. */
-    } e;
-
-    struct {
-        ppe_uint * type;
-        ppe_uint cnt;
-        ppe_uint cap;           /* The total count of types. */
-    } t;
-
-    struct {
-        ppe_sbc_buffer * dat;
-        ppe_uint cnt;
-        ppe_size cap;           /* The total count of allocated buffers. */
-    } b;
-} ppe_str_bunch_st;
+    const char * pos;
+    const char * end;
+} ppe_str_finder_st;
 
 /* ---- Functions ---- */
 
-PPE_API ppe_str_bunch ppe_sbc_create(void)
+static inline void ppe_sfd_reset_for_imp(ppe_str_finder restrict fd, const char * restrict s, const ppe_size sz)
 {
-    ppe_str_bunch bc = ppe_mp_calloc(1, sizeof(ppe_str_bunch_st));
-    if (! bc) {
-        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+    if (sz == 0) {
+        fd->pos = str_empty_s.buf;
+        fd->end = str_empty_s.buf;
+    } else {
+        fd->pos = s;
+        fd->end = s + sz;
+    }
+}
+
+PPE_API ppe_str_finder ppe_sfd_create_for_cstr(const char * restrict s, const ppe_size sz)
+{
+    ppe_str_finder nw = NULL;
+
+    if (! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    bc->b.cap = 4096;
-    return bc;
-}
 
-PPE_API void ppe_sbc_destroy(ppe_str_bunch restrict bc)
-{
-    if (bc) {
-        while (bc->b.cap > 0) {
-            bc->b.cap -= 1;
-            ppe_mp_free(bc->b.dat[bc->b.cap]);
-        }
-        ppe_mp_free(bc->t.type);
-        ppe_mp_free(bc->e.ent);
-        ppe_mp_free(bc);
-    }
-}
-
-PPE_API void ppe_sbc_reset(ppe_str_bunch restrict bc)
-{
-    if (bc) {
-        bc->e.cnt = 0;
-        bc->t.cnt = 0;
-        bc->b.cnt = 0;
-    }
-}
-
-#define PPE_SBC_TYPE_CONTAINER_SIZE (sizeof(((ppe_sbc_bunch) 0)->t.type[0]))
-#define PPE_SBC_TYPE_CONTAINER_BITS (PPE_SBC_TYPE_CONTAINER_SIZE * 8)
-
-#define PPE_SBC_TYPE_BITS 2
-#define PPE_SBC_TYPE_COUNT_PER_CONTAINER (PPE_SBC_TYPE_CONTAINER_BITS / PPE_SBC_TYPE_BITS)
-
-static inline void ppe_sbc_set_type(ppe_str_bunch restrict bc, const ppe_uint idx, const ppe_uint type)
-{
-    ppe_uint p = idx / PPE_SBC_TYPE_COUNT_PER_CONTAINER;
-    ppe_uint q = idx % PPE_SBC_TYPE_COUNT_PER_CONTAINER;
-
-    bc->t.type[p] &= ~ (0x3 << (q * PPE_SBC_TYPE_BITS));        /* Clear bits. */
-    bc->t.type[p] |= (type & 0x3) << (q * PPE_SBC_TYPE_BITS);   /* Set bits. */
-}
-
-static ppe_bool ppe_sbc_augment_entries(ppe_str_bunch restrict bc)
-{
-    ppe_sbc_entry_st * nw = NULL;
-    ppe_uint cap = 0;
-
-    cap = (bc->e.cap > 0) ? (bc->e.cap + (bc->e.cap >> 1)) : 16; /* The new capacity is 1.5 times of the old one. */
-
-    nw = (ppe_sbc_entry_st *) ppe_mp_calloc(cap, sizeof(ppe_sbc_entry_st));
-    if (! nw) {
-        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-        return ppe_false;
-    }
-
-    if (bc->e.cnt > 0) {
-        memcpy(nw, bc->e.ent, bc->e.cnt * sizeof(ppe_sbc_entry_st));
-        ppe_mp_free(bc->e.ent);
-    }
-
-    bc->e.ent = nw;
-    bc->e.cap = cap;
-    return ppe_true;
-}
-
-static inline ppe_uint ppe_sbc_type_container_count(ppe_uint cap)
-{
-    cap *= 2; /* Turn to the count of bits. */
-    if (cap & (ppe_uint)(PPE_SBC_TYPE_CONTAINER_BITS - 1)) {
-        cap = (cap + PPE_SBC_TYPE_CONTAINER_BITS) & (~ (ppe_uint)(PPE_SBC_TYPE_CONTAINER_BITS - 1));
-    }
-    return cap / PPE_SBC_TYPE_CONTAINER_BITS; /* Turn back to the count of type containers. */
-}
-
-static ppe_bool ppe_sbc_augment_types(ppe_str_bunch restrict bc)
-{
-    ppe_uint * nw = NULL;
-    ppe_uint cap = 0;
-
-    cap = (bc->t.cap > 0) ? (bc->t.cap + (bc->t.cap >> 1)) : 128; /* The new capacity is 1.5 times of the old one. */
-
-    nw = (ppe_uint *) ppe_mp_calloc(ppe_sbc_type_container_count(cap), PPE_SBC_TYPE_CONTAINER_SIZE);
-    if (! nw) {
-        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-        return ppe_false;
-    }
-
-    if (bc->t.cnt > 0) {
-        memcpy(nw, bc->t.type, ppe_sbc_type_container_count(bc->t.cnt) * PPE_SBC_TYPE_CONTAINER_SIZE);
-        ppe_mp_free(bc->t.type);
-    }
-
-    bc->t.type = nw;
-    bc->t.cap = cap;
-    return ppe_true;
-}
-
-static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc)
-{
-    ppe_sbc_buffer * nw = NULL;
-    ppe_uint cap = 0;
-
-    if (bc->b.cnt == bc->b.cap) {
-        cap = (bc->b.cap > 0) ? (bc->b.cap + (bc->b.cap >> 1)) : 8; /* The new capacity is 1.5 times of the old one. */
-
-        nw = (ppe_sbc_buffer *) ppe_mp_calloc(cap, sizeof(ppe_sbc_buffer));
-        if (! nw) {
-            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-            return ppe_false;
-        }
-
-        if (bc->b.cnt > 0) {
-            memcpy(nw, bc->b.dat, bc->b.cnt * sizeof(ppe_sbc_buffer));
-            ppe_mp_free(bc->b.dat);
-        }
-
-        bc->b.dat = nw;
-        bc->b.cap = cap;
-    }
-
-    bc->bc.cnt += 1;
-    if (! bc->b.dat[bc->b.cnt]) {
-        bc->b.dat[bc->b.cnt] = (ppe_sbc_buffer) ppe_mp_malloc(4096);
-        if (! bc->b.dat[bc->b.cnt]) {
-            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-            bc->bc.cnt -= 1;
-            return ppe_false;
-        }
-    }
-    bc->b.dat[bc->b.cnt]->rem = 4096; /* TODO: Define a buffer size aligning to page size. */
-    return ppe_true;
-}
-
-PPE_API ppe_bool ppe_sbc_refer_to_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
-{
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-
-    if (bc->e.cnt == bc->e.cap && ! ppe_sbc_augment_entries(bc)) {
-        return ppe_false;
-    }
-    if (bc->t.cnt == bc->t.cap && ! ppe_sbc_augment_types(bc)) {
-        return ppe_false;
-    }
-
-    bc->e.ent[bc->e.cnt].t.buf =  s;
-    bc->e.ent[bc->e.cnt].t.len =  sz;
-
-    ppe_sbc_set_type(bc, bc->t.cnt, PPE_SBC_CSTR_REF);
-
-    bc->e.cnt += 1;
-    bc->t.cnt += 1;
-    return ppe_true;
-}
-
-PPE_API ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_string restrict s)
-{
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-
-    if (bc->e.cnt == bc->e.cap && ! ppe_sbc_augment_entries(bc)) {
-        return ppe_false;
-    }
-    if (bc->t.cnt == bc->t.cap && ! ppe_sbc_augment_types(bc)) {
-        return ppe_false;
-    }
-
-    /* TODO: Add reference counting. */
-    bc->e.ent[bc->e.cnt].s =  s;
-
-    ppe_sbc_set_type(bc, bc->t.cnt, PPE_SBC_STR_REF);
-
-    bc->e.cnt += 1;
-    bc->t.cnt += 1;
-    return ppe_true;
-}
-
-static ppe_bool ppe_sbc_copy_from_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
-{
-    if (bc->e.cnt == bc->e.cap && ! ppe_sbc_augment_entries(bc)) {
-        return ppe_false;
-    }
-    if (bc->t.cnt == bc->t.cap && ! ppe_sbc_augment_types(bc)) {
-        return ppe_false;
-    }
-    if (bc->b.cnt == 0 || bc->b.dat[bc->b.cnt - 1]->rem < sz) {
-        if (! ppe_sbc_augment_buffers(bc)) {
-            return ppe_false;
-        }
-    }
-
-    ppe_sbc_set_type(bc, bc->t.cnt, PPE_SBC_CSTR_DAT);
-
-    /* TODO: Align the start address to which copy the string. */
-    bc->e.ent[bc->e.cnt].t.buf = bc->b.dat[bc->b.cnt - 1]->buf + (4096 - bc->b.dat[bc->b.cnt - 1]->rem);
-    bc->e.ent[bc->e.cnt].t.len = sz;
-    memcpy(bc->e.ent[bc->e.cnt].buf, s, sz);
-
-    bc->e.cnt += 1;
-    bc->t.cnt += 1;
-    bc->b.dat[bc->b.cnt - 1]->rem -= sz;
-    return ppe_true;
-}
-
-PPE_API ppe_bool ppe_sbc_copy_from_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
-{
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    return ppe_sbc_copy_from_imp(bc, s, sz);
-}
-
-PPE_API ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string restrict s)
-{
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    return ppe_sbc_copy_from_imp(bc, s->buf, s->len);
-}
-
-static ppe_string ppe_sbc_join_by_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
-{
-#define ppe_sbc_get_next_type(d, r, q, t) \
-    do { \
-        if (q == 0 || q == PPE_SBC_TYPE_COUNT_PER_CONTAINER) { \
-            r = *d; \
-            q = 0; \
-            d += 1; \
-        } \
-        t = r & 0x3; \
-        r >>= PPE_SBC_TYPE_BITS; \
-        q += 1; \
-    } while(0);
-
-    ppe_string nw = NULL;
-    ppe_size nwsz = 0;
-    ppe_uint * d = NULL;
-    ppe_uint r = 0;
-    ppe_uint q = 0;
-    ppe_uint t = 0;
-    ppe_uint i = 0;
-
-    if (bc->e.cnt == 0) {
-        return &str_empty_s;
-    }
-
-    d = bc->t.type;
-    r = 0;
-    q = 0;
-    t = 0;
-
-    if (bc->e.cnt == 1) {
-        ppe_sbc_get_next_type(d, r, q, t);
-        switch (t) {
-            case PPE_SBC_STR_REF:
-                return ppe_cs_close(bc->e.ent[0]->s.buf, bc->e.ent[0]->s.len);
-
-            default:
-                return ppe_cs_close(bc->e.ent[0]->t.buf, bc->e.ent[0]->t.len);
-        } /* switch */
-    }
-
-    for (i = 0; i < bc->e.cnt; i += 1) {
-        ppe_sbc_get_next_type(d, r, q, t);
-        switch (t) {
-            case PPE_SBC_STR_REF:
-                nwsz += bc->e.ent[i].s->len;
-                break;
-
-            default:
-                nwsz += bc->e.ent[i].t.len;
-                break;
-        }
-        nwsz += sz;
-    }
-    nwsz -= sz;
-
-    if (nwsz == 0) {
-        /* All the strings to join and the delimiter are empty. */
-        return &str_empty_s;
-    }
-
-    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + nwsz);
+    nw = ppe_mp_malloc(sizeof(ppe_str_finder_st));
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
-
-    d = bc->t.type;
-    r = 0;
-    q = 0;
-    t = 0;
-    pos = nw->buf;
-    switch (t) {
-        case PPE_SBC_STR_REF:
-            memcpy(pos, bc->e.ent[i].s->buf, bc->e.ent[i].s->len);
-            pos += bc->e.ent[i].s->len;
-            break;
-
-        default:
-            memcpy(pos, bc->e.ent[i].t->buf, bc->e.ent[i].t->len);
-            pos += bc->e.ent[i].t->len;
-            break;
-    }
-
-    for (i = 1; i < bc->e.cnt; i += 1) {
-        memcpy(pos, s, sz);
-        pos += sz;
-
-        ppe_sbc_get_next_type(d, r, q, t);
-        switch (t) {
-            case PPE_SBC_STR_REF:
-                memcpy(pos, bc->e.ent[i].s->buf, bc->e.ent[i].s->len);
-                pos += bc->e.ent[i].s->len;
-                break;
-
-            default:
-                memcpy(pos, bc->e.ent[i].t->buf, bc->e.ent[i].t->len);
-                pos += bc->e.ent[i].t->len;
-                break;
-        }
-    }
-    *pos = '\0';
-    nw->len = nwsz;
+    ppe_sfd_reset_for_imp(nw, s, sz);
     return nw;
-
-#undef ppe_sbc_get_next_type
 }
 
-PPE_API ppe_string ppe_sbc_join_by_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
+PPE_API ppe_str_finder ppe_sfd_create_for(const ppe_string restrict s)
 {
-    if (! bc || ! ppe_str_is_valid(s)) {
+    if (! ppe_str_is_valid(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    ppe_sfd_create_for_cstr(s->buf, s->len);
+    return nw;
+}
+
+PPE_API void ppe_sfd_destroy(ppe_str_finder restrict fd)
+{
+    if (fd) {
+        ppe_mp_free(fd);
+    }
+}
+
+PPE_API ppe_bool ppe_sfd_reset_for_cstr(ppe_str_finder restrict fd, const char * restrict s, const ppe_size sz)
+{
+    if (! fd || ! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
-    return ppe_sbc_join_by_imp(bc, s, sz);
-}
-
-PPE_API ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string restrict s)
-{
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    return ppe_sbc_join_by_imp(bc, s->buf, s->len);
-}
-
-PPE_API ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc)
-{
-    if (! bc) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    return ppe_sbc_join_by_imp(bc, str_empty_s.buf, str_empty_s.len);
-}
-
-PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz)
-{
-    if (! bc || ! s || ! sz) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    if (bc->e.cnt <= idx) {
-        ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
-        return ppe_false;
-    }
-    *s = bc->e.ent[idx].t.buf;
-    *sz = bc->e.ent[idx].t.len;
+    ppe_sfd_reset_for_imp(fd, s, sz);
     return ppe_true;
 }
 
-PPE_API ppe_int ppe_sbc_count(ppe_str_bunch restrict bc)
+PPE_API ppe_bool ppe_sfd_reset_for(ppe_str_finder restrict fd, const ppe_string restrict s)
 {
-    if (! bc) {
+    if (! fd || ! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return ppe_false;
     }
-    return (ppe_int) bc->e.cnt;
+    ppe_sfd_reset_for_imp(fd, s->buf, s->len);
+    return ppe_true;
+}
+
+PPE_API ppe_int ppe_sfd_find_component_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, const ppe_uint n, ppe_str_bunch restrict bc)
+{
+}
+
+PPE_API ppe_int ppe_sfd_find_component_by(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_uint n, ppe_str_bunch restrict bc)
+{
+}
+
+PPE_API ppe_int ppe_sfd_find_substring_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, const ppe_uint n, ppe_str_bunch restrict bc)
+{
+}
+
+PPE_API ppe_int ppe_sfd_find_substring_by(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_uint n, ppe_str_bunch restrict bc)
+{
 }
 
 #ifdef __cplusplus
