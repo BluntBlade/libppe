@@ -20,7 +20,7 @@ typedef struct ppe_string_st * ppe_string;
 
 typedef struct PPE_TEXT
 {
-    ppe_size len;
+    ppe_size sz;
     const char * buf;
 } ppe_text_st, *ppe_text;
 
