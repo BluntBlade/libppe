@@ -18,21 +18,13 @@ extern "C"
 struct ppe_string_st; 
 typedef struct ppe_string_st * ppe_string;
 
-typedef struct PPE_TEXT
-{
-    ppe_size sz;
-    const char * buf;
-} ppe_text_st, *ppe_text;
-
 /* ---- Macros ---- */
 
-#define PPE_STR_DETECT_LENGTH (~ (ppe_size)0L)
-#define PPE_STR_INVALID_LENGTH (~ (ppe_size)0L)
-#define PPE_STR_MAX_LENGTH ((~ (ppe_size)0L) / 2)
+#define PPE_STR_DETECT_SIZE (~ (ppe_size)0L)
+#define PPE_STR_INVALID_SIZE (~ (ppe_size)0L)
+#define PPE_STR_MAX_SIZE ((~ (ppe_size)0L) / 2)
 
 #define PPE_STR_ARG_END NULL
-
-#define PPE_STR_MAX_INPUT_N 32
 
 /* ---- Interfaces ---- */
 
@@ -149,7 +141,7 @@ PPE_API extern ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc);
 
 PPE_API extern ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz);
 PPE_API extern ppe_int ppe_sbc_count(ppe_str_bunch restrict bc);
-PPE_API extern ppe_ssize ppe_sbc_byte_size(ppe_str_bunch restrict bc);
+PPE_API extern ppe_size ppe_sbc_byte_size(ppe_str_bunch restrict bc);
 
 /* ==== Declaration : String Finder ==== */
 

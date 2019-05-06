@@ -10,6 +10,12 @@ extern "C"
 
 /* ---- Types ---- */
 
+typedef struct PPE_TEXT
+{
+    ppe_size sz;
+    const char * buf;
+} ppe_text_st, *ppe_text;
+
 typedef struct PPE_STRING
 {
     ppe_size sz;
@@ -22,12 +28,12 @@ typedef struct PPE_STRING
 
 static inline ppe_size ppe_cs_detect_size(const char * restrict s, const ppe_size len)
 {
-    return (len == PPE_STR_DETECT_LENGTH) ? strlen(s) : len;
+    return (len == PPE_STR_DETECT_SIZE) ? strlen(s) : len;
 }
 
 static inline ppe_bool ppe_cs_subtract_remainder(ppe_size * restrict rem, const ppe_size len)
 {
-    if ((len & ~PPE_STR_MAX_LENGTH) == 0 && *rem >= len) {
+    if ((len & ~PPE_STR_MAX_SIZE) == 0 && *rem >= len) {
         *rem -= len;
         return ppe_true;
     }
@@ -71,7 +77,7 @@ PPE_API ppe_string ppe_cs_clone(const ppe_char * restrict s, const ppe_size sz)
     if (s == str_empty_s.buf) {
         return &str_empty_s;
     }
-    if (sz == PPE_STR_DETECT_LENGTH) {
+    if (sz == PPE_STR_DETECT_SIZE) {
         sz = strlen(s);
     }
 
@@ -125,7 +131,7 @@ PPE_API ppe_size ppe_str_size(ppe_string restrict s)
 {
     if (! ppe_str_is_valid(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return PPE_STR_INVALID_LENGTH;
+        return PPE_STR_INVALID_SIZE;
     }
     return s->sz;
 }
@@ -136,7 +142,7 @@ PPE_API ppe_bool ppe_str_equals(const ppe_string restrict s1, const ppe_string r
 {
     if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return PPE_STR_INVALID_LENGTH;
+        return ppe_false;
     }
     return strcmp(((ppe_string)s1)->buf, ((ppe_string)s2)->buf) == 0;
 }
@@ -145,7 +151,7 @@ PPE_API ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_strin
 {
     if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return PPE_STR_INVALID_LENGTH;
+        return ppe_false;
     }
     return strcmp(((ppe_string)s1)->buf, ((ppe_string)s2)->buf) < 0;
 }
@@ -154,7 +160,7 @@ PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_st
 {
     if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return PPE_STR_INVALID_LENGTH;
+        return ppe_false;
     }
     return strcmp(((ppe_string)s1)->buf, ((ppe_string)s2)->buf) > 0;
 }
@@ -617,13 +623,13 @@ PPE_API ppe_int ppe_sbc_count(ppe_str_bunch restrict bc)
     return (ppe_int) bc->e.cnt;
 }
 
-PPE_API ppe_ssize ppe_sbc_byte_size(ppe_str_bunch restrict bc)
+PPE_API ppe_size ppe_sbc_byte_size(ppe_str_bunch restrict bc)
 {
     if (! bc) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return PPE_STR_INVALID_SIZE;
     }
-    return (ppe_ssize) bc->size;
+    return bc->size;
 }
 
 /* ==== Definition : String Finder ==== */
@@ -917,7 +923,7 @@ PPE_API ppe_string * ppe_cs_split(const char * restrict d, const ppe_size dsz, c
 static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
     ppe_string nw = NULL;
-    ppe_size rem = PPE_STR_MAX_LENGTH;
+    ppe_size rem = PPE_STR_MAX_SIZE;
 
     if (sz1 > 0 && ! ppe_cs_subtract_remainder(&rem, sz1)) {
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
@@ -928,7 +934,7 @@ static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_size dsz, const
         return NULL;
     }
 
-    if (rem == PPE_STR_MAX_LENGTH) {
+    if (rem == PPE_STR_MAX_SIZE) {
         /* Both strings are empty. */
         return ppe_cs_clone(d, dsz);
     }
@@ -938,7 +944,7 @@ static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_size dsz, const
         return NULL;
     }
 
-    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + PPE_STR_MAX_LENGTH - rem);
+    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + PPE_STR_MAX_SIZE - rem);
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
@@ -965,7 +971,7 @@ static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_size dsz, const
 static ppe_string ppe_cs_concat_2_imp(const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
     ppe_string nw = NULL;
-    ppe_size rem = PPE_STR_MAX_LENGTH;
+    ppe_size rem = PPE_STR_MAX_SIZE;
 
     if (sz1 > 0 && ! ppe_cs_subtract_remainder(&rem, sz1)) {
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
@@ -976,18 +982,18 @@ static ppe_string ppe_cs_concat_2_imp(const char * restrict s1, const ppe_size s
         return NULL;
     }
 
-    if (rem == PPE_STR_MAX_LENGTH) {
+    if (rem == PPE_STR_MAX_SIZE) {
         /* Both strings are empty. */
         return &str_empty_s;
     }
-    if (PPE_STR_MAX_LENGTH - rem == sz1) {
+    if (PPE_STR_MAX_SIZE - rem == sz1) {
         return ppe_str_clone(s1);
     }
-    if (PPE_STR_MAX_LENGTH - rem == sz2) {
+    if (PPE_STR_MAX_SIZE - rem == sz2) {
         return ppe_str_clone(s2);
     }
 
-    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + (PPE_STR_MAX_LENGTH - rem));
+    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + (PPE_STR_MAX_SIZE - rem));
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
