@@ -30,7 +30,7 @@ typedef struct PPE_TEXT
 #define PPE_STR_INVALID_LENGTH (~ (ppe_size)0L)
 #define PPE_STR_MAX_LENGTH ((~ (ppe_size)0L) / 2)
 
-#define PPE_STR_ARG_END (~ (void*)0)
+#define PPE_STR_ARG_END NULL
 
 #define PPE_STR_MAX_INPUT_N 32
 
@@ -48,45 +48,45 @@ PPE_API extern const ppe_string ppe_str_get_empty(void);
 
 PPE_API extern ppe_string ppe_cs_clone(const ppe_char * restrict s, const ppe_size sz);
 
+/* join */
+
+PPE_API extern ppe_string ppe_cs_join_cstr(const char * restrict d, const ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, ...);
+PPE_API extern ppe_string ppe_cs_join(const char * restrict d, const ppe_size dsz, const ppe_string restrict s1, const ppe_string restrict s2, ...);
+
+PPE_API extern ppe_string ppe_cs_join_cstr_2(const char * restrict d, const ppe_size dsz, const ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2);
+PPE_API extern ppe_string ppe_cs_join_2(const char * restrict d, const ppe_size dsz, const ppe_size dsz, const ppe_string restrict s1, const ppe_string restrict s2);
+
+/* concat */
+
+PPE_API extern ppe_string ppe_cs_concat_cstr(const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, ...);
+PPE_API extern ppe_string ppe_cs_concat_cstr_2(const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2);
+
 /* split */
 
 PPE_API extern ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe_size dsz, const char * restrict s, const ppe_size sz, ppe_uint * restrict n);
 PPE_API extern ppe_string * ppe_cs_split(const char * restrict d, const ppe_size dsz, const ppe_string restrict s, ppe_uint * restrict n);
 
-/* join */
-
-PPE_API extern ppe_string ppe_cs_join_var(const char * restrict d, const ppe_size dsz, const ppe_string restrict s1, const ppe_string restrict s2, va_list args);
-PPE_API extern ppe_string ppe_cs_join_list(const char * restrict d, const ppe_size dsz, const ppe_string * restrict srcs, const ppe_uint n);
-
-PPE_API extern ppe_string ppe_cs_join_cstr_var(const char * restrict d, const ppe_size dsz, const char * restrict s1, const char * restrict s2, va_list args);
-PPE_API extern ppe_string ppe_cs_join_cstr_list(const char * restrict d, const ppe_size dsz, const char ** restrict srcs, const ppe_uint n);
-
-PPE_API extern ppe_string ppe_cs_join_text_var(const char * restrict d, const ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, va_list args);
-PPE_API extern ppe_string ppe_cs_join_text_list(const char * restrict d, const ppe_size dsz, const ppe_text_st * restrict srcs, const ppe_uint n);
-
-PPE_API extern ppe_string ppe_cs_join_2(const char * restrict d, const ppe_size dsz, const ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2);
-
 /* _str_ series */
 
 PPE_API extern ppe_string ppe_str_clone(const ppe_string restrict s);
 
-/* split */
-
-PPE_API extern ppe_string * ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, ppe_uint * restrict n);
-PPE_API extern ppe_string * ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_size sz, ppe_uint * restrict n);
-
 /* join */
 
-PPE_API extern ppe_string ppe_str_join_var(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2, va_list args);
-PPE_API extern ppe_string ppe_str_join_list(const ppe_string restrict d, const ppe_string * restrict srcs, const ppe_uint n);
+PPE_API extern ppe_string ppe_str_join_cstr(const ppe_string restrict d, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, ...);
+PPE_API extern ppe_string ppe_str_join(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2, ...);
 
-PPE_API extern ppe_string ppe_str_join_cstr_var(const ppe_string restrict d, const char * restrict s1, const char * restrict s2, va_list args);
-PPE_API extern ppe_string ppe_str_join_cstr_list(const ppe_string restrict d, const char ** restrict srcs, const ppe_uint n);
-
-PPE_API extern ppe_string ppe_str_join_text_var(const ppe_string restrict d, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, va_list args);
-PPE_API extern ppe_string ppe_str_join_text_list(const ppe_string restrict d, const ppe_text_st * restrict srcs, const ppe_uint n);
-
+PPE_API extern ppe_string ppe_str_join_cstr_2(const char * restrict d, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2);
 PPE_API extern ppe_string ppe_str_join_2(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2);
+
+/* concat */
+
+PPE_API extern ppe_string ppe_str_concat(const ppe_string restrict s1, const ppe_string restrict s2, ...);
+PPE_API extern ppe_string ppe_str_concat_2(const ppe_string restrict s1, const ppe_string restrict s2);
+
+/* split */
+
+PPE_API extern ppe_string * ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_size sz, ppe_uint * restrict n);
+PPE_API extern ppe_string * ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, ppe_uint * restrict n);
 
 /* destroy */
 
@@ -112,70 +112,6 @@ PPE_API extern ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const
 
 /* _cs_ series */
 
-static inline ppe_string ppe_cs_join_cstr(const char * restrict d, const ppe_size dsz, const char * restrict s1, const char * restrict s2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, s2);
-    new_str = ppe_cs_join_cstr_var(d, dsz, s1, sz1, s2, sz2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_cs_join_text(const char * restrict d, const ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, sz2);
-    new_str = ppe_cs_join_text_var(d, dsz, s1, sz1, s2, sz2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_cs_join_string(const char * restrict d, const ppe_size dsz, const ppe_string restrict s1, const ppe_string restrict s2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, s2);
-    new_str = ppe_cs_join_var(d, dsz, s1, s2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_cs_concat(const char * restrict s1, const char * restrict s2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, s2);
-    new_str = ppe_cs_join_cstr_var("", 0, s1, sz1, s2, sz2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_cs_concat_text(const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, sz2);
-    new_str = ppe_cs_join_text_var("", 0, s1, sz1, s2, sz2, args);
-    va_end(args);
-    return new_str;
-}
-static inline ppe_string ppe_cs_concat_list(ppe_text_st * restrict srcs, const ppe_uint n)
-{
-    return ppe_cs_join_cstr_list("", 0, srcs, n);
-}
-
-static inline ppe_string ppe_cs_concat_2(const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
-{
-    return ppe_cs_join_2("", 0, s1, sz1, s2, sz2);
-}
-
 static ppe_string ppe_cs_sprintf(const char * restrict fmt, ...)
 {
     ppe_string new_str = NULL;
@@ -185,62 +121,6 @@ static ppe_string ppe_cs_sprintf(const char * restrict fmt, ...)
     new_str = ppe_cs_vsprintf(fmt, args);
     va_end(args);
     return new_str;
-}
-
-/* _str_ series */
-
-static inline ppe_string ppe_str_join_cstr(const ppe_string restrict d, const char * restrict s1, const char * restrict s2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, s2);
-    new_str = ppe_str_join_cstr_var(d, s1, sz1, s2, sz2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_str_join_text(const ppe_string restrict d, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, sz2);
-    new_str = ppe_str_join_text_var(d, s1, sz1, s2, sz2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_str_join(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, s2);
-    new_str = ppe_str_join_var(d, s1, s2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_str_concat(const ppe_string restrict s1, const ppe_string restrict s2, ...)
-{
-    ppe_string new_str = NULL;
-    va_list args;
-
-    va_start(args, s2);
-    new_str = ppe_cs_join_var("", 0, s1, s2, args);
-    va_end(args);
-    return new_str;
-}
-
-static inline ppe_string ppe_str_concat_list(const ppe_string * restrict srcs, const ppe_uint n)
-{
-    return ppe_cs_join_cstr_list("", 0, srcs, n);
-}
-
-static inline ppe_string ppe_str_concat_2(const ppe_string restrict s1, const ppe_string restrict s2)
-{
-    return ppe_cs_join_2("", 0, s1, s2, args);
 }
 
 /* ==== Declaration : String Bunch ==== */
@@ -293,6 +173,14 @@ PPE_API extern ppe_bool ppe_sfd_refer_last_component(ppe_str_finder restrict fd,
 
 PPE_API extern ppe_bool ppe_sfd_find_substring_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, ppe_uint * restrict n, ppe_str_bunch restrict bc);
 PPE_API extern ppe_bool ppe_sfd_find_substring_by(ppe_str_finder restrict fd, const ppe_string restrict s, ppe_uint * restrict n, ppe_str_bunch restrict bc);
+
+/* ==== Declarations : String ==== */
+
+/* ---- Functions Defered to Implement ---- */
+
+/* -- cs module -- */
+
+/* -- str module -- */
 
 #ifdef __cplusplus
 }
