@@ -614,13 +614,13 @@ PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx
     return ppe_true;
 }
 
-PPE_API ppe_int ppe_sbc_count(ppe_str_bunch restrict bc)
+PPE_API ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc)
 {
     if (! bc) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return PPE_STR_INVALID_COUNT;
     }
-    return (ppe_int) bc->e.cnt;
+    return bc->e.cnt;
 }
 
 PPE_API ppe_size ppe_sbc_byte_size(ppe_str_bunch restrict bc)

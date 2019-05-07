@@ -24,6 +24,8 @@ typedef struct ppe_string_st * ppe_string;
 #define PPE_STR_INVALID_SIZE (~ (ppe_size)0L)
 #define PPE_STR_MAX_SIZE ((~ (ppe_size)0L) / 2)
 
+#define PPE_STR_INVALID_COUNT (~ (ppe_uint)0L)
+
 #define PPE_STR_ARG_END NULL
 
 /* ---- Interfaces ---- */
@@ -140,7 +142,7 @@ PPE_API extern ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_s
 PPE_API extern ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc);
 
 PPE_API extern ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz);
-PPE_API extern ppe_int ppe_sbc_count(ppe_str_bunch restrict bc);
+PPE_API extern ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc);
 PPE_API extern ppe_size ppe_sbc_byte_size(ppe_str_bunch restrict bc);
 
 /* ==== Declaration : String Finder ==== */
