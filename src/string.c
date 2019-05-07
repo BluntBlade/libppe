@@ -463,7 +463,7 @@ PPE_API ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string r
     return ppe_sbc_copy_from_imp(bc, s->buf, s->sz);
 }
 
-static ppe_string ppe_sbc_join_by_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
+static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
 {
 #define ppe_sbc_get_next_type(d, r, q, t) \
     do { \
@@ -578,7 +578,7 @@ PPE_API ppe_string ppe_sbc_join_by_cstr(ppe_str_bunch restrict bc, const char * 
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
-    return ppe_sbc_join_by_imp(bc, s, sz);
+    return ppe_sbc_join_by_cstr_imp(bc, s, sz);
 }
 
 PPE_API ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string restrict s)
@@ -587,7 +587,7 @@ PPE_API ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string r
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
-    return ppe_sbc_join_by_imp(bc, s->buf, s->sz);
+    return ppe_sbc_join_by_cstr_imp(bc, s->buf, s->sz);
 }
 
 PPE_API ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc)
@@ -596,7 +596,7 @@ PPE_API ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc)
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
-    return ppe_sbc_join_by_imp(bc, str_empty_s.buf, str_empty_s.sz);
+    return ppe_sbc_join_by_cstr_imp(bc, "", 0);
 }
 
 PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz)
@@ -1049,7 +1049,7 @@ static ppe_string ppe_cs_join_cstr_imp(const char * restrict d, const ppe_size d
         s = va_arg(cp, const char *);
     } while (s != PPE_STR_ARG_END);
 
-    nw = ppe_sbc_join_by_cstr(bc, d, dsz);
+    nw = ppe_sbc_join_by_cstr_imp(bc, d, dsz);
 
 PPE_CS_JOIN_CSTR_ERROR_HANDLING:
     ppe_sbc_clean(&bc);
@@ -1112,7 +1112,7 @@ static ppe_string ppe_cs_join_imp(const char * restrict d, const ppe_size dsz, c
         s = va_arg(cp, ppe_string);
     } while (s != PPE_STR_ARG_END);
 
-    nw = ppe_sbc_join_by_cstr(bc, d, dsz);
+    nw = ppe_sbc_join_by_cstr_imp(bc, d, dsz);
 
 PPE_CS_JOIN_ERROR_HANDLING:
     ppe_sbc_clean(&bc);
