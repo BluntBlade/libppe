@@ -313,7 +313,7 @@ static ppe_bool ppe_sbc_augment_types(ppe_str_bunch restrict bc)
     ppe_uint * nw = NULL;
     ppe_uint cap = 0;
 
-    cap = (bc->t.cap > 0) ? (bc->t.cap + (bc->t.cap >> 1)) : 128; /* The new capacity is 1.5 times of the old one. */
+    cap = (bc->t.cap > 0) ? (bc->t.cap + (bc->t.cap >> 1)) : 32; /* The new capacity is 1.5 times of the old one. */
 
     nw = (ppe_uint *) ppe_mp_calloc(ppe_sbc_type_container_count(cap), PPE_SBC_TYPE_CONTAINER_SIZE);
     if (! nw) {
