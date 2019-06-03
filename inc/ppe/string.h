@@ -143,7 +143,7 @@ PPE_API extern ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc);
 
 PPE_API extern ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz);
 PPE_API extern ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc);
-PPE_API extern ppe_size ppe_sbc_byte_size(ppe_str_bunch restrict bc);
+PPE_API extern ppe_size ppe_sbc_total_size(ppe_str_bunch restrict bc);
 
 /* ==== Declaration : String Finder ==== */
 
