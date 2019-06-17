@@ -73,6 +73,7 @@ typedef unsigned int ppe_uint32, ppe_word;
 
 typedef unsigned int ppe_uint;
 
+typedef ssize_t ppe_ssize;
 typedef size_t ppe_size;
 typedef off_t ppe_off;
 
