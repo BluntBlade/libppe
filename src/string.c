@@ -39,9 +39,12 @@ static inline ppe_bool ppe_str_is_valid(void * restrict s)
     return (s != NULL);
 }
 
-/* ==== Definitions : String ==== */
+static inline char * ppe_str_buffer(ppe_string restrict s)
+{
+    return (((char *)&s->ptr) + sizeof(s->ptr));
+}
 
-#define ppe_str_buffer(s) (((char *)&s->ptr) + sizeof(s->ptr))
+/* ==== Definitions : String ==== */
 
 /* ---- Preset values ---- */
 
