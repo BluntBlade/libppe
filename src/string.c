@@ -119,19 +119,22 @@ PPE_API ppe_ssize ppe_str_size(ppe_string restrict s)
 
 PPE_API ppe_bool ppe_str_equals(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    assert(s1 != NULL && s2 != NULL);
+    assert(s1 != NULL);
+    assert(s2 != NULL);
     return strcmp(s1->ptr, s2->ptr) == 0;
 }
 
 PPE_API ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    assert(s1 != NULL && s2 != NULL);
+    assert(s1 != NULL);
+    assert(s2 != NULL);
     return strcmp(s1->ptr, s2->ptr) < 0;
 }
 
 PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    assert(s1 != NULL && s2 != NULL);
+    assert(s1 != NULL);
+    assert(s2 != NULL);
     return strcmp(s1->ptr, s2->ptr) > 0;
 }
 
@@ -254,7 +257,7 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
     ppe_sbc_buffer_st * nw = NULL;
     ppe_ssize bytes = 0;
 
-    if (sizeof(ppe_sbc_buffer_st) + sz < bc->nwcap) {
+    if (sizeof(ppe_sbc_buffer_st) + sz < bc->buf.nwcap) {
         bytes = bc->buf.nwcap;
     } else {
         bytes = sizeof(ppe_sbc_buffer_st) + sz;
@@ -266,12 +269,12 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
         return ppe_false;
     }
     nw->rem = nw->cap = bytes - sizeof(ppe_sbc_buffer_st);
+    nw->next = NULL;
 
     if (! bc->buf.head) {
-        nw->next = NULL;
         bc->buf.head = nw;
     } else {
-        nw->next = bc->buf.last;
+        bc->buf.last->next = nw;
     }
     bc->buf.last = nw;
 
@@ -301,7 +304,8 @@ PPE_API ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_string re
 {
     /* Reference to an external string. */
 
-    assert(bc != NULL && s != NULL);
+    assert(bc != NULL);
+    assert(s != NULL);
 
     if (bc->ref.i == bc->ref.n && ! ppe_sbc_augment_references(bc)) {
         return ppe_false;
@@ -336,13 +340,15 @@ static ppe_bool ppe_sbc_copy_from_imp(ppe_str_bunch restrict bc, const char * re
 
 PPE_API ppe_bool ppe_sbc_copy_from_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
 {
-    assert(bc != NULL && s != NULL);
+    assert(bc != NULL);
+    assert(s != NULL);
     return ppe_sbc_copy_from_imp(bc, s, sz);
 }
 
 PPE_API ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string restrict s)
 {
-    assert(bc != NULL && s != NULL);
+    assert(bc != NULL);
+    assert(s != NULL);
     return ppe_sbc_copy_from_imp(bc, s->ptr, s->sz);
 }
 
