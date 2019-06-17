@@ -34,11 +34,6 @@ static inline ppe_bool ppe_cs_subtract_remainder(ppe_size * restrict rem, const 
     return ppe_false;
 }
 
-static inline ppe_bool ppe_str_is_valid(void * restrict s)
-{
-    return (s != NULL);
-}
-
 static inline char * ppe_str_buffer(ppe_string restrict s)
 {
     return (((char *)&s->ptr) + sizeof(s->ptr));
@@ -69,17 +64,12 @@ PPE_API ppe_string ppe_cs_clone(const ppe_char * restrict s, const ppe_size sz)
 {
     ppe_string nw = NULL;
 
-    if (! ppe_str_valid_string(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(s != NULL);
 
     if (s == str_empty_s.ptr) {
         return &str_empty_s;
     }
-    if (sz == PPE_STR_DETECT_SIZE) {
-        sz = strlen(s);
-    }
+    sz = ppe_cs_detect_size(s, sz);
 
     if (sz == 0) {
         /* Check if the source string is empty. */
@@ -109,6 +99,7 @@ PPE_API ppe_string ppe_cs_vsprintf(const char * restrict fmt, va_list args)
 
 PPE_API ppe_string ppe_str_clone(const ppe_string restrict s)
 {
+    assert(s != NULL);
     return ppe_cs_clone(s->ptr, s->sz);
 }
 
@@ -123,19 +114,13 @@ PPE_API void ppe_str_destroy(ppe_string restrict s)
 
 PPE_API const char * ppe_str_cstr(ppe_string restrict s)
 {
-    if (! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(s != NULL);
     return s->ptr;
 }
 
 PPE_API ppe_size ppe_str_size(ppe_string restrict s)
 {
-    if (! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return PPE_STR_INVALID_SIZE;
-    }
+    assert(s != NULL);
     return s->sz;
 }
 
@@ -143,29 +128,20 @@ PPE_API ppe_size ppe_str_size(ppe_string restrict s)
 
 PPE_API ppe_bool ppe_str_equals(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    return strcmp(((ppe_string)s1)->ptr, ((ppe_string)s2)->ptr) == 0;
+    assert(s1 != NULL && s2 != NULL);
+    return strcmp(s1->ptr, s2->ptr) == 0;
 }
 
 PPE_API ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    return strcmp(((ppe_string)s1)->ptr, ((ppe_string)s2)->ptr) < 0;
+    assert(s1 != NULL && s2 != NULL);
+    return strcmp(s1->ptr, s2->ptr) < 0;
 }
 
 PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    return strcmp(((ppe_string)s1)->ptr, ((ppe_string)s2)->ptr) > 0;
+    assert(s1 != NULL && s2 != NULL);
+    return strcmp(s1->ptr, s2->ptr) > 0;
 }
 
 /* ==== Definition : String Bunch ==== */
@@ -315,10 +291,7 @@ PPE_API ppe_bool ppe_sbc_refer_to_cstr(ppe_str_bunch restrict bc, const char * r
 {
     /* Reference to an external C-style string. */
 
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL);
 
     if (bc->ref.i == bc->ref.n && ! ppe_sbc_augment_references(bc)) {
         return ppe_false;
@@ -336,10 +309,7 @@ PPE_API ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_string re
 {
     /* Reference to an external string. */
 
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL);
 
     if (bc->ref.i == bc->ref.n && ! ppe_sbc_augment_references(bc)) {
         return ppe_false;
@@ -374,19 +344,13 @@ static ppe_bool ppe_sbc_copy_from_imp(ppe_str_bunch restrict bc, const char * re
 
 PPE_API ppe_bool ppe_sbc_copy_from_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
 {
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL);
     return ppe_sbc_copy_from_imp(bc, s, sz);
 }
 
 PPE_API ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string restrict s)
 {
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL);
     return ppe_sbc_copy_from_imp(bc, s->ptr, s->sz);
 }
 
@@ -440,37 +404,26 @@ static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char
 
 PPE_API ppe_string ppe_sbc_join_by_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_size sz)
 {
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL);
     return ppe_sbc_join_by_cstr_imp(bc, s, sz);
 }
 
 PPE_API ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string restrict s)
 {
-    if (! bc || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL);
     return ppe_sbc_join_by_cstr_imp(bc, s->ptr, s->sz);
 }
 
 PPE_API ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc)
 {
-    if (! bc) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL);
     return ppe_sbc_join_by_cstr_imp(bc, "", 0);
 }
 
 PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_size * restrict sz)
 {
-    if (! bc || ! s || ! sz) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(bc != NULL && s != NULL && sz != NULL);
+
     if (bc->ref.i <= idx) {
         ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
         return ppe_false;
@@ -482,19 +435,13 @@ PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx
 
 PPE_API ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc)
 {
-    if (! bc) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return PPE_STR_INVALID_COUNT;
-    }
+    assert(bc != NULL);
     return bc->ref.i;
 }
 
 PPE_API ppe_size ppe_sbc_total_size(ppe_str_bunch restrict bc)
 {
-    if (! bc) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return PPE_STR_INVALID_SIZE;
-    }
+    assert(bc != NULL);
     return bc->total;
 }
 
@@ -525,10 +472,7 @@ PPE_API ppe_str_finder ppe_sfd_create_for_cstr(const char * restrict s, const pp
 {
     ppe_str_finder nw = NULL;
 
-    if (! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(s != NULL);
 
     nw = ppe_mp_malloc(sizeof(ppe_str_finder_st));
     if (! nw) {
@@ -541,10 +485,7 @@ PPE_API ppe_str_finder ppe_sfd_create_for_cstr(const char * restrict s, const pp
 
 PPE_API ppe_str_finder ppe_sfd_create_for(const ppe_string restrict s)
 {
-    if (! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(s != NULL);
     return ppe_sfd_create_for_cstr(s->ptr, s->sz);
 }
 
@@ -557,20 +498,14 @@ PPE_API void ppe_sfd_destroy(ppe_str_finder restrict fd)
 
 PPE_API ppe_bool ppe_sfd_reset_for_cstr(ppe_str_finder restrict fd, const char * restrict s, const ppe_size sz)
 {
-    if (! fd || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(s != NULL);
     ppe_sfd_reset_for_imp(fd, s, sz);
     return ppe_true;
 }
 
 PPE_API ppe_bool ppe_sfd_reset_for(ppe_str_finder restrict fd, const ppe_string restrict s)
 {
-    if (! fd || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(s != NULL);
     ppe_sfd_reset_for_imp(fd, s->ptr, s->sz);
     return ppe_true;
 }
@@ -626,11 +561,6 @@ static ppe_bool ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s re
     ppe_uint i = 0;
     ppe_uint max = ~0L;
 
-    if (! fd || ! ppe_str_is_valid(s) || sz == 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-
     if (n) {
         if (*n == 0) {
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -673,38 +603,31 @@ static ppe_bool ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s re
 
 PPE_API ppe_bool ppe_sfd_find_component_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, ppe_uint * restrict n, ppe_str_bunch restrict bc)
 {
+    assert(fd != NULL && s != NULL && bc != NULL);
     return ppe_sfd_find_n_imp(fd, s, sz, n, bc, PPE_SFD_FIND_TYPE_COMPONENT);
 }
 
 PPE_API ppe_bool ppe_sfd_find_component_by(ppe_str_finder restrict fd, const ppe_string restrict s, ppe_uint * restrict n, ppe_str_bunch restrict bc)
 {
-    if (! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(fd != NULL && s != NULL && bc != NULL);
     return ppe_sfd_find_n_imp(fd, s->ptr, s->sz, n, bc, PPE_SFD_FIND_TYPE_COMPONENT);
 }
 
 PPE_API ppe_bool ppe_sfd_refer_last_component(ppe_str_finder restrict fd, ppe_str_bunch restrict bc)
 {
-    if (! fd || ! bc) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(fd != NULL && bc != NULL);
     return ppe_sbc_refer_to_cstr(bc, fd->pos, fd->end - fd->pos);
 }
 
 PPE_API ppe_bool ppe_sfd_find_substring_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_size sz, ppe_uint * restrict n, ppe_str_bunch restrict bc)
 {
+    assert(fd != NULL && s != NULL && bc != NULL);
     return ppe_sfd_find_n_imp(fd, s, sz, n, bc, PPE_SFD_FIND_TYPE_SUBSTRING);
 }
 
 PPE_API ppe_bool ppe_sfd_find_substring_by(ppe_str_finder restrict fd, const ppe_string restrict s, ppe_uint * restrict n, ppe_str_bunch restrict bc)
 {
-    if (! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
+    assert(fd != NULL && s != NULL && bc != NULL);
     return ppe_sfd_find_n_imp(fd, s->ptr, s->sz, n, bc, PPE_SFD_FIND_TYPE_SUBSTRING);
 }
 
@@ -762,10 +685,7 @@ PPE_CS_SPLIT_IMP_ERROR_HANDLING:
 
 PPE_API ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe_size dsz, const char * restrict s, const ppe_size sz, ppe_uint * restrict n)
 {
-    if (! ppe_str_is_valid(d) || dsz == 0 || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s != NULL);
     if (sz == 0) {
         return &str_empty_array_s;
     }
@@ -774,10 +694,7 @@ PPE_API ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe_size d
 
 PPE_API ppe_string * ppe_cs_split(const char * restrict d, const ppe_size dsz, const ppe_string restrict s, ppe_uint * restrict n)
 {
-    if (! ppe_str_is_valid(d) || dsz == 0 || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s != NULL);
     if (s->sz == 0) {
         return &str_empty_array_s;
     }
@@ -929,10 +846,7 @@ PPE_API ppe_string ppe_cs_join_cstr(const char * restrict d, const ppe_size dsz,
     va_list ap;
     ppe_string nw = NULL;
 
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
 
     va_start(ap, sz2);
     nw = ppe_cs_join_cstr_imp(d, dsz, s1, sz1, s2, sz2, ap);
@@ -947,6 +861,8 @@ static ppe_string ppe_cs_join_imp(const char * restrict d, const ppe_size dsz, c
     ppe_string nw = NULL;
     ppe_string s = NULL;
     ppe_uint n = 0;
+
+    assert(d != NULL && s1 != NULL && s2 != NULL);
 
     /* -- Check arguments. -- */
     va_copy(cp, args);
@@ -992,10 +908,7 @@ PPE_API ppe_string ppe_cs_join(const char * restrict d, const ppe_size dsz, cons
     va_list ap;
     ppe_string nw = NULL;
 
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
 
     va_start(ap, s2);
     nw = ppe_cs_join_imp(d, dsz, s1, s2, ap);
@@ -1005,10 +918,7 @@ PPE_API ppe_string ppe_cs_join(const char * restrict d, const ppe_size dsz, cons
 
 PPE_API ppe_string ppe_cs_join_cstr_2(const char * restrict d, const ppe_size dsz, const ppe_size dsz, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
     if (dsz == 0) {
         return ppe_cs_concat_2_imp(s1, sz1, s2, sz2);
     }
@@ -1017,10 +927,7 @@ PPE_API ppe_string ppe_cs_join_cstr_2(const char * restrict d, const ppe_size ds
 
 PPE_API ppe_string ppe_cs_join_2(const char * restrict d, const ppe_size dsz, const ppe_size dsz, const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
     if (dsz == 0) {
         return ppe_cs_concat_2_imp(s1->ptr, s1->sz, s2->ptr, s2->sz);
     }
@@ -1034,10 +941,7 @@ PPE_API ppe_string ppe_cs_concat_cstr(const char * restrict s1, const ppe_size s
     va_list ap;
     ppe_string nw = NULL;
 
-    if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
 
     va_start(ap, sz2);
     nw = ppe_cs_join_cstr_imp("", 0, s1, sz1, s2, sz2, ap);
@@ -1047,10 +951,7 @@ PPE_API ppe_string ppe_cs_concat_cstr(const char * restrict s1, const ppe_size s
 
 PPE_API ppe_string ppe_cs_concat_cstr_2(const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
-    if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
     return ppe_cs_concat_2_imp(s1, sz1, s2, sz2);
 }
 
@@ -1063,10 +964,7 @@ PPE_API ppe_string ppe_str_join_cstr(const ppe_string restrict d, const char * r
     va_list ap;
     ppe_string nw = NULL;
 
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
 
     va_start(ap, sz2);
     nw = ppe_cs_join_cstr_imp(d->ptr, d->sz, s1, sz1, s2, sz2, ap);
@@ -1079,10 +977,7 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_string re
     va_list ap;
     ppe_string nw = NULL;
 
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
 
     va_start(ap, s2);
     nw = ppe_cs_join_imp(d->ptr, d->sz, s1, s2, ap);
@@ -1092,10 +987,7 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_string re
 
 PPE_API ppe_string ppe_str_join_cstr_2(const ppe_string restrict d, const char * restrict s1, const ppe_size sz1, const char * restrict s2, const ppe_size sz2)
 {
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
     if (d->sz == 0) {
         return ppe_cs_concat_2_imp(s1, sz1, s2, sz2);
     }
@@ -1104,10 +996,7 @@ PPE_API ppe_string ppe_str_join_cstr_2(const ppe_string restrict d, const char *
 
 PPE_API ppe_string ppe_str_join_2(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    if (! ppe_str_is_valid(d) || ! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
     if (d->sz == 0) {
         return ppe_cs_concat_2_imp(s1->ptr, s1->sz, s2->ptr, s2->sz);
     }
@@ -1121,10 +1010,7 @@ PPE_API ppe_string ppe_str_concat(const ppe_string restrict s1, const ppe_string
     va_list ap;
     ppe_string nw = NULL;
 
-    if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(s1 != NULL && s2 != NULL);
 
     va_start(ap, s2);
     nw = ppe_cs_join_imp("", 0, s1, s2, ap);
@@ -1134,10 +1020,7 @@ PPE_API ppe_string ppe_str_concat(const ppe_string restrict s1, const ppe_string
 
 PPE_API ppe_string ppe_str_concat_2(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    if (! ppe_str_is_valid(s1) || ! ppe_str_is_valid(s2)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(s1 != NULL && s2 != NULL);
     return ppe_cs_concat_2_imp(s1->ptr, s1->sz, s2->ptr, s2->sz);
 }
 
@@ -1145,10 +1028,7 @@ PPE_API ppe_string ppe_str_concat_2(const ppe_string restrict s1, const ppe_stri
 
 PPE_API ppe_string * ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_size sz, ppe_uint * restrict n)
 {
-    if (! ppe_str_is_valid(d) || dsz == 0 || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
     if (sz == 0) {
         return &str_empty_array_s;
     }
@@ -1157,10 +1037,7 @@ PPE_API ppe_string * ppe_str_split_cstr(const ppe_string restrict d, const char 
 
 PPE_API ppe_string * ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, ppe_uint * restrict n)
 {
-    if (! ppe_str_is_valid(d) || dsz == 0 || ! ppe_str_is_valid(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    assert(d != NULL && s1 != NULL && s2 != NULL);
     if (s->sz == 0) {
         return &str_empty_array_s;
     }
