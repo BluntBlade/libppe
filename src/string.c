@@ -146,6 +146,7 @@ struct PPE_SBC_BUFFER;
 
 typedef struct PPE_SBC_BUFFER
 {
+    struct PPE_SBC_BUFFER * prev;
     struct PPE_SBC_BUFFER * next;
     ppe_ssize rem;
     ppe_ssize cap;
@@ -162,6 +163,7 @@ typedef struct PPE_STR_BUNCH
     struct {
         ppe_sbc_buffer_st * head;
         ppe_sbc_buffer_st * last;
+        ppe_sbc_buffer_st * curr;
         ppe_ssize nwcap;         /* The default capacity of new buffer, include the size of the ppe_sbc_buffer_st structure. */
     } buf;
 
@@ -225,6 +227,7 @@ PPE_API void ppe_sbc_reset(ppe_str_bunch restrict bc)
             curr->rem = curr->cap;
             curr = curr->next;
         }
+        bc->buf.curr = bc->buf.head;
         bc->ref.i = 0;
     }
 }
@@ -257,6 +260,11 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
     ppe_sbc_buffer_st * nw = NULL;
     ppe_ssize bytes = 0;
 
+    if (bc->buf.curr != bc->buf.tail) {
+        bc->buf.curr = bc->curr.next;
+        return ppe_true;
+    }
+
     if (sizeof(ppe_sbc_buffer_st) + sz < bc->buf.nwcap) {
         bytes = bc->buf.nwcap;
     } else {
@@ -269,19 +277,22 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
         return ppe_false;
     }
     nw->rem = nw->cap = bytes - sizeof(ppe_sbc_buffer_st);
+    nw->prev = NULL;
     nw->next = NULL;
 
     if (! bc->buf.head) {
         bc->buf.head = nw;
     } else {
+        nw->prev = bc->buf.last;
         bc->buf.last->next = nw;
     }
     bc->buf.last = nw;
+    bc->buf.curr = nw;
 
     return ppe_true;
 }
 
-PPE_API ppe_bool ppe_sbc_refer_to_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
+PPE_API ppe_bool ppe_sbc_push_refer_to_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
 {
     /* Reference to an external C-style string. */
 
@@ -300,7 +311,7 @@ PPE_API ppe_bool ppe_sbc_refer_to_cstr(ppe_str_bunch restrict bc, const char * r
     return ppe_true;
 }
 
-PPE_API ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_string restrict s)
+PPE_API ppe_bool ppe_sbc_push_refer_to(ppe_str_bunch restrict bc, const ppe_string restrict s)
 {
     /* Reference to an external string. */
 
@@ -319,12 +330,12 @@ PPE_API ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_string re
     return ppe_true;
 }
 
-static ppe_bool ppe_sbc_copy_from_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
+static ppe_bool ppe_sbc_push_copy_of_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
 {
     if (bc->ref.i == bc->ref.n && ! ppe_sbc_augment_references(bc)) {
         return ppe_false;
     }
-    if (bc->buf.last->rem < sz && ! ppe_sbc_augment_buffers(bc, sz)) {
+    if (bc->buf.curr->rem < sz && ! ppe_sbc_augment_buffers(bc, sz)) {
         return ppe_false;
     }
 
@@ -338,18 +349,44 @@ static ppe_bool ppe_sbc_copy_from_imp(ppe_str_bunch restrict bc, const char * re
     return ppe_true;
 }
 
-PPE_API ppe_bool ppe_sbc_copy_from_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
+PPE_API ppe_bool ppe_sbc_push_copy_of_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
 {
     assert(bc != NULL);
     assert(s != NULL);
-    return ppe_sbc_copy_from_imp(bc, s, sz);
+    return ppe_sbc_push_copy_of_imp(bc, s, sz);
 }
 
-PPE_API ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string restrict s)
+PPE_API ppe_bool ppe_sbc_push_copy_of(ppe_str_bunch restrict bc, const ppe_string restrict s)
 {
     assert(bc != NULL);
     assert(s != NULL);
-    return ppe_sbc_copy_from_imp(bc, s->ptr, s->sz);
+    return ppe_sbc_push_copy_of_imp(bc, s->ptr, s->sz);
+}
+
+PPE_API void ppe_sbc_pop(ppe_str_bunch restrict bc)
+{
+    ppe_sbc_buffer curr = NULL;
+    const char * end = NULL;
+
+    assert(bc != NULL);
+
+    if (bc->ref.i == 0) {
+        return;
+    }
+
+    curr = (bc->buf.curr->rem == bc->buf.curr->cap) ? bc->buf.curr->prev : bc->buf.curr;
+
+    end = bc->ref.ent[bc->ref.i - 1].ptr + bc->ref.ent[bc->ref.i - 1].sz;
+    if (ppe_sbc_buffer_position(curr) == end) {
+        curr->rem += bc->ref.ent[bc->ref.i - 1].sz;
+
+        if (bc->buf.curr->prev == curr) {
+            bc->buf.curr = curr;
+        }
+    }
+
+    bc->total -= bc->ref.ent[bc->ref.i - 1].sz;
+    bc->ref.i -= 1;
 }
 
 static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char * restrict d, const ppe_ssize dsz)
@@ -487,7 +524,7 @@ PPE_API ppe_str_finder ppe_sfd_create_for_cstr(const char * restrict s, const pp
 {
     ppe_str_finder nw = NULL;
 
-    assert(s != NULL);
+    assert(s != NULL && sz >= 0);
 
     nw = ppe_mp_malloc(sizeof(ppe_str_finder_st));
     if (! nw) {
@@ -513,7 +550,7 @@ PPE_API void ppe_sfd_destroy(ppe_str_finder restrict fd)
 
 PPE_API ppe_bool ppe_sfd_reset_for_cstr(ppe_str_finder restrict fd, const char * restrict s, const ppe_ssize sz)
 {
-    assert(s != NULL);
+    assert(s != NULL && sz >= 0);
     ppe_sfd_reset_for_imp(fd, s, sz);
     return ppe_true;
 }
@@ -548,6 +585,11 @@ static const char * ppe_sfd_find_imp(ppe_str_finder restrict fd, const char * re
         return NULL;
     }
 
+    /* Detect the substring at every char. */
+    /* Case:
+     * -------ABC
+     * --AB
+     */
     for (pos = fd->pos; sz <= rem; ++pos, --rem) {
         pos = memchr(pos, s[0], rem);
         if (! pos) {
@@ -563,30 +605,27 @@ static const char * ppe_sfd_find_imp(ppe_str_finder restrict fd, const char * re
     return NULL;
 }
 
-typedef enum
-{
-    PPE_SFD_FIND_TYPE_COMPONENT = 0,
-    PPE_SFD_FIND_TYPE_SUBSTRING = 1
-} ppe_sfd_find_type;
-
-static ppe_bool ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, ppe_uint * restrict n, ppe_str_bunch restrict bc, const ppe_sfd_find_type type)
+static ppe_int ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, ppe_int restrict n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
 {
     const char * begin = NULL;
     const char * pos = NULL;
-    ppe_uint i = 0;
-    ppe_uint max = ~0L;
+    ppe_int max = 32;
+    ppe_int i = 0;
+    ppe_int bccn = 0;
+    ppe_int bcsn = 0;
 
-    if (n) {
-        if (*n == 0) {
-            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-            return ppe_false;
-        }
-        if(*n < max) {
-            max = *n;
-        }
+    if(n < max) {
+        max = n;
     }
-
+   
     for (i = 0; i < max; ++i) {
+        if (bcc) {
+            assert(i == bccn);
+        }
+        if (bcs) {
+            assert(i == bcsn);
+        }
+
         begin = fd->pos;
 
         pos = ppe_sfd_find_imp(fd, s, sz);
@@ -594,56 +633,66 @@ static ppe_bool ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s re
             break;
         }
 
-        if (bc) {
-            if (type == PPE_SFD_FIND_TYPE_COMPONENT) {
-                ret = ppe_sbc_refer_to_cstr(bc, begin, pos - begin);
-            } else (type == PPE_SFD_FIND_TYPE_SUBSTRING) {
-                ret = ppe_sbc_refer_to_cstr(bc, pos, sz);
-            }
-
+        if (bcc) {
+            ret = ppe_sbc_push_refer_to_cstr(bcc, begin, pos - begin);
             if (! ret) {
-                if (n) {
-                    *n = i;
-                }
-                fd->pos = begin; /* Resume the start point of the next search. */
-                return ppe_false;
+                goto PPE_SFD_FIND_N_IMP_ERROR_HANDLING;
             }
+            bccn += 1;
+        }
+        if (bcs) {
+            ret = ppe_sbc_push_refer_to_cstr(bcs, pos, sz);
+            if (! ret) {
+                goto PPE_SFD_FIND_N_IMP_ERROR_HANDLING;
+            }
+            bcsn += 1;
         }
     } /* for */
-    if (n) {
-        *n = i;
+    return i;
+
+PPE_SFD_FIND_N_IMP_ERROR_HANDLING:
+    fd->pos = begin; /* Resume the start point of the next search. */
+
+    if (bcc && bccn > i) {
+        ppe_sbc_pop(bcc);
     }
-    return ppe_true;
+    if (bcs && bcsn > i) {
+        ppe_sbc_pop(bcs);
+    }
+    return 0 - i;
 }
 
-PPE_API ppe_bool ppe_sfd_find_component_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, ppe_uint * restrict n, ppe_str_bunch restrict bc)
+PPE_API ppe_int ppe_sfd_find_n_for_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, const ppe_int n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
 {
-    assert(fd != NULL && s != NULL && bc != NULL);
-    return ppe_sfd_find_n_imp(fd, s, sz, n, bc, PPE_SFD_FIND_TYPE_COMPONENT);
+    assert(fd != NULL);
+    assert(s != NULL && sz > 0);
+    assert(bcc != NULL);
+    assert(bcs != NULL);
+    if (sz == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sfd_find_n_imp(fd, s, sz, n, bcc, bcs);
 }
 
-PPE_API ppe_bool ppe_sfd_find_component_by(ppe_str_finder restrict fd, const ppe_string restrict s, ppe_uint * restrict n, ppe_str_bunch restrict bc)
+PPE_API ppe_int ppe_sfd_find_n_for(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_int n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
 {
-    assert(fd != NULL && s != NULL && bc != NULL);
-    return ppe_sfd_find_n_imp(fd, s->ptr, s->sz, n, bc, PPE_SFD_FIND_TYPE_COMPONENT);
+    assert(fd != NULL);
+    assert(s != NULL);
+    assert(bcc != NULL);
+    assert(bcs != NULL);
+    if (s->sz == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_sfd_find_n_imp(fd, s->ptr, s->sz, n, bcc, bcs);
 }
 
-PPE_API ppe_bool ppe_sfd_refer_last_component(ppe_str_finder restrict fd, ppe_str_bunch restrict bc)
+PPE_API ppe_bool ppe_sfd_refer_last_component(ppe_str_finder restrict fd, ppe_str_bunch restrict bcc)
 {
-    assert(fd != NULL && bc != NULL);
-    return ppe_sbc_refer_to_cstr(bc, fd->pos, fd->end - fd->pos);
-}
-
-PPE_API ppe_bool ppe_sfd_find_substring_by_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, ppe_uint * restrict n, ppe_str_bunch restrict bc)
-{
-    assert(fd != NULL && s != NULL && bc != NULL);
-    return ppe_sfd_find_n_imp(fd, s, sz, n, bc, PPE_SFD_FIND_TYPE_SUBSTRING);
-}
-
-PPE_API ppe_bool ppe_sfd_find_substring_by(ppe_str_finder restrict fd, const ppe_string restrict s, ppe_uint * restrict n, ppe_str_bunch restrict bc)
-{
-    assert(fd != NULL && s != NULL && bc != NULL);
-    return ppe_sfd_find_n_imp(fd, s->ptr, s->sz, n, bc, PPE_SFD_FIND_TYPE_SUBSTRING);
+    assert(fd != NULL);
+    assert(bcc != NULL);
+    return ppe_sbc_push_refer_to_cstr(bcc, fd->pos, fd->end - fd->pos);
 }
 
 /* ==== Definitions : String ==== */
@@ -836,10 +885,10 @@ static ppe_string ppe_cs_join_cstr_imp(const char * restrict d, const ppe_ssize 
     /* -- Prepare operands. -- */
     ppe_sbc_init(&bc);
 
-    if (! ppe_sbc_refer_to_cstr(bc, s1, sz1)) {
+    if (! ppe_sbc_push_refer_to_cstr(bc, s1, sz1)) {
         goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
     }
-    if (! ppe_sbc_refer_to_cstr(bc, s2, sz2)) {
+    if (! ppe_sbc_push_refer_to_cstr(bc, s2, sz2)) {
         goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
     }
 
@@ -849,7 +898,7 @@ static ppe_string ppe_cs_join_cstr_imp(const char * restrict d, const ppe_ssize 
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
             goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
         }
-        if (! ppe_sbc_refer_to_cstr(bc, s, sz)) {
+        if (! ppe_sbc_push_refer_to_cstr(bc, s, sz)) {
             goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
         }
 
@@ -903,15 +952,15 @@ static ppe_string ppe_cs_join_imp(const char * restrict d, const ppe_ssize dsz, 
     /* -- Prepare operands. -- */
     ppe_sbc_init(&bc);
 
-    if (! ppe_sbc_refer_to(bc, s1)) {
+    if (! ppe_sbc_push_refer_to(bc, s1)) {
         goto PPE_CS_JOIN_ERROR_HANDLING;
     }
-    if (! ppe_sbc_refer_to(bc, s2)) {
+    if (! ppe_sbc_push_refer_to(bc, s2)) {
         goto PPE_CS_JOIN_ERROR_HANDLING;
     }
 
     do {
-        if (! ppe_sbc_refer_to(bc, s)) {
+        if (! ppe_sbc_push_refer_to(bc, s)) {
             goto PPE_CS_JOIN_ERROR_HANDLING;
         }
 
