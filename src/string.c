@@ -20,9 +20,9 @@ typedef struct PPE_STRING
 
 /* -- Internals -- */
 
-static inline ppe_size ppe_cs_detect_size(const char * restrict s, const ppe_size len)
+static inline ppe_size ppe_cs_detect_size(const char * restrict s, const ppe_size sz)
 {
-    return (len == PPE_STR_DETECT_SIZE) ? strlen(s) : len;
+    return (sz == PPE_STR_DETECT_SIZE) ? strlen(s) : sz;
 }
 
 static inline ppe_bool ppe_cs_subtract_remainder(ppe_size * restrict rem, const ppe_size len)
