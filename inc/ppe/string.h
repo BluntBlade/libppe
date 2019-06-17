@@ -133,14 +133,14 @@ PPE_API extern ppe_bool ppe_sbc_refer_to(ppe_str_bunch restrict bc, const ppe_st
 PPE_API extern ppe_bool ppe_sbc_copy_from_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
 PPE_API extern ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string restrict s);
 
-PPE_API extern ppe_string ppe_sbc_join_by_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
-PPE_API extern ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string restrict s);
+PPE_API extern ppe_string ppe_sbc_join_by_cstr(const ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
+PPE_API extern ppe_string ppe_sbc_join_by(const ppe_str_bunch restrict bc, const ppe_string restrict s);
 
-PPE_API extern ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc);
+PPE_API extern ppe_string ppe_sbc_concat(const ppe_str_bunch restrict bc);
 
-PPE_API extern ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_ssize * restrict sz);
-PPE_API extern ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc);
-PPE_API extern ppe_ssize ppe_sbc_total_size(ppe_str_bunch restrict bc);
+PPE_API extern ppe_bool ppe_sbc_reference(const ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, ppe_ssize * restrict sz);
+PPE_API extern ppe_uint ppe_sbc_count(const ppe_str_bunch restrict bc);
+PPE_API extern ppe_ssize ppe_sbc_total_size(const ppe_str_bunch restrict bc);
 
 /* ==== Declaration : String Finder ==== */
 

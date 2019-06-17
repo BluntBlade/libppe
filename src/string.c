@@ -352,10 +352,11 @@ PPE_API ppe_bool ppe_sbc_copy_from(ppe_str_bunch restrict bc, const ppe_string r
     return ppe_sbc_copy_from_imp(bc, s->ptr, s->sz);
 }
 
-static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
+static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char * restrict d, const ppe_ssize dsz)
 {
     ppe_string nw = NULL;
     ppe_ssize nwsz = 0;
+    ppe_uint i = 0;
 
     if (bc->ref.i == 0) {
         return &str_empty_s;
@@ -364,14 +365,20 @@ static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char
         return ppe_cs_clone(bc->ref.ent[0].ptr, bc->ref.ent[0].sz);
     }
 
-    for (i = 0; i < bc->ref.i; i += 1) {
-        nwsz += bc->ref.ent[i]->sz;
-        nwsz += sz;
+    nwsz = bc->ref.ent[0]->sz;
+    if (dsz > 0) {
+        for (i = 1; i < bc->ref.i; i += 1) {
+            nwsz += dsz;
+            nwsz += bc->ref.ent[i]->sz;
+        }
+    } else {
+        for (i = 1; i < bc->ref.i; i += 1) {
+            nwsz += bc->ref.ent[i]->sz;
+        }
     }
-    nwsz -= sz;
 
     if (nwsz == 0) {
-        /* All the strings to join and the delimiter are empty. */
+        /* All the source strings and the delimiter are empty. */
         return &str_empty_s;
     }
 
@@ -385,12 +392,19 @@ static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char
     memcpy(pos, bc->ref.ent[0].ptr, bc->ref.ent[0].sz);
     pos += bc->ref.ent[0].sz;
 
-    for (i = 1; i < bc->ref.i; i += 1) {
-        memcpy(pos, s, sz);
-        pos += sz;
+    if (dsz > 0) {
+        for (i = 1; i < bc->ref.i; i += 1) {
+            memcpy(pos, d, dsz);
+            pos += dsz;
 
-        memcpy(pos, bc->ref.ent[i].ptr, bc->ref.ent[i].sz);
-        pos += bc->ref.ent[i].sz;
+            memcpy(pos, bc->ref.ent[i].ptr, bc->ref.ent[i].sz);
+            pos += bc->ref.ent[i].sz;
+        }
+    } else {
+        for (i = 1; i < bc->ref.i; i += 1) {
+            memcpy(pos, bc->ref.ent[i].ptr, bc->ref.ent[i].sz);
+            pos += bc->ref.ent[i].sz;
+        }
     }
 
     *pos = '\0';
@@ -399,27 +413,31 @@ static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char
     return nw;
 }
 
-PPE_API ppe_string ppe_sbc_join_by_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
+PPE_API ppe_string ppe_sbc_join_by_cstr(const ppe_str_bunch restrict bc, const char * restrict d, const ppe_ssize dsz)
 {
-    assert(bc != NULL && s != NULL);
-    return ppe_sbc_join_by_cstr_imp(bc, s, sz);
+    assert(bc != NULL);
+    assert(d != NULL && dsz >= 0);
+    return ppe_sbc_join_by_cstr_imp(bc, d, dsz);
 }
 
-PPE_API ppe_string ppe_sbc_join_by(ppe_str_bunch restrict bc, const ppe_string restrict s)
+PPE_API ppe_string ppe_sbc_join_by(const ppe_str_bunch restrict bc, const ppe_string restrict d)
 {
-    assert(bc != NULL && s != NULL);
-    return ppe_sbc_join_by_cstr_imp(bc, s->ptr, s->sz);
+    assert(bc != NULL);
+    assert(d != NULL);
+    return ppe_sbc_join_by_cstr_imp(bc, d->ptr, d->sz);
 }
 
-PPE_API ppe_string ppe_sbc_concat(ppe_str_bunch restrict bc)
+PPE_API ppe_string ppe_sbc_concat(const ppe_str_bunch restrict bc)
 {
-    assert(bc != NULL && s != NULL);
+    assert(bc != NULL);
     return ppe_sbc_join_by_cstr_imp(bc, "", 0);
 }
 
-PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, const ppe_ssize * restrict sz)
+PPE_API ppe_bool ppe_sbc_reference(const ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, ppe_ssize * restrict sz)
 {
-    assert(bc != NULL && s != NULL && sz != NULL);
+    assert(bc != NULL);
+    assert(s != NULL);
+    assert(sz != NULL);
 
     if (bc->ref.i <= idx) {
         ppe_err_set(PPE_ERR_NO_SUCH_ENTRY, NULL);
@@ -430,13 +448,13 @@ PPE_API ppe_bool ppe_sbc_reference(ppe_str_bunch restrict bc, const ppe_uint idx
     return ppe_true;
 }
 
-PPE_API ppe_uint ppe_sbc_count(ppe_str_bunch restrict bc)
+PPE_API ppe_uint ppe_sbc_count(const ppe_str_bunch restrict bc)
 {
     assert(bc != NULL);
     return bc->ref.i;
 }
 
-PPE_API ppe_ssize ppe_sbc_total_size(ppe_str_bunch restrict bc)
+PPE_API ppe_ssize ppe_sbc_total_size(const ppe_str_bunch restrict bc)
 {
     assert(bc != NULL);
     return bc->total;
