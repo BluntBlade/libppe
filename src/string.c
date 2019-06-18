@@ -605,7 +605,7 @@ static const char * ppe_sfd_find_imp(ppe_str_finder restrict fd, const char * re
     return NULL;
 }
 
-static ppe_int ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, ppe_int restrict n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
+static ppe_int ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, const ppe_int n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
 {
     const char * begin = NULL;
     const char * pos = NULL;
@@ -614,7 +614,7 @@ static ppe_int ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s res
     ppe_int bccn = 0;
     ppe_int bcsn = 0;
 
-    if(n < max) {
+    if (0 < n && n < max) {
         max = n;
     }
    
@@ -703,67 +703,42 @@ PPE_API ppe_bool ppe_sfd_refer_last_component(ppe_str_finder restrict fd, ppe_st
 
 /* split */
 
-static ppe_string * ppe_cs_split_imp(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, ppe_uint * restrict n)
+static ppe_str_bunch ppe_cs_split_imp(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n)
 {
-    ppe_str_bunch_st bc;
     ppe_str_finder_st fd;
-    ppe_string * arr = NULL;
-    const char * t = NULL;
-    ppe_ssize tsz = 0;
+    ppe_str_bunch bcc = NULL;
+    ppe_int ret = 0;
 
-    ppe_sbc_init(&bc);
-    ppe_sfd_reset_for_cstr(s, sz);
-
-    if (! ppe_sfd_find_n_imp(&fd, d, dsz, n, &bc, PPE_SFD_FIND_TYPE_COMPONENT)) {
-        ppe_sbc_clean(&bc);
+    bcc = ppe_sbc_create();
+    if (! bcc) {
         return NULL;
     }
 
-    arr = ppe_mp_malloc((ppe_sbc_count(&bc) + 1) * sizeof(ppe_string));
-    if (! arr) {
-        ppe_sbc_clean(&bc);
-        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+    ppe_sfd_reset_for_cstr(&fd, s, sz);
+
+    ret = ppe_sfd_find_n_imp(&fd, d, dsz, n, bcc, NULL); 
+    if (ret < 0) {
+        ppe_sbc_destroy(bcc);
         return NULL;
     }
-
-    for (i = 0; i < ppe_sbc_count(&bc); ++i) {
-        if (! ppe_sbc_reference(&bc, i, &t, &tsz)) {
-            goto PPE_CS_SPLIT_IMP_ERROR_HANDLING;
-        }
-        arr[i] = ppe_cs_clone(t, tsz);
-        if (! arr[i]) {
-            goto PPE_CS_SPLIT_IMP_ERROR_HANDLING;
-        }
+    if (! ppe_sfd_refer_last_component(&fd)) {
+        ppe_sbc_destroy(bcc);
+        return NULL;
     }
-    arr[i] = NULL; /* Specify the end of the array. */
-    return arr;
-
-PPE_CS_SPLIT_IMP_ERROR_HANDLING:
-    while (i > 0) {
-        ppe_str_destroy(arr[--i]);
-    }
-    ppe_mp_free(arr);
-    ppe_sbc_clean(&bc);
-    return NULL;
+    return bcc;
 }
 
-PPE_API ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, ppe_uint * restrict n)
+PPE_API ppe_str_bunch ppe_cs_split_cstr(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n)
 {
     assert(d != NULL && dsz > 0);
     assert(s != NULL);
-    if (sz == 0) {
-        return &str_empty_array_s;
-    }
     return ppe_cs_split_imp(d, dsz, s, sz, n);
 }
 
-PPE_API ppe_string * ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, ppe_uint * restrict n)
+PPE_API ppe_str_bunch ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n)
 {
     assert(d != NULL && dsz > 0);
     assert(s != NULL);
-    if (s->sz == 0) {
-        return &str_empty_array_s;
-    }
     return ppe_cs_split_imp(d, dsz, s->ptr, s->sz, n);
 }
 
@@ -1116,23 +1091,17 @@ PPE_API ppe_string ppe_str_concat_2(const ppe_string restrict s1, const ppe_stri
 
 /* split */
 
-PPE_API ppe_string * ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, ppe_uint * restrict n)
+PPE_API ppe_str_bunch ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, const ppe_int n)
 {
     assert(d != NULL && d->sz > 0);
     assert(s != NULL);
-    if (sz == 0) {
-        return &str_empty_array_s;
-    }
     return ppe_cs_split_imp(d->ptr, d->sz, s, sz, n);
 }
 
-PPE_API ppe_string * ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, ppe_uint * restrict n)
+PPE_API ppe_str_bunch ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, const ppe_int n)
 {
     assert(d != NULL && d->sz > 0);
     assert(s != NULL);
-    if (s->sz == 0) {
-        return &str_empty_array_s;
-    }
     return ppe_cs_split_imp(d->ptr, d->sz, s->ptr, s->sz, n);
 }
 

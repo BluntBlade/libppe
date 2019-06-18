@@ -54,8 +54,8 @@ PPE_API extern ppe_string ppe_cs_concat_cstr_2(const char * restrict s1, const p
 
 /* split */
 
-PPE_API extern ppe_string * ppe_cs_split_cstr(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, ppe_uint * restrict n);
-PPE_API extern ppe_string * ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, ppe_uint * restrict n);
+PPE_API extern ppe_str_bunch ppe_cs_split_cstr(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n);
+PPE_API extern ppe_str_bunch ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n);
 
 /* _str_ series */
 
@@ -76,8 +76,8 @@ PPE_API extern ppe_string ppe_str_concat_2(const ppe_string restrict s1, const p
 
 /* split */
 
-PPE_API extern ppe_string * ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, ppe_uint * restrict n);
-PPE_API extern ppe_string * ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, ppe_uint * restrict n);
+PPE_API extern ppe_str_bunch ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, const ppe_int n);
+PPE_API extern ppe_str_bunch ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, const ppe_int n);
 
 /* destroy */
 
