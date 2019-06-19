@@ -140,8 +140,10 @@ PPE_API extern ppe_string ppe_sbc_join_by(const ppe_str_bunch restrict bc, const
 
 PPE_API extern ppe_string ppe_sbc_concat(const ppe_str_bunch restrict bc);
 
+PPE_API extern ppe_bool ppe_sbc_next_buffer(const ppe_str_bunch restrict bc, const char ** restrict buf, ppe_size * restrict sz, void ** restrict dat);
+
 PPE_API extern ppe_bool ppe_sbc_reference(const ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, ppe_ssize * restrict sz);
-PPE_API extern ppe_uint ppe_sbc_count(const ppe_str_bunch restrict bc);
+PPE_API extern ppe_uint ppe_sbc_string_count(const ppe_str_bunch restrict bc);
 PPE_API extern ppe_ssize ppe_sbc_total_size(const ppe_str_bunch restrict bc);
 
 /* ==== Declaration : String Finder ==== */

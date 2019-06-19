@@ -470,6 +470,37 @@ PPE_API ppe_string ppe_sbc_concat(const ppe_str_bunch restrict bc)
     return ppe_sbc_join_by_cstr_imp(bc, "", 0);
 }
 
+PPE_API ppe_bool ppe_sbc_next_buffer(const ppe_str_bunch restrict bc, const char ** restrict buf, ppe_size * restrict sz, void ** restrict dat)
+{
+    assert(bc != NULL);
+    assert(buf != NULL);
+    assert(sz != NULL);
+    assert(dat != NULL);
+
+    if (*dat == (void *) bc->buf.curr) {
+        /* All buffers have been iterated. */
+        /* NOTE Case: NULL == NULL */
+        return ppe_false;
+    }
+
+    if (! *dat) {
+        *dat = (void *) bc->buf.head;
+    } else {
+        *dat = (void *) ((ppe_sbc_buffer)dat)->next;
+        if (! *dat) {
+            return ppe_false;
+        }
+    }
+
+    if (((ppe_sbc_buffer)dat)->cap == ((ppe_sbc_buffer)dat)->rem) {
+        /* No more data. */
+        return ppe_false;
+    }
+    *buf = ((const char *)dat) + sizeof(ppe_sbc_buffer_st);
+    *sz = ((ppe_sbc_buffer)dat)->cap - ((ppe_sbc_buffer)dat)->rem;
+    return ppe_true;
+}
+
 PPE_API ppe_bool ppe_sbc_reference(const ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, ppe_ssize * restrict sz)
 {
     assert(bc != NULL);
@@ -485,10 +516,16 @@ PPE_API ppe_bool ppe_sbc_reference(const ppe_str_bunch restrict bc, const ppe_ui
     return ppe_true;
 }
 
-PPE_API ppe_uint ppe_sbc_count(const ppe_str_bunch restrict bc)
+PPE_API ppe_uint ppe_sbc_string_count(const ppe_str_bunch restrict bc)
 {
     assert(bc != NULL);
     return bc->ref.i;
+}
+
+PPE_API ppe_uint ppe_sbc_buffer_count(const ppe_str_bunch restrict bc)
+{
+    assert(bc != NULL);
+    return bc->buf.i;
 }
 
 PPE_API ppe_ssize ppe_sbc_total_size(const ppe_str_bunch restrict bc)
