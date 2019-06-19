@@ -146,10 +146,9 @@ struct PPE_SBC_BUFFER;
 
 typedef struct PPE_SBC_BUFFER
 {
-    struct PPE_SBC_BUFFER * prev;
-    struct PPE_SBC_BUFFER * next;
-    ppe_ssize rem;
-    ppe_ssize cap;
+    char * pos;
+    char * end;
+    char * ptr;
 } ppe_sbc_buffer_st, *ppe_sbc_buffer;
 
 typedef struct PPE_STR_BUNCH
@@ -161,13 +160,13 @@ typedef struct PPE_STR_BUNCH
     } ref;
 
     struct {
-        ppe_sbc_buffer_st * head;
-        ppe_sbc_buffer_st * last;
-        ppe_sbc_buffer_st * curr;
-        ppe_ssize nwcap;         /* The default capacity of new buffer, include the size of the ppe_sbc_buffer_st structure. */
+        ppe_sbc_buffer_st * ent;
+        ppe_uint i;             /* The index of the current buffer in use. */
+        ppe_uint n;             /* The total amount of buffers. */
+        ppe_ssize nwcap;        /* The default capacity of new buffer. */
     } buf;
 
-    ppe_ssize total;             /* The total size of referenced and buffered strings in bytes. */
+    ppe_ssize total;            /* The total size of referenced and buffered strings in bytes. */
 } ppe_str_bunch_st;
 
 /* ---- Functions ---- */
@@ -193,14 +192,12 @@ PPE_API ppe_str_bunch ppe_sbc_create(void)
 
 static void ppe_sbc_clean(ppe_str_bunch restrict bc)
 {
-    ppe_sbc_buffer_st * curr = NULL;
-    ppe_sbc_buffer_st * next = NULL;
+    ppe_uint i = 0;
 
-    curr = bc->buf.head;
-    while (curr) {
-        next = curr->next;
-        ppe_mp_free(curr);
+    for (i = 0; i < bc->buf.i; ++i) {
+        ppe_mp_free(bc->buf.ent[i]->ptr);
     }
+    ppe_mp_free(bc->buf.ent);
     ppe_mp_free(bc->ref.ent);
 }
 
@@ -212,22 +209,15 @@ PPE_API void ppe_sbc_destroy(ppe_str_bunch restrict bc)
     }
 }
 
-static char * ppe_sbc_buffer_position(const ppe_sbc_buffer restrict b)
-{
-    return (char *)b + sizeof(ppb_sbc_buffer_st) + (b->cap - b->rem);
-}
-
 PPE_API void ppe_sbc_reset(ppe_str_bunch restrict bc)
 {
-    ppe_sbc_buffer_st * curr = NULL;
+    ppe_uint i = 0;
 
     if (bc) {
-        curr = bc->buf.head;
-        while (curr) {
-            curr->rem = curr->cap;
-            curr = curr->next;
+        for (i = 0; i < bc->buf.i; ++i) {
+            bc->buf.ent[i]->pos = bc->buf.ent[i]->ptr;
         }
-        bc->buf.curr = bc->buf.head;
+        bc->buf.i = 0;
         bc->ref.i = 0;
     }
 }
@@ -245,8 +235,8 @@ static ppe_bool ppe_sbc_augment_references(ppe_str_bunch restrict bc)
         return ppe_false;
     }
 
-    if (bc->ref.i > 0) {
-        memcpy(nw, bc->ref.ent, bc->ref.i * sizeof(ppe_string_st));
+    if (bc->ref.ent) {
+        memcpy(nw, bc->ref.ent, sizeof(ppe_string_st) * bc->ref.i);
         ppe_mp_free(bc->ref.ent);
     }
 
@@ -255,40 +245,74 @@ static ppe_bool ppe_sbc_augment_references(ppe_str_bunch restrict bc)
     return ppe_true;
 }
 
+static ppe_bool ppe_sbc_augment_buffer(ppe_str_bunch restrict bc, const ppe_ssize sz)
+{
+    ppe_sbc_buffer buf = NULL;
+    void * nwchk = NULL;
+    ppe_size bytes = 0;
+
+    buf = &bc->buf.ent[bc->buf.i];
+
+    /* NOTE case: buf->end and buf->pos may be both NULL. */
+    if ((bytes = bc->buf.nwcap) < sz) {
+        bytes = sz * 2;
+    }
+
+    nwchk = ppe_mp_malloc(bytes);
+    if (! nwchk) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return ppe_false;
+    }
+
+    ppe_mp_free(buf->ptr);
+    buf->ptr = nwchk;
+    buf->pos = nwchk;
+    buf->end = nwchk + bytes;
+    return ppe_true;
+}
+
 static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssize sz)
 {
     ppe_sbc_buffer_st * nw = NULL;
-    ppe_ssize bytes = 0;
+    ppe_uint cap = 4;
+    ppe_size rem = 0;
 
-    if (bc->buf.curr != bc->buf.tail) {
-        bc->buf.curr = bc->curr.next;
-        return ppe_true;
-    }
+    /* INVARIABLE: bc->buf.i is pointing to the current buffer in use. */
+    if (bc->buf.ent) {
+        bc->buf.i += 1;
 
-    if (sizeof(ppe_sbc_buffer_st) + sz < bc->buf.nwcap) {
-        bytes = bc->buf.nwcap;
-    } else {
-        bytes = sizeof(ppe_sbc_buffer_st) + sz;
-    }
+        if (bc->buf.i < bc->buf.n) {
+            rem = bc->buf.ent[bc->buf.i].end - bc->buf.ent[bc->buf.i].pos; 
+            if (rem < sz && ! ppe_sbc_augment_buffer(bc, sz)) {
+                bc->buf.i -= 1;
+                return ppe_false;
+            }
+            return ppe_true;
+        }
 
-    nw = (ppe_sbc_buffer_st *) ppe_mp_malloc(bytes);
+        cap = (bc->buf.n + (bc->buf.n >> 1)); /* The new capacity is 1.5 times of the old one. */
+    } /* if */
+
+    nw = (ppe_sbc_buffer_st *) ppe_mp_calloc(cap, sizeof(ppe_sbc_buffer_st));
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return ppe_false;
     }
-    nw->rem = nw->cap = bytes - sizeof(ppe_sbc_buffer_st);
-    nw->prev = NULL;
-    nw->next = NULL;
 
-    if (! bc->buf.head) {
-        bc->buf.head = nw;
-    } else {
-        nw->prev = bc->buf.last;
-        bc->buf.last->next = nw;
+    if (bc->buf.ent) {
+        memcpy(nw, bc->buf.ent, sizeof(ppe_sbc_buffer_st) * bc->buf.n);
+        ppe_mp_free(bc->buf.ent);
     }
-    bc->buf.last = nw;
-    bc->buf.curr = nw;
 
+    bc->buf.ent = nw;
+    bc->buf.n = cap;
+
+    if (! ppe_sbc_augment_buffer(bc, sz)) {
+        if (bc->buf.i > 0) {
+            bc->buf.i -= 1;
+        }
+        return ppe_false;
+    }
     return ppe_true;
 }
 
@@ -332,19 +356,29 @@ PPE_API ppe_bool ppe_sbc_push_refer_to(ppe_str_bunch restrict bc, const ppe_stri
 
 static ppe_bool ppe_sbc_push_copy_of_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
 {
+    ppe_sbc_buffer buf = NULL;
+
     if (bc->ref.i == bc->ref.n && ! ppe_sbc_augment_references(bc)) {
         return ppe_false;
     }
-    if (bc->buf.curr->rem < sz && ! ppe_sbc_augment_buffers(bc, sz)) {
+
+    if (bc->buf.ent) {
+        buf = &bc->buf.ent[bc->buf.i];
+        if ((buf->end - buf->pos) < sz && ! ppe_sbc_augment_buffers(bc, sz)) {
+            return ppe_false;
+        }
+    } else if (! ppe_sbc_augment_buffers(bc, sz)) {
         return ppe_false;
     }
+    buf = &bc->buf.ent[bc->buf.i];
 
-    bc->ref.ent[bc->ref.i].ptr = ppe_sbc_buffer_position(bc->buf.last);
+    memcpy(buf->pos, s, sz);
+
+    bc->ref.ent[bc->ref.i].ptr = buf->pos;
     bc->ref.ent[bc->ref.i].sz = sz;
-    memcpy(bc->ref.ent[bc->ref.i].ptr, s, sz);
-
     bc->ref.i += 1;
-    bc->buf.last->rem -= sz;
+
+    buf->pos += sz;
     bc->total += sz;
     return ppe_true;
 }
@@ -365,8 +399,8 @@ PPE_API ppe_bool ppe_sbc_push_copy_of(ppe_str_bunch restrict bc, const ppe_strin
 
 PPE_API void ppe_sbc_pop(ppe_str_bunch restrict bc)
 {
-    ppe_sbc_buffer curr = NULL;
-    const char * end = NULL;
+    ppe_sbc_buffer buf = NULL;
+    const char * pos = NULL;
 
     assert(bc != NULL);
 
@@ -374,16 +408,17 @@ PPE_API void ppe_sbc_pop(ppe_str_bunch restrict bc)
         return;
     }
 
-    curr = (bc->buf.curr->rem == bc->buf.curr->cap) ? bc->buf.curr->prev : bc->buf.curr;
+    if (bc->buf.ent) {
+        pos = bc->ref.ent[bc->ref.i - 1].ptr + bc->ref.ent[bc->ref.i - 1].sz;
 
-    end = bc->ref.ent[bc->ref.i - 1].ptr + bc->ref.ent[bc->ref.i - 1].sz;
-    if (ppe_sbc_buffer_position(curr) == end) {
-        curr->rem += bc->ref.ent[bc->ref.i - 1].sz;
-
-        if (bc->buf.curr->prev == curr) {
-            bc->buf.curr = curr;
+        buf = bc->buf.ent[bc->buf.i];
+        if (buf->pos == pos) {
+            buf->pos -= bc->ref.ent[bc->ref.i - 1].sz;
+            if (buf->pos == buf->ptr) {
+                bc->buf.i -= 1;
+            }
         }
-    }
+    } /* if */
 
     bc->total -= bc->ref.ent[bc->ref.i - 1].sz;
     bc->ref.i -= 1;
@@ -470,34 +505,38 @@ PPE_API ppe_string ppe_sbc_concat(const ppe_str_bunch restrict bc)
     return ppe_sbc_join_by_cstr_imp(bc, "", 0);
 }
 
-PPE_API ppe_bool ppe_sbc_next_buffer(const ppe_str_bunch restrict bc, const char ** restrict buf, ppe_size * restrict sz, void ** restrict dat)
+PPE_API ppe_bool ppe_sbc_next_buffer(const ppe_str_bunch restrict bc, void ** restrict dat, const char ** restrict ptr, ppe_size * restrict sz)
 {
-    assert(bc != NULL);
-    assert(buf != NULL);
-    assert(sz != NULL);
-    assert(dat != NULL);
+    ppe_sbc_buffer buf = (ppe_sbc_buffer) dat;
 
-    if (*dat == (void *) bc->buf.curr) {
-        /* All buffers have been iterated. */
-        /* NOTE Case: NULL == NULL */
+    assert(bc != NULL);
+    assert(dat != NULL);
+    assert(ptr != NULL);
+    assert(sz != NULL);
+
+    if (! bc->buf.ent) {
+        /* No any buffer exists. */
         return ppe_false;
     }
 
-    if (! *dat) {
-        *dat = (void *) bc->buf.head;
+    if (! buf) {
+        buf = &bc->buf.ent[0];
     } else {
-        *dat = (void *) ((ppe_sbc_buffer)dat)->next;
-        if (! *dat) {
+        buf += 1;
+        if (buf == &bc->buf.ent[bc->buf.n]) {
+            /* No more buffers. */
             return ppe_false;
         }
     }
 
-    if (((ppe_sbc_buffer)dat)->cap == ((ppe_sbc_buffer)dat)->rem) {
+    if (buf->pos == buf->ptr) {
         /* No more data. */
         return ppe_false;
     }
-    *buf = ((const char *)dat) + sizeof(ppe_sbc_buffer_st);
-    *sz = ((ppe_sbc_buffer)dat)->cap - ((ppe_sbc_buffer)dat)->rem;
+
+    *ptr = buf->ptr;
+    *sz = buf->pos - buf->ptr;
+    *dat = (void *) buf;
     return ppe_true;
 }
 
