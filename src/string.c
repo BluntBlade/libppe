@@ -605,7 +605,7 @@ static const char * ppe_sfd_find_imp(ppe_str_finder restrict fd, const char * re
     return NULL;
 }
 
-static ppe_int ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, const ppe_int n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
+static ppe_int ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, const ppe_int n, const ppe_bool copy, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
 {
     const char * begin = NULL;
     const char * pos = NULL;
@@ -634,14 +634,22 @@ static ppe_int ppe_sfd_find_n_imp(ppe_str_finder restrict fd, const char * s res
         }
 
         if (bcc) {
-            ret = ppe_sbc_push_refer_to_cstr(bcc, begin, pos - begin);
+            if (copy) {
+                ret = ppe_sbc_push_copy_of_cstr(bcc, begin, pos - begin);
+            } else {
+                ret = ppe_sbc_push_refer_to_cstr(bcc, begin, pos - begin);
+            }
             if (! ret) {
                 goto PPE_SFD_FIND_N_IMP_ERROR_HANDLING;
             }
             bccn += 1;
         }
         if (bcs) {
-            ret = ppe_sbc_push_refer_to_cstr(bcs, pos, sz);
+            if (copy) {
+                ret = ppe_sbc_push_copy_of_cstr(bcs, pos, sz);
+            } else {
+                ret = ppe_sbc_push_refer_to_cstr(bcs, pos, sz);
+            }
             if (! ret) {
                 goto PPE_SFD_FIND_N_IMP_ERROR_HANDLING;
             }
@@ -662,7 +670,7 @@ PPE_SFD_FIND_N_IMP_ERROR_HANDLING:
     return 0 - i;
 }
 
-PPE_API ppe_int ppe_sfd_find_n_for_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, const ppe_int n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
+PPE_API ppe_int ppe_sfd_find_n_for_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, const ppe_int n, const ppe_bool copy, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
 {
     assert(fd != NULL);
     assert(s != NULL && sz > 0);
@@ -672,10 +680,10 @@ PPE_API ppe_int ppe_sfd_find_n_for_cstr(ppe_str_finder restrict fd, const char *
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
-    return ppe_sfd_find_n_imp(fd, s, sz, n, bcc, bcs);
+    return ppe_sfd_find_n_imp(fd, s, sz, n, copy, bcc, bcs);
 }
 
-PPE_API ppe_int ppe_sfd_find_n_for(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_int n, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
+PPE_API ppe_int ppe_sfd_find_n_for(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_int n, const ppe_bool copy, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs)
 {
     assert(fd != NULL);
     assert(s != NULL);
@@ -685,13 +693,16 @@ PPE_API ppe_int ppe_sfd_find_n_for(ppe_str_finder restrict fd, const ppe_string 
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
-    return ppe_sfd_find_n_imp(fd, s->ptr, s->sz, n, bcc, bcs);
+    return ppe_sfd_find_n_imp(fd, s->ptr, s->sz, n, copy, bcc, bcs);
 }
 
-PPE_API ppe_bool ppe_sfd_refer_last_component(ppe_str_finder restrict fd, ppe_str_bunch restrict bcc)
+PPE_API ppe_bool ppe_sfd_find_last_component(ppe_str_finder restrict fd, const ppe_bool copy, ppe_str_bunch restrict bcc)
 {
     assert(fd != NULL);
     assert(bcc != NULL);
+    if (copy) {
+        return ppe_sbc_push_copy_of_cstr(bcc, fd->pos, fd->end - fd->pos);
+    }
     return ppe_sbc_push_refer_to_cstr(bcc, fd->pos, fd->end - fd->pos);
 }
 
@@ -716,7 +727,7 @@ static ppe_str_bunch ppe_cs_split_imp(const char * restrict d, const ppe_ssize d
 
     ppe_sfd_reset_for_cstr(&fd, s, sz);
 
-    ret = ppe_sfd_find_n_imp(&fd, d, dsz, n, bcc, NULL); 
+    ret = ppe_sfd_find_n_imp(&fd, d, dsz, n, ppe_false, bcc, NULL); 
     if (ret < 0) {
         ppe_sbc_destroy(bcc);
         return NULL;
