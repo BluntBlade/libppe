@@ -253,7 +253,7 @@ static ppe_bool ppe_sbc_augment_buffer(ppe_str_bunch restrict bc, const ppe_ssiz
 
     buf = &bc->buf.ent[bc->buf.i];
 
-    /* NOTE case: buf->end and buf->pos may be both NULL. */
+    /* NOTE Case: buf->end and buf->pos may be both NULL. */
     if ((bytes = bc->buf.nwcap) < sz) {
         bytes = sz * 2;
     }
@@ -279,6 +279,12 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
 
     /* INVARIABLE: bc->buf.i is pointing to the current buffer in use. */
     if (bc->buf.ent) {
+        if (bc->buf.ent[bc->buf.i].ptr == bc->buf.ent[bc->buf.i].pos) {
+            /* Case: The current buffer have been reset or holding nothing, but the capacity is less than the source string size. */
+            return ppe_sbc_augment_buffer(bc, sz);
+        }
+
+        /* Case: Some strings have been copied to the current buffer, move to next one. */
         bc->buf.i += 1;
 
         if (bc->buf.i < bc->buf.n) {
