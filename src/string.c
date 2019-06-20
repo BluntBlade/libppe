@@ -167,6 +167,7 @@ typedef struct PPE_STR_BUNCH
     } buf;
 
     ppe_ssize total;            /* The total size of referenced and buffered strings in bytes. */
+    ppe_sbc_buffer_st bufs[2];
 } ppe_str_bunch_st;
 
 /* ---- Functions ---- */
@@ -177,6 +178,8 @@ static inline void ppe_sbc_init(ppe_str_bunch restrict bc)
 {
     memset(bc, 0, sizeof(ppe_str_bunch_st));
     bc->buf.nwcap = PPE_SBC_BUFFER_SIZE;
+    bc->buf.ent = &bc->bufs[0];
+    bc->buf.n = sizeof(bc->bufs) / sizeof(bc->bufs[0]);
 }
 
 PPE_API ppe_str_bunch ppe_sbc_create(void)
@@ -197,7 +200,9 @@ static void ppe_sbc_clean(ppe_str_bunch restrict bc)
     for (i = 0; i <= bc->buf.i; ++i) {
         ppe_mp_free(bc->buf.ent[i]->ptr);
     }
-    ppe_mp_free(bc->buf.ent);
+    if (bc->buf.ent != &bc->bufs[0]) {
+        ppe_mp_free(bc->buf.ent);
+    }
     ppe_mp_free(bc->ref.ent);
 }
 
@@ -272,7 +277,7 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
     ppe_size rem = 0;
 
     /* The new capacity is 1.5 times of the old one. */
-    cap = (bc->buf.ent) ? (bc->buf.n + (bc->buf.n >> 1)) : 4;
+    cap = (bc->buf.n + (bc->buf.n >> 1));
 
     nw = (ppe_sbc_buffer_st *) ppe_mp_calloc(cap, sizeof(ppe_sbc_buffer_st));
     if (! nw) {
@@ -282,7 +287,9 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
 
     if (bc->buf.ent) {
         memcpy(nw, bc->buf.ent, sizeof(ppe_sbc_buffer_st) * bc->buf.n);
-        ppe_mp_free(bc->buf.ent);
+        if (bc->buf.ent != &bc->bufs[0]) {
+            ppe_mp_free(bc->buf.ent);
+        }
     }
 
     bc->buf.ent = nw;
@@ -338,9 +345,6 @@ static ppe_bool ppe_sbc_push_copy_of_imp(ppe_str_bunch restrict bc, const char *
     }
 
     /* INVARIABLE: bc->buf.i and buf is pointing to the current buffer to save string. */
-    if (! bc->buf.ent && ! ppe_sbc_augment_buffers(bc, sz)) {
-        return ppe_false;
-    }
 
     buf = &bc->buf.ent[bc->buf.i];
     out_of_buffer = (buf->end - buf->pos) < sz;
@@ -394,19 +398,16 @@ PPE_API void ppe_sbc_pop(ppe_str_bunch restrict bc)
         return;
     }
 
-    if (bc->buf.ent) {
-        /* Only in the case the some buffers have been allocated. */
-        buf = bc->buf.ent[bc->buf.i];
-        if ((bc->ref.ent[bc->ref.i - 1].ptr + bc->ref.ent[bc->ref.i - 1].sz) == buf->pos) {
-            buf->pos -= bc->ref.ent[bc->ref.i - 1].sz;
-            if (buf->pos == buf->ptr) {
-                bc->buf.i -= 1;
-            }
-        }
-    } /* if */
-
-    bc->total -= bc->ref.ent[bc->ref.i - 1].sz;
     bc->ref.i -= 1;
+    bc->total -= bc->ref.ent[bc->ref.i].sz;
+
+    buf = bc->buf.ent[bc->buf.i];
+    if ((bc->ref.ent[bc->ref.i].ptr + bc->ref.ent[bc->ref.i].sz) == buf->pos) {
+        buf->pos -= bc->ref.ent[bc->ref.i].sz;
+        if (buf->pos == buf->ptr) {
+            bc->buf.i -= 1;
+        }
+    }
 }
 
 static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char * restrict d, const ppe_ssize dsz)
