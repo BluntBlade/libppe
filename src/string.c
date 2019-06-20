@@ -194,7 +194,7 @@ static void ppe_sbc_clean(ppe_str_bunch restrict bc)
 {
     ppe_uint i = 0;
 
-    for (i = 0; i < bc->buf.i; ++i) {
+    for (i = 0; i <= bc->buf.i; ++i) {
         ppe_mp_free(bc->buf.ent[i]->ptr);
     }
     ppe_mp_free(bc->buf.ent);
@@ -214,7 +214,7 @@ PPE_API void ppe_sbc_reset(ppe_str_bunch restrict bc)
     ppe_uint i = 0;
 
     if (bc) {
-        for (i = 0; i < bc->buf.i; ++i) {
+        for (i = 0; i <= bc->buf.i; ++i) {
             bc->buf.ent[i]->pos = bc->buf.ent[i]->ptr;
         }
         bc->buf.i = 0;
@@ -245,59 +245,34 @@ static ppe_bool ppe_sbc_augment_references(ppe_str_bunch restrict bc)
     return ppe_true;
 }
 
-static ppe_bool ppe_sbc_augment_buffer(ppe_str_bunch restrict bc, const ppe_ssize sz)
+static ppe_bool ppe_sbc_augment_buffer(ppe_sbc_buffer restrict buf, const ppe_ssize cap, const ppe_ssize sz)
 {
-    ppe_sbc_buffer buf = NULL;
-    void * nwchk = NULL;
-    ppe_size bytes = 0;
+    void * nw = NULL;
+    ppe_ssize bytes = 0;
 
-    buf = &bc->buf.ent[bc->buf.i];
+    bytes = (cap < sz) ? sz * 2 : cap;
 
-    /* NOTE Case: buf->end and buf->pos may be both NULL. */
-    if ((bytes = bc->buf.nwcap) < sz) {
-        bytes = sz * 2;
-    }
-
-    nwchk = ppe_mp_malloc(bytes);
-    if (! nwchk) {
+    nw = ppe_mp_malloc(bytes);
+    if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return ppe_false;
     }
 
     ppe_mp_free(buf->ptr);
-    buf->ptr = nwchk;
-    buf->pos = nwchk;
-    buf->end = nwchk + bytes;
+    buf->ptr = nw;
+    buf->pos = nw;
+    buf->end = nw + bytes;
     return ppe_true;
 }
 
 static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssize sz)
 {
     ppe_sbc_buffer_st * nw = NULL;
-    ppe_uint cap = 4;
+    ppe_uint cap = 0;
     ppe_size rem = 0;
 
-    /* INVARIABLE: bc->buf.i is pointing to the current buffer in use. */
-    if (bc->buf.ent) {
-        if (bc->buf.ent[bc->buf.i].ptr == bc->buf.ent[bc->buf.i].pos) {
-            /* Case: The current buffer have been reset or holding nothing, but the capacity is less than the source string size. */
-            return ppe_sbc_augment_buffer(bc, sz);
-        }
-
-        /* Case: Some strings have been copied to the current buffer, move to next one. */
-        bc->buf.i += 1;
-
-        if (bc->buf.i < bc->buf.n) {
-            rem = bc->buf.ent[bc->buf.i].end - bc->buf.ent[bc->buf.i].pos; 
-            if (rem < sz && ! ppe_sbc_augment_buffer(bc, sz)) {
-                bc->buf.i -= 1;
-                return ppe_false;
-            }
-            return ppe_true;
-        }
-
-        cap = (bc->buf.n + (bc->buf.n >> 1)); /* The new capacity is 1.5 times of the old one. */
-    } /* if */
+    /* The new capacity is 1.5 times of the old one. */
+    cap = (bc->buf.ent) ? (bc->buf.n + (bc->buf.n >> 1)) : 4;
 
     nw = (ppe_sbc_buffer_st *) ppe_mp_calloc(cap, sizeof(ppe_sbc_buffer_st));
     if (! nw) {
@@ -312,13 +287,6 @@ static ppe_bool ppe_sbc_augment_buffers(ppe_str_bunch restrict bc, const ppe_ssi
 
     bc->buf.ent = nw;
     bc->buf.n = cap;
-
-    if (! ppe_sbc_augment_buffer(bc, sz)) {
-        if (bc->buf.i > 0) {
-            bc->buf.i -= 1;
-        }
-        return ppe_false;
-    }
     return ppe_true;
 }
 
@@ -363,20 +331,33 @@ PPE_API ppe_bool ppe_sbc_push_refer_to(ppe_str_bunch restrict bc, const ppe_stri
 static ppe_bool ppe_sbc_push_copy_of_imp(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz)
 {
     ppe_sbc_buffer buf = NULL;
+    ppe_bool out_of_buffer = ppe_false;
 
     if (bc->ref.i == bc->ref.n && ! ppe_sbc_augment_references(bc)) {
         return ppe_false;
     }
 
-    if (bc->buf.ent) {
-        buf = &bc->buf.ent[bc->buf.i];
-        if ((buf->end - buf->pos) < sz && ! ppe_sbc_augment_buffers(bc, sz)) {
-            return ppe_false;
-        }
-    } else if (! ppe_sbc_augment_buffers(bc, sz)) {
+    /* INVARIABLE: bc->buf.i and buf is pointing to the current buffer to save string. */
+    if (! bc->buf.ent && ! ppe_sbc_augment_buffers(bc, sz)) {
         return ppe_false;
     }
+
     buf = &bc->buf.ent[bc->buf.i];
+    out_of_buffer = (buf->end - buf->pos) < sz;
+    if (buf->pos != buf->ptr && out_of_buffer) {
+        /* The current buffer is holding something, */
+        /* and there is not enough buffer, move to the next one. */
+        if ((bc->buf.i + 1) == bc->buf.n && ! ppe_sbc_augment_buffers(bc, sz)) {
+            return ppe_false;
+        }
+        bc->buf.i += 1;
+        buf = &bc->buf.ent[bc->buf.i];
+        out_of_buffer = (buf->end - buf->pos) < sz;
+    }
+
+    if (out_of_buffer && ! ppe_sbc_augment_buffer(buf, bc->buf.nwcap, sz)) {
+        return ppe_false;
+    }
 
     memcpy(buf->pos, s, sz);
 
@@ -406,7 +387,6 @@ PPE_API ppe_bool ppe_sbc_push_copy_of(ppe_str_bunch restrict bc, const ppe_strin
 PPE_API void ppe_sbc_pop(ppe_str_bunch restrict bc)
 {
     ppe_sbc_buffer buf = NULL;
-    const char * pos = NULL;
 
     assert(bc != NULL);
 
@@ -415,10 +395,9 @@ PPE_API void ppe_sbc_pop(ppe_str_bunch restrict bc)
     }
 
     if (bc->buf.ent) {
-        pos = bc->ref.ent[bc->ref.i - 1].ptr + bc->ref.ent[bc->ref.i - 1].sz;
-
+        /* Only in the case the some buffers have been allocated. */
         buf = bc->buf.ent[bc->buf.i];
-        if (buf->pos == pos) {
+        if ((bc->ref.ent[bc->ref.i - 1].ptr + bc->ref.ent[bc->ref.i - 1].sz) == buf->pos) {
             buf->pos -= bc->ref.ent[bc->ref.i - 1].sz;
             if (buf->pos == buf->ptr) {
                 bc->buf.i -= 1;
