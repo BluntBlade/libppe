@@ -416,13 +416,6 @@ static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char
     ppe_ssize nwsz = 0;
     ppe_uint i = 0;
 
-    if (bc->ref.i == 0) {
-        return &str_empty_s;
-    }
-    if (bc->ref.i == 1) {
-        return ppe_cs_clone(bc->ref.ent[0].ptr, bc->ref.ent[0].sz);
-    }
-
     nwsz = bc->ref.ent[0]->sz;
     if (dsz > 0) {
         for (i = 1; i < bc->ref.i; i += 1) {
@@ -445,7 +438,8 @@ static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
-    pos = ppe_str_buffer(nw);
+    nw->ptr = pos = ppe_str_buffer(nw);
+    nw->sz = nwsz;
 
     memcpy(pos, bc->ref.ent[0].ptr, bc->ref.ent[0].sz);
     pos += bc->ref.ent[0].sz;
@@ -466,8 +460,6 @@ static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char
     }
 
     *pos = '\0';
-    nw->ptr = ppe_str_buffer(nw);
-    nw->sz = nwsz;
     return nw;
 }
 
@@ -475,6 +467,13 @@ PPE_API ppe_string ppe_sbc_join_by_cstr(const ppe_str_bunch restrict bc, const c
 {
     assert(bc != NULL);
     assert(d != NULL && dsz >= 0);
+
+    if (bc->ref.i == 0) {
+        return &str_empty_s;
+    }
+    if (bc->ref.i == 1) {
+        return ppe_cs_clone(bc->ref.ent[0].ptr, bc->ref.ent[0].sz);
+    }
     return ppe_sbc_join_by_cstr_imp(bc, d, dsz);
 }
 
@@ -482,12 +481,26 @@ PPE_API ppe_string ppe_sbc_join_by(const ppe_str_bunch restrict bc, const ppe_st
 {
     assert(bc != NULL);
     assert(d != NULL);
+
+    if (bc->ref.i == 0) {
+        return &str_empty_s;
+    }
+    if (bc->ref.i == 1) {
+        return ppe_cs_clone(bc->ref.ent[0].ptr, bc->ref.ent[0].sz);
+    }
     return ppe_sbc_join_by_cstr_imp(bc, d->ptr, d->sz);
 }
 
 PPE_API ppe_string ppe_sbc_concat(const ppe_str_bunch restrict bc)
 {
     assert(bc != NULL);
+
+    if (bc->ref.i == 0) {
+        return &str_empty_s;
+    }
+    if (bc->ref.i == 1) {
+        return ppe_cs_clone(bc->ref.ent[0].ptr, bc->ref.ent[0].sz);
+    }
     return ppe_sbc_join_by_cstr_imp(bc, "", 0);
 }
 
@@ -826,19 +839,18 @@ static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_ssize dsz, cons
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
         return NULL;
     }
+    if ((rem -= dsz) < 0) {
+        ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
+        return NULL;
+    }
     if ((rem -= sz2) < 0) {
         ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
         return NULL;
     }
 
-    if (rem == PPE_STR_MAX_SIZE) {
+    if (PPE_STR_MAX_SIZE - rem == dsz) {
         /* Both source strings are empty. */
         return ppe_cs_clone(d, dsz);
-    }
-
-    if ((rem -= dsz) < 0) {
-        ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
-        return NULL;
     }
 
     nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + (PPE_STR_MAX_SIZE - rem) + 1);
@@ -885,13 +897,6 @@ static ppe_string ppe_cs_concat_2_imp(const char * restrict s1, const ppe_ssize 
         return &str_empty_s;
     }
 
-    if (PPE_STR_MAX_SIZE - rem == sz1) {
-        return ppe_cs_clone(s1, sz1);
-    }
-    if (PPE_STR_MAX_SIZE - rem == sz2) {
-        return ppe_cs_clone(s2, sz2);
-    }
-
     nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + (PPE_STR_MAX_SIZE - rem) + 1);
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
@@ -900,10 +905,14 @@ static ppe_string ppe_cs_concat_2_imp(const char * restrict s1, const ppe_ssize 
     nw->ptr = ppe_str_buffer(nw);
     nw->sz = 0;
 
-    memcpy(nw->ptr, s1, sz1);
-    nw->sz += sz1;
-    memcpy(nw->ptr + nw->sz, s2, sz2);
-    nw->sz += sz2;
+    if (sz1 > 0) {
+        memcpy(nw->ptr, s1, sz1);
+        nw->sz += sz1;
+    }
+    if (sz2 > 0) {
+        memcpy(nw->ptr + nw->sz, s2, sz2);
+        nw->sz += sz2;
+    }
     nw->ptr[nw->sz] = '\0';
     return nw;
 }
