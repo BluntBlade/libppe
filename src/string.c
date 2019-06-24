@@ -36,7 +36,6 @@ static inline char * ppe_str_buffer(ppe_string restrict s)
 
 static const char * cs_empty_s = "";
 static ppe_string_st str_empty_s = { 0, cs_empty_s };
-static ppe_string str_empty_array_s[2] = { &str_empty_s, NULL };
 
 /* ---- Functions ---- */
 
@@ -167,6 +166,7 @@ typedef struct PPE_STR_BUNCH
     } buf;
 
     ppe_ssize total;            /* The total size of referenced and buffered strings in bytes. */
+    ppe_string_st strs[8];
     ppe_sbc_buffer_st bufs[2];
 } ppe_str_bunch_st;
 
@@ -177,8 +177,12 @@ typedef struct PPE_STR_BUNCH
 static inline void ppe_sbc_init(ppe_str_bunch restrict bc)
 {
     memset(bc, 0, sizeof(ppe_str_bunch_st));
-    bc->buf.nwcap = PPE_SBC_BUFFER_SIZE;
+
+    bc->ref.ent = &bc->strs[0];
+    bc->ref.n = sizeof(bc->strs) / sizeof(bc->strs[0]);
+
     bc->buf.ent = &bc->bufs[0];
+    bc->buf.nwcap = PPE_SBC_BUFFER_SIZE;
     bc->buf.n = sizeof(bc->bufs) / sizeof(bc->bufs[0]);
 }
 
@@ -199,6 +203,9 @@ static void ppe_sbc_clean(ppe_str_bunch restrict bc)
 
     for (i = 0; i <= bc->buf.i; ++i) {
         ppe_mp_free(bc->buf.ent[i]->ptr);
+    }
+    if (bc->ref.ent != &bc->strs[0]) {
+        ppe_mp_free(bc->ref.ent);
     }
     if (bc->buf.ent != &bc->bufs[0]) {
         ppe_mp_free(bc->buf.ent);
@@ -232,7 +239,8 @@ static ppe_bool ppe_sbc_augment_references(ppe_str_bunch restrict bc)
     ppe_string_st * nw = NULL;
     ppe_uint cap = 0;
 
-    cap = (bc->ref.n > 0) ? (bc->ref.n + (bc->ref.n >> 1)) : 16; /* The new capacity is 1.5 times of the old one. */
+    /* The new capacity is 1.5 times of the old one. */
+    cap = (bc->ref.n + (bc->ref.n >> 1));
 
     nw = (ppe_string_st *) ppe_mp_calloc(cap, sizeof(ppe_string_st));
     if (! nw) {
@@ -242,7 +250,9 @@ static ppe_bool ppe_sbc_augment_references(ppe_str_bunch restrict bc)
 
     if (bc->ref.ent) {
         memcpy(nw, bc->ref.ent, sizeof(ppe_string_st) * bc->ref.i);
-        ppe_mp_free(bc->ref.ent);
+        if (bc->ref.ent != &bc->strs[0]) {
+            ppe_mp_free(bc->ref.ent);
+        }
     }
 
     bc->ref.ent = nw;
