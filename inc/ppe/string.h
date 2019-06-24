@@ -133,7 +133,7 @@ PPE_API extern ppe_bool ppe_sbc_push_refer_to(ppe_str_bunch restrict bc, const p
 PPE_API extern ppe_bool ppe_sbc_push_copy_of_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
 PPE_API extern ppe_bool ppe_sbc_push_copy_of(ppe_str_bunch restrict bc, const ppe_string restrict s);
 
-PPE_API extern void ppe_sbc_pop(ppe_str_bunch restrict bc);
+PPE_API extern void ppe_sbc_pop_n(ppe_str_bunch restrict bc, const ppe_uint n);
 
 PPE_API extern ppe_string ppe_sbc_join_by_cstr(const ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
 PPE_API extern ppe_string ppe_sbc_join_by(const ppe_str_bunch restrict bc, const ppe_string restrict s);

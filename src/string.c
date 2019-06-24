@@ -388,26 +388,30 @@ PPE_API ppe_bool ppe_sbc_push_copy_of(ppe_str_bunch restrict bc, const ppe_strin
     return ppe_sbc_push_copy_of_imp(bc, s->ptr, s->sz);
 }
 
-PPE_API void ppe_sbc_pop(ppe_str_bunch restrict bc)
+PPE_API void ppe_sbc_pop_n(ppe_str_bunch restrict bc, const ppe_uint n)
 {
     ppe_sbc_buffer buf = NULL;
+    ppe_uint max = 0;
+    ppe_uint i = 0;
 
     assert(bc != NULL);
+    assert(n > 0);
 
-    if (bc->ref.i == 0) {
-        return;
-    }
-
-    bc->ref.i -= 1;
-    bc->total -= bc->ref.ent[bc->ref.i].sz;
+    max = (bc->ref.i < n) ? bc->ref.i : n;
 
     buf = bc->buf.ent[bc->buf.i];
-    if ((bc->ref.ent[bc->ref.i].ptr + bc->ref.ent[bc->ref.i].sz) == buf->pos) {
-        buf->pos -= bc->ref.ent[bc->ref.i].sz;
-        if (buf->pos == buf->ptr) {
-            bc->buf.i -= 1;
+    for (i = 0; i < max; ++i) {
+        bc->ref.i -= 1;
+        bc->total -= bc->ref.ent[bc->ref.i].sz;
+
+        if ((bc->ref.ent[bc->ref.i].ptr + bc->ref.ent[bc->ref.i].sz) == buf->pos) {
+            buf->pos -= bc->ref.ent[bc->ref.i].sz;
+            if (buf->pos == buf->ptr) {
+                bc->buf.i -= 1;
+                buf -= 1;
+            }
         }
-    }
+    } /* for */
 }
 
 static ppe_string ppe_sbc_join_by_cstr_imp(ppe_str_bunch restrict bc, const char * restrict d, const ppe_ssize dsz)
@@ -737,10 +741,10 @@ PPE_SFD_FIND_N_IMP_ERROR_HANDLING:
     fd->pos = begin; /* Resume the start point of the next search. */
 
     if (bcc && bccn > i) {
-        ppe_sbc_pop(bcc);
+        ppe_sbc_pop_n(bcc, 1);
     }
     if (bcs && bcsn > i) {
-        ppe_sbc_pop(bcs);
+        ppe_sbc_pop_n(bcs, 1);
     }
     return 0 - i;
 }
