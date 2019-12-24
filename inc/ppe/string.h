@@ -41,16 +41,27 @@ PPE_API extern ppe_string ppe_cs_clone(const ppe_char * restrict s, const ppe_ss
 
 /* join */
 
-PPE_API extern ppe_string ppe_cs_join_cstr(const char * restrict d, const ppe_ssize dsz, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, ...);
-PPE_API extern ppe_string ppe_cs_join(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s1, const ppe_string restrict s2, ...);
+PPE_API extern ppe_string ppe_cs_join(const char * restrict d, const ppe_ssize dsz, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, ...);
+PPE_API extern ppe_string ppe_cs_join_str(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s1, const ppe_string restrict s2, ...);
 
-PPE_API extern ppe_string ppe_cs_join_cstr_2(const char * restrict d, const ppe_ssize dsz, const ppe_ssize dsz, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2);
-PPE_API extern ppe_string ppe_cs_join_2(const char * restrict d, const ppe_ssize dsz, const ppe_ssize dsz, const ppe_string restrict s1, const ppe_string restrict s2);
+static inline ppe_string ppe_cs_join_2(const char * restrict d, const ppe_ssize dsz, const ppe_ssize dsz, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2)
+{
+    return ppe_cs_join(d, dsz, s1, sz1, s2, sz2, PPE_STR_ARG_END);
+}
+
+static inline ppe_string ppe_cs_join_str_2(const char * restrict d, const ppe_ssize dsz, const ppe_ssize dsz, const ppe_string restrict s1, const ppe_string restrict s2)
+{
+    return ppe_cs_join_str(d, dsz, s1, s2, PPE_STR_ARG_END);
+}
 
 /* concat */
 
-PPE_API extern ppe_string ppe_cs_concat_cstr(const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, ...);
-PPE_API extern ppe_string ppe_cs_concat_cstr_2(const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2);
+PPE_API extern ppe_string ppe_cs_concat(const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, ...);
+
+static inline ppe_string ppe_cs_concat_2(const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2)
+{
+    return ppe_cs_join("", 0, s1, sz1, s2, sz2, PPE_STR_ARG_END);
+}
 
 /* split */
 
