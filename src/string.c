@@ -41,7 +41,7 @@ static ppe_string_st str_empty_s = { 0, cs_empty_s };
 
 /* -- Preset values -- */
 
-PPE_API const ppe_string ppe_str_get_empty(void)
+PPE_API const ppe_string ppe_str_empty(void)
 {
     return &str_empty_s;
 }
@@ -116,7 +116,7 @@ PPE_API ppe_ssize ppe_str_size(ppe_string restrict s)
 
 /* -- Comparison -- */
 
-PPE_API ppe_bool ppe_str_equals(const ppe_string restrict s1, const ppe_string restrict s2)
+PPE_API ppe_bool ppe_str_equals_to(const ppe_string restrict s1, const ppe_string restrict s2)
 {
     assert(s1 != NULL);
     assert(s2 != NULL);
@@ -828,14 +828,14 @@ static ppe_str_bunch ppe_cs_split_imp(const char * restrict d, const ppe_ssize d
     return bcc;
 }
 
-PPE_API ppe_str_bunch ppe_cs_split_cstr(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n)
+PPE_API ppe_str_bunch ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n)
 {
     assert(d != NULL && dsz > 0);
     assert(s != NULL);
     return ppe_cs_split_imp(d, dsz, s, sz, n);
 }
 
-PPE_API ppe_str_bunch ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n)
+PPE_API ppe_str_bunch ppe_cs_split_str(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n)
 {
     assert(d != NULL && dsz > 0);
     assert(s != NULL);
@@ -1066,22 +1066,6 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_string re
     return nw;
 }
 
-PPE_API ppe_string ppe_str_join_cstr_2(const ppe_string restrict d, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2)
-{
-    assert(d != NULL);
-    assert(s1 != NULL && sz1 >= 0);
-    assert(s2 != NULL && sz2 >= 0);
-    return ppe_cs_join_2_imp(d->ptr, d->sz, s1, sz1, s2, sz2);
-}
-
-PPE_API ppe_string ppe_str_join_2(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)
-{
-    assert(d != NULL);
-    assert(s1 != NULL);
-    assert(s2 != NULL);
-    return ppe_cs_join_2_imp(d->ptr, d->sz, s1->ptr, s1->sz, s2->ptr, s2->sz);
-}
-
 /* concat */
 
 PPE_API ppe_string ppe_str_concat(const ppe_string restrict s1, const ppe_string restrict s2, ...)
@@ -1098,13 +1082,6 @@ PPE_API ppe_string ppe_str_concat(const ppe_string restrict s1, const ppe_string
     return nw;
 }
 
-PPE_API ppe_string ppe_str_concat_2(const ppe_string restrict s1, const ppe_string restrict s2)
-{
-    assert(s1 != NULL);
-    assert(s2 != NULL);
-    return ppe_cs_join_2_imp("", 0, s1->ptr, s1->sz, s2->ptr, s2->sz);
-}
-
 /* split */
 
 PPE_API ppe_str_bunch ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, const ppe_int n)
@@ -1112,13 +1089,6 @@ PPE_API ppe_str_bunch ppe_str_split_cstr(const ppe_string restrict d, const char
     assert(d != NULL && d->sz > 0);
     assert(s != NULL);
     return ppe_cs_split_imp(d->ptr, d->sz, s, sz, n);
-}
-
-PPE_API ppe_str_bunch ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, const ppe_int n)
-{
-    assert(d != NULL && d->sz > 0);
-    assert(s != NULL);
-    return ppe_cs_split_imp(d->ptr, d->sz, s->ptr, s->sz, n);
 }
 
 #ifdef __cplusplus
