@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "ppe/mempool.h"
 #include "ppe/string.h"
 
@@ -6,187 +8,117 @@ extern "C"
 {
 #endif
 
-/* ==== Declaration : String ==== */
+/* ==== Definitions : C-String ============================================== */
 
-/* ---- Types ---- */
+/* ---- Preset Values ------------------------------------------------------- */
 
-typedef struct PPE_STRING
-{
-    ppe_ssize sz;
-    char buf[1];
-} ppe_string_st;
+static const ppe_char * cs_empty_s = "";
 
-/* ---- Functions ---- */
-
-/* -- Internals -- */
-
-static inline ppe_ssize ppe_cs_detect_size(const char * restrict s, const ppe_ssize sz)
-{
-    return (sz == PPE_STR_DETECT_SIZE) ? strlen(s) : sz;
-}
-
-static inline char * ppe_str_buffer(ppe_string restrict s)
-{
-    return (((char *)&s->buf) + sizeof(s->buf));
-}
-
-/* ==== Definitions : String ==== */
-
-/* ---- Preset values ---- */
-
-static const char * cs_empty_s = "";
-static ppe_string_st str_empty_s = { 0, cs_empty_s };
-
-/* ---- Functions ---- */
+/* ---- Functions ----------------------------------------------------------- */
 
 /* -- Preset values -- */
 
-PPE_API const ppe_string ppe_str_empty(void)
+PPE_API const ppe_cstr ppe_cs_empty(void)
 {
-    return &str_empty_s;
+    return cs_empty_s;
 }
 
 /* -- Property -- */
 
-PPE_API const char * pp_str_addr(ppe_string restrict s)
+PPE_API ppe_cs_size(const ppe_cstr restrict s)
 {
-    assert(s != NULL);
-    return s->buf;
+    assert(s);
+    return strlen(s);
 }
 
-PPE_API ppe_ssize ppe_str_size(ppe_string restrict s)
+/* -- Test -- */
+
+PPE_API ppe_bool ppe_cs_is_empty(const ppe_cstr restrict s)
 {
-    assert(s != NULL);
-    return s->sz;
+    assert(s);
+    return (s[0] == '\0');
 }
 
-/* -- Comparison -- */
-
-PPE_API ppe_bool ppe_str_equals_to(const ppe_string restrict s1, const ppe_string restrict s2)
+PPE_API ppe_int ppe_cs_compare(const ppe_cstr restrict s1, const ppe_cstr restrict s2)
 {
-    assert(s1 != NULL);
-    assert(s2 != NULL);
-    return strcmp(s1->buf, s2->buf) == 0;
+    assert(s1);
+    assert(s2);
+    return strcmp(s1, s2);
 }
 
-PPE_API ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_string restrict s2)
-{
-    assert(s1 != NULL);
-    assert(s2 != NULL);
-    return strcmp(s1->buf, s2->buf) < 0;
-}
+/* -- Find -- */
 
-PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_string restrict s2)
+PPE_API const ppe_cstr ppe_cs_find(const ppe_cstr restrict s, const ppe_cstr restrict t)
 {
-    assert(s1 != NULL);
-    assert(s2 != NULL);
-    return strcmp(s1->buf, s2->buf) > 0;
+    assert(s);
+    assert(t);
+    return (const ppe_cstr) strstr(s, t);
 }
 
 /* -- Create & Destroy -- */
 
-/* _cs_ series */
-
-PPE_API ppe_string ppe_cs_clone(const ppe_char * restrict s, const ppe_ssize sz)
+PPE_API void ppe_cs_destroy(ppe_cstr restrict s)
 {
-    ppe_string nw = NULL;
-
-    assert(s != NULL);
-
-    if (s == str_empty_s.ptr) {
-        return &str_empty_s;
+    if (s && s != cs_empty_s) {
+        ppe_mp_free(s);
     }
-    sz = ppe_cs_detect_size(s, sz);
+}
 
-    if (sz == 0) {
-        /* Check if the source string is empty. */
-        return &str_empty_s;
+PPE_API ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size sz)
+{
+    ppe_cstr nw = NULL;
+
+    assert(s);
+
+    if (ppe_cs_is_empty(s) || sz == 0) {
+        return cs_empty_s;
     }
 
-    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + sz);
+    nw = (ppe_cstr) ppe_mp_malloc(sz);
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
 
-    nw->buf = ppe_str_buffer(nw);
-    memcpy(nw->buf, s, sz);
-    nw->buf[sz] = '\0';
-    nw->sz = sz;
+    memcpy(nw, s, sz);
+    nw[sz] = '\0';
     return nw;
 }
 
-PPE_API ppe_string ppe_cs_vsprintf(const char * restrict fmt, va_list args)
+/* -- Join & Concat -- */
+
+PPE_API ppe_cstr ppe_cs_join(const ppe_cstr restrict d, const ppe_cstr restrict s1, const ppe_cstr restrict s2, ...)
 {
-    /* TODO: Implementation */
-    return NULL;
 }
 
-/* _str_ series */
-
-PPE_API ppe_string ppe_str_clone(const ppe_string restrict s)
+PPE_API extern ppe_cstr ppe_cs_concat(const ppe_cstr restrict d, const ppe_cstr restrict s1, const ppe_cstr restrict s2, ...)
 {
-    assert(s != NULL);
-    return ppe_cs_clone(s->buf, s->sz);
 }
 
-PPE_API void ppe_str_destroy(ppe_string restrict s)
+/* ==== Definitions : String ================================================ */
+
+/* ---- Types --------------------------------------------------------------- */
+
+typedef struct PPE_STRING
 {
-    if (s && s != &str_empty_s) {
-        ppe_mp_free(s);
-    }
+    ppe_ssize sz;
+    ppe_char buf[1];
+} ppe_string_st;
+
+/* ---- Preset Values ------------------------------------------------------- */
+
+static ppe_string_st str_empty_s = { 0, '\0' };
+
+/* ---- Functions ----------------------------------------------------------- */
+
+/* -- Internals -- */
+
+static inline ppe_ssize ppe_cs_detect_size(const ppe_char * restrict s, const ppe_ssize sz)
+{
+    return (sz == PPE_STR_DETECT_SIZE) ? strlen(s) : sz;
 }
 
-/* ==== Definitions : String ==== */
-
-/* ---- Functions Defered to Implement ---- */
-
-/* -- cs module -- */
-
-/* split */
-
-static ppe_str_bunch ppe_cs_split_imp(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n)
-{
-    ppe_str_finder_st fd;
-    ppe_str_bunch bcc = NULL;
-    ppe_int ret = 0;
-
-    bcc = ppe_sbc_create();
-    if (! bcc) {
-        return NULL;
-    }
-
-    ppe_sfd_reset_for_cstr(&fd, s, sz);
-
-    ret = ppe_sfd_find_n_imp(&fd, d, dsz, n, ppe_false, bcc, NULL); 
-    if (ret < 0) {
-        ppe_sbc_destroy(bcc);
-        return NULL;
-    }
-    if (! ppe_sfd_refer_last_component(&fd)) {
-        ppe_sbc_destroy(bcc);
-        return NULL;
-    }
-    return bcc;
-}
-
-PPE_API ppe_str_bunch ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n)
-{
-    assert(d != NULL && dsz > 0);
-    assert(s != NULL);
-    return ppe_cs_split_imp(d, dsz, s, sz, n);
-}
-
-PPE_API ppe_str_bunch ppe_cs_split_str(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n)
-{
-    assert(d != NULL && dsz > 0);
-    assert(s != NULL);
-    return ppe_cs_split_imp(d, dsz, s->buf, s->sz, n);
-}
-
-/* join */
-
-static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_ssize dsz, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2)
+static ppe_string ppe_cs_join_2_imp(const ppe_char * restrict d, ppe_ssize dsz, const ppe_char * restrict s1, const ppe_ssize sz1, const ppe_char * restrict s2, const ppe_ssize sz2)
 {
     ppe_string nw = NULL;
     ppe_ssize rem = PPE_STR_MAX_SIZE;
@@ -233,19 +165,19 @@ static ppe_string ppe_cs_join_2_imp(const char * restrict d, ppe_ssize dsz, cons
     return nw;
 }
 
-static ppe_string ppe_cs_join_imp(const char * restrict d, const ppe_ssize dsz, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, va_list args)
+static ppe_string ppe_cs_join_imp(const ppe_char * restrict d, const ppe_ssize dsz, const ppe_char * restrict s1, const ppe_ssize sz1, const ppe_char * restrict s2, const ppe_ssize sz2, va_list args)
 {
     va_list cp;
     ppe_str_bunch bc;
     ppe_string nw = NULL;
-    const char * s = NULL;
+    const ppe_char * s = NULL;
     ppe_ssize sz = 0;
     ppe_uint n = 0;
 
     /* -- Check arguments. -- */
     va_copy(cp, args);
 
-    s = va_arg(cp, const char *);
+    s = va_arg(cp, const ppe_char *);
     if (s == PPE_STR_ARG_END) {
         /* Only two strings to join. */
         va_end(cp);
@@ -256,34 +188,112 @@ static ppe_string ppe_cs_join_imp(const char * restrict d, const ppe_ssize dsz, 
     ppe_sbc_init(&bc);
 
     if (! ppe_sbc_push_refer_to_cstr(bc, s1, sz1)) {
-        goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
+        goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
     }
     if (! ppe_sbc_push_refer_to_cstr(bc, s2, sz2)) {
-        goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
+        goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
     }
 
     do {
         sz = va_arg(cp, ppe_ssize);
         if (sz < 0) {
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-            goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
+            goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
         }
         if (! ppe_sbc_push_refer_to_cstr(bc, s, sz)) {
-            goto PPE_CS_JOIN_CSTR_ERROR_HANDLING;
+            goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
         }
 
-        s = va_arg(cp, const char *);
+        s = va_arg(cp, const ppe_char *);
     } while (s != PPE_STR_ARG_END);
 
     nw = ppe_sbc_join_by_cstr_imp(bc, d, dsz);
 
-PPE_CS_JOIN_CSTR_ERROR_HANDLING:
+PPE_CS_JOIN_IMP_ERROR_HANDLING:
     ppe_sbc_clean(&bc);
     va_end(cp);
     return nw;
 }
 
-PPE_API ppe_string ppe_cs_join(const char * restrict d, const ppe_ssize dsz, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, ...)
+/* -- Preset values -- */
+
+PPE_API const ppe_string ppe_str_empty(void)
+{
+    return &str_empty_s;
+}
+
+/* -- Property -- */
+
+PPE_API const ppe_char * pp_str_addr(ppe_string restrict s)
+{
+    assert(s != NULL);
+    return s->buf;
+}
+
+PPE_API ppe_ssize ppe_str_size(ppe_string restrict s)
+{
+    assert(s != NULL);
+    return s->sz;
+}
+
+/* -- Comparison -- */
+
+PPE_API ppe_bool ppe_str_equals_to(const ppe_string restrict s1, const ppe_string restrict s2)
+{
+    assert(s1 != NULL);
+    assert(s2 != NULL);
+    return strcmp(s1->buf, s2->buf) == 0;
+}
+
+PPE_API ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_string restrict s2)
+{
+    assert(s1 != NULL);
+    assert(s2 != NULL);
+    return strcmp(s1->buf, s2->buf) < 0;
+}
+
+PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_string restrict s2)
+{
+    assert(s1 != NULL);
+    assert(s2 != NULL);
+    return strcmp(s1->buf, s2->buf) > 0;
+}
+
+/* -- Create & Destroy -- */
+
+PPE_API void ppe_str_destroy(ppe_string restrict s)
+{
+    if (s && s != &str_empty_s) {
+        ppe_mp_free(s);
+    }
+}
+
+/* _cs_ series */
+
+PPE_API ppe_string ppe_cs_clone(const ppe_char * restrict s, const ppe_ssize sz)
+{
+    ppe_string nw = NULL;
+
+    assert(s != NULL && sz >= 0);
+
+    if (sz == 0 || s[0] == '\0') {
+        /* Check if the source string is empty. */
+        return &str_empty_s;
+    }
+
+    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + sz);
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    memcpy(nw->buf, s, sz);
+    nw->buf[sz] = '\0';
+    nw->sz = sz;
+    return nw;
+}
+
+PPE_API ppe_string ppe_cs_join(const ppe_char * restrict d, const ppe_ssize dsz, const ppe_char * restrict s1, const ppe_ssize sz1, const ppe_char * restrict s2, const ppe_ssize sz2, ...)
 {
     va_list ap;
     ppe_string nw = NULL;
@@ -298,7 +308,60 @@ PPE_API ppe_string ppe_cs_join(const char * restrict d, const ppe_ssize dsz, con
     return nw;
 }
 
-static ppe_string ppe_cs_join_str_imp(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s1, const ppe_string restrict s2, va_list args)
+PPE_API ppe_string ppe_cs_vsprintf(const ppe_char * restrict fmt, va_list args)
+{
+    /* TODO: Implementation */
+    return NULL;
+}
+
+/* _str_ series */
+
+/* -- cs module -- */
+
+/* split */
+
+static ppe_str_bunch ppe_cs_split_imp(const ppe_char * restrict d, const ppe_ssize dsz, const ppe_char * restrict s, const ppe_ssize sz, const ppe_int n)
+{
+    ppe_str_finder_st fd;
+    ppe_str_bunch bcc = NULL;
+    ppe_int ret = 0;
+
+    bcc = ppe_sbc_create();
+    if (! bcc) {
+        return NULL;
+    }
+
+    ppe_sfd_reset_for_cstr(&fd, s, sz);
+
+    ret = ppe_sfd_find_n_imp(&fd, d, dsz, n, ppe_false, bcc, NULL); 
+    if (ret < 0) {
+        ppe_sbc_destroy(bcc);
+        return NULL;
+    }
+    if (! ppe_sfd_refer_last_component(&fd)) {
+        ppe_sbc_destroy(bcc);
+        return NULL;
+    }
+    return bcc;
+}
+
+PPE_API ppe_str_bunch ppe_cs_split(const ppe_char * restrict d, const ppe_ssize dsz, const ppe_char * restrict s, const ppe_ssize sz, const ppe_int n)
+{
+    assert(d != NULL && dsz > 0);
+    assert(s != NULL);
+    return ppe_cs_split_imp(d, dsz, s, sz, n);
+}
+
+PPE_API ppe_str_bunch ppe_cs_split_str(const ppe_char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n)
+{
+    assert(d != NULL && dsz > 0);
+    assert(s != NULL);
+    return ppe_cs_split_imp(d, dsz, s->buf, s->sz, n);
+}
+
+/* join */
+
+static ppe_string ppe_cs_join_str_imp(const ppe_char * restrict d, const ppe_ssize dsz, const ppe_string restrict s1, const ppe_string restrict s2, va_list args)
 {
     va_list cp;
     ppe_str_bunch bc;
@@ -342,24 +405,9 @@ PPE_CS_JOIN_ERROR_HANDLING:
     return nw;
 }
 
-PPE_API ppe_string ppe_cs_join_str(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s1, const ppe_string restrict s2, ...)
-{
-    va_list ap;
-    ppe_string nw = NULL;
-
-    assert(d != NULL && dsz >= 0);
-    assert(s1 != NULL);
-    assert(s2 != NULL);
-
-    va_start(ap, s2);
-    nw = ppe_cs_join_str_imp(d, dsz, s1, s2, ap);
-    va_end(ap);
-    return nw;
-}
-
 /* concat */
 
-PPE_API ppe_string ppe_cs_concat(const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, ...)
+PPE_API ppe_string ppe_cs_concat(const ppe_char * restrict s1, const ppe_ssize sz1, const ppe_char * restrict s2, const ppe_ssize sz2, ...)
 {
     va_list ap;
     ppe_string nw = NULL;
@@ -377,7 +425,7 @@ PPE_API ppe_string ppe_cs_concat(const char * restrict s1, const ppe_ssize sz1, 
 
 /* join */
 
-PPE_API ppe_string ppe_str_join_cstr(const ppe_string restrict d, const char * restrict s1, const ppe_ssize sz1, const char * restrict s2, const ppe_ssize sz2, ...)
+PPE_API ppe_string ppe_str_join_cstr(const ppe_string restrict d, const ppe_char * restrict s1, const ppe_ssize sz1, const ppe_char * restrict s2, const ppe_ssize sz2, ...)
 {
     va_list ap;
     ppe_string nw = NULL;
@@ -425,7 +473,7 @@ PPE_API ppe_string ppe_str_concat(const ppe_string restrict s1, const ppe_string
 
 /* split */
 
-PPE_API ppe_str_bunch ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, const ppe_int n)
+PPE_API ppe_str_bunch ppe_str_split_cstr(const ppe_string restrict d, const ppe_char * restrict s, const ppe_ssize sz, const ppe_int n)
 {
     assert(d != NULL && d->sz > 0);
     assert(s != NULL);
