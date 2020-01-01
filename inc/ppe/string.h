@@ -15,61 +15,10 @@ extern "C"
 
 /* ---- Types ---- */
 
+struct ppe_str_bunch_st;
+
 struct ppe_string_st; 
 typedef struct ppe_string_st * ppe_string;
-
-/* ==== Declaration : String Bunch ==== */
-
-/* ---- Types ---- */
-
-struct ppe_str_bunch_st;
-typedef struct ppe_str_bunch_st * ppe_str_bunch;
-
-/* ---- Functions ---- */
-
-PPE_API extern ppe_str_bunch ppe_sbc_create(void);
-PPE_API extern void ppe_sbc_destroy(ppe_str_bunch restrict bc);
-PPE_API extern void ppe_sbc_reset(ppe_str_bunch restrict bc);
-
-PPE_API extern ppe_bool ppe_sbc_push_refer_to_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
-PPE_API extern ppe_bool ppe_sbc_push_refer_to(ppe_str_bunch restrict bc, const ppe_string restrict s);
-
-PPE_API extern ppe_bool ppe_sbc_push_copy_of_cstr(ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
-PPE_API extern ppe_bool ppe_sbc_push_copy_of(ppe_str_bunch restrict bc, const ppe_string restrict s);
-
-PPE_API extern void ppe_sbc_pop_n(ppe_str_bunch restrict bc, const ppe_uint n);
-
-PPE_API extern ppe_string ppe_sbc_join_by_cstr(const ppe_str_bunch restrict bc, const char * restrict s, const ppe_ssize sz);
-PPE_API extern ppe_string ppe_sbc_join_by(const ppe_str_bunch restrict bc, const ppe_string restrict s);
-
-PPE_API extern ppe_string ppe_sbc_concat(const ppe_str_bunch restrict bc);
-
-PPE_API extern ppe_bool ppe_sbc_next_buffer(const ppe_str_bunch restrict bc, void ** restrict dat, const char ** restrict ptr, ppe_size * restrict sz);
-
-PPE_API extern ppe_bool ppe_sbc_reference(const ppe_str_bunch restrict bc, const ppe_uint idx, const char ** restrict s, ppe_ssize * restrict sz);
-PPE_API extern ppe_uint ppe_sbc_string_count(const ppe_str_bunch restrict bc);
-PPE_API extern ppe_ssize ppe_sbc_total_size(const ppe_str_bunch restrict bc);
-
-/* ==== Declaration : String Finder ==== */
-
-/* ---- Types ---- */
-
-struct ppe_str_finder_st;
-typedef struct ppe_str_finder_st * ppe_str_finder;
-
-/* ---- Functions ---- */
-
-PPE_API extern ppe_str_finder ppe_sfd_create_for_cstr(const char * restrict s, const ppe_ssize sz);
-PPE_API extern ppe_str_finder ppe_sfd_create_for(const ppe_string restrict s);
-PPE_API extern void ppe_sfd_destroy(ppe_str_finder restrict fd);
-
-PPE_API extern ppe_bool ppe_sfd_reset_for_cstr(ppe_str_finder restrict fd, const char * restrict s, const ppe_ssize sz);
-PPE_API extern ppe_bool ppe_sfd_reset_for(ppe_str_finder restrict fd, const ppe_string restrict s);
-
-PPE_API extern ppe_int ppe_sfd_find_n_for_cstr(ppe_str_finder restrict fd, const char * s restrict, const ppe_ssize sz, const ppe_int n, const ppe_bool copy, ppe_str_bunch restrict bcc, ppe_str_bunch restrict bcs);
-PPE_API extern ppe_int ppe_sfd_find_n_for(ppe_str_finder restrict fd, const ppe_string restrict s, const ppe_int n, const ppe_bool copy, pe_str_bunch restrict bcc, ppe_str_bunch restrict bcs);
-
-PPE_API extern ppe_bool ppe_sfd_find_last_component(ppe_str_finder restrict fd, const ppe_bool copy, ppe_str_bunch restrict bcc);
 
 /* ==== Declarations : String ==== */
 
@@ -87,6 +36,27 @@ PPE_API extern ppe_bool ppe_sfd_find_last_component(ppe_str_finder restrict fd, 
 /* -- Preset values -- */
 
 PPE_API extern const ppe_string ppe_str_empty(void);
+
+/* -- Property -- */
+
+PPE_API extern const char * pp_str_addr(ppe_string restrict s);
+PPE_API extern ppe_ssize ppe_str_size(ppe_string restrict s);
+
+/* -- Comparison -- */
+
+PPE_API extern ppe_bool ppe_str_equals_to(const ppe_string restrict s1, const ppe_string restrict s2);
+PPE_API extern ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_string restrict s2);
+PPE_API extern ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_string restrict s2);
+
+static inline ppe_bool ppe_str_less_than_or_equals_to(const ppe_string restrict s1, const ppe_string restrict s2)
+{
+    return ! ppe_str_greater_than(s1, s2);
+}
+
+static inline ppe_bool ppe_str_greater_than_or_equals_to(const ppe_string restrict s1, const ppe_string restrict s2)
+{
+    return ! ppe_str_less_than(s1, s2);
+}
 
 /* -- Create & Destroy -- */
 
@@ -120,8 +90,8 @@ static inline ppe_string ppe_cs_concat_2(const char * restrict s1, const ppe_ssi
 
 /* split */
 
-PPE_API extern ppe_str_bunch ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n);
-PPE_API extern ppe_str_bunch ppe_cs_split_str(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n);
+PPE_API extern struct ppe_str_bunch_st * ppe_cs_split(const char * restrict d, const ppe_ssize dsz, const char * restrict s, const ppe_ssize sz, const ppe_int n);
+PPE_API extern struct ppe_str_bunch_st * ppe_cs_split_str(const char * restrict d, const ppe_ssize dsz, const ppe_string restrict s, const ppe_int n);
 
 /* _str_ series */
 
@@ -153,11 +123,11 @@ static inline ppe_string ppe_str_concat_2(const ppe_string restrict s1, const pp
 
 /* split */
 
-PPE_API extern ppe_str_bunch ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, const ppe_int n);
+PPE_API extern struct ppe_str_bunch_st * ppe_str_split_cstr(const ppe_string restrict d, const char * restrict s, const ppe_ssize sz, const ppe_int n);
 
-static inline ppe_str_bunch ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, const ppe_int n)
+static inline struct ppe_str_bunch_st * ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, const ppe_int n)
 {
-    return ppe_str_split_cstr(d, ppe_str_cstr(s), ppe_str_size(s), n);
+    return ppe_str_split_cstr(d, pp_str_addr(s), ppe_str_size(s), n);
 }
 
 /* destroy */
@@ -168,27 +138,6 @@ PPE_API extern void ppe_str_destroy(ppe_string restrict s);
 
 /* PPE_API extern ppe_ssize ppe_misc_snprintf(char * restrict buf, ppe_ssize * restrict buf_size, const char * restrict format, ...); */
 PPE_API extern ppe_string ppe_cs_vsprintf(const char * restrict fmt, va_list args);
-
-/* -- Property -- */
-
-PPE_API extern const char * ppe_str_cstr(ppe_string restrict s);
-PPE_API extern ppe_ssize ppe_str_size(ppe_string restrict s);
-
-/* -- Comparison -- */
-
-PPE_API extern ppe_bool ppe_str_equals_to(const ppe_string restrict s1, const ppe_string restrict s2);
-PPE_API extern ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_string restrict s2);
-PPE_API extern ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_string restrict s2);
-
-static inline ppe_bool ppe_str_less_than_or_equals_to(const ppe_string restrict s1, const ppe_string restrict s2)
-{
-    return ! ppe_str_greater_than(s1, s2);
-}
-
-static inline ppe_bool ppe_str_greater_than_or_equals_to(const ppe_string restrict s1, const ppe_string restrict s2)
-{
-    return ! ppe_str_less_than(s1, s2);
-}
 
 /* -- Wrapper -- */
 
