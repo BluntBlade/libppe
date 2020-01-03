@@ -85,6 +85,116 @@ PPE_API ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size sz)
     return nw;
 }
 
+/* -- Substring -- */
+
+PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size index, const ppe_size bytes)
+{
+    ppe_size sz = 0;
+    ppe_size cpsz = 0;
+
+    assert(s);
+
+    sz = ppe_cstr_size(s);
+    if (sz <= index) {
+        ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
+        return NULL;
+    }
+
+    cpsz = (index + bytes <= sz) ? bytes : sz - index;
+    return ppe_cs_create(s + index, cpsz);
+}
+
+/* -- Trim & Chomp -- */
+
+PPE_API ppe_cstr ppe_cs_trim_left_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+{
+    assert(s);
+    assert(accept && ppe_cs_size(accept) > 0);
+
+    while (*s && strchr(accept, *s)) {
+        s++;
+    }
+    return ppe_cs_clone(s);
+}
+
+PPE_API ppe_cstr ppe_cs_trim_right_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+{
+    ppe_cstr p = NULL;
+    ppe_size sz = 0;
+
+    assert(s);
+    assert(accept && ppe_cs_size(accept) > 0);
+
+    sz = ppe_cs_size(s);
+    if (sz == 0) {
+        return cs_empty_s;
+    }
+
+    p = s + sz - 1;
+    while (s <= p && strchr(accept, *p)) {
+        p--;
+    }
+
+    if (p < s) {
+        return cs_empty_s;
+    }
+    return ppe_cs_create(s, p - s + 1);
+}
+
+PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+{
+    ppe_cstr p = NULL;
+    ppe_size sz = 0;
+
+    assert(s);
+    assert(accept && ppe_cs_size(accept) > 0);
+
+    while (*s && strchr(accept, *s)) {
+        s++;
+    }
+
+    sz = ppe_cs_size(s);
+    if (sz == 0) {
+        return cs_empty_s;
+    }
+
+    p = s + sz - 1;
+    while (s <= p && strchr(accept, *p)) {
+        p--;
+    }
+
+    if (p < s) {
+        return cs_empty_s;
+    }
+    return ppe_cs_create(s, p - s + 1);
+}
+
+PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s)
+{
+    ppe_size sz = 0;
+
+    assert(s);
+
+    sz = ppe_cs_size(s);
+    if (sz <= 1) {
+        return cs_empty_s;
+    }
+    return ppe_cs_create(s, sz - 1);
+}
+
+PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s)
+{
+    ppe_cstr p = 0;
+
+    assert(s);
+
+    p = strstr(s, PPE_STR_NEWLINE);
+    if (p) {
+        return ppe_cs_create(s, p - s);
+    }
+    return ppe_cs_clone(s);
+}
+
 /* -- Join & Concat -- */
 
 static ppe_bool ppe_cs_join_imp(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_size dsz, const ppe_bool enable_delimiter, va_list * restrict args)

@@ -37,7 +37,18 @@ typedef enum
 /* ---- Macros -------------------------------------------------------------- */
 
 #define PPE_STR_DETECT_SIZE ((ppe_ssize)-1L)
-#define PPE_STR_MAX_SIZE (1L << (sizeof(ppe_ssize) * 8 - 1))
+#define PPE_STR_MAX_SIZE (1L << (sizeof(ppe_size) * 8 - 1))
+
+#define PPE_STR_SPACES " \t"
+
+#define PPE_STR_WINDOWS_NEWLINE "\r\n"
+#define PPE_STR_UNIX_NEWLINE "\n"
+
+#if defined(PPE_CFG_OS_WINDOWS)
+#define PPE_STR_NEWLINE PPE_STR_WINDOWS_NEWLINE
+#else
+#define PPE_STR_NEWLINE PPE_STR_UNIX_NEWLINE
+#endif
 
 #define PPE_STR_ARG_END NULL
 
@@ -67,10 +78,27 @@ PPE_API extern const ppe_cstr ppe_cs_find(const ppe_cstr restrict s, const ppe_c
 PPE_API extern void ppe_cs_destroy(ppe_cstr restrict s);
 PPE_API extern ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size sz);
 
+/* -- Substring -- */
+
+PPE_API extern ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size index, const ppe_size bytes);
+
+/* -- Trim & Chomp -- */
+
+PPE_API extern ppe_cstr ppe_cs_trim_left_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept);
+PPE_API extern ppe_cstr ppe_cs_trim_right_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept);
+PPE_API extern ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept);
+PPE_API extern ppe_cstr ppe_cs_chop(const ppe_cstr restrict s);
+PPE_API extern ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s);
+
 /* -- Join & Concat -- */
 
 PPE_API extern ppe_bool ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ...);
 PPE_API extern ppe_bool ppe_cs_concat(ppe_char * restrict b, ppe_size * restrict bsz, ...);
+
+/* -- Split & Slice -- */
+
+/* TODO: ppe_bool ppe_cs_slice(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_cstr restrict s); */
+/* TODO: ppe_bool ppe_cs_split(ppe_cs_array * restrict a, const ppe_cstr restrict d, const ppe_cstr restrict s); */
 
 /* -- Wrapper -- */
 
@@ -102,6 +130,21 @@ static inline ppe_bool ppe_cs_is_greater_than_or_equal_to(const ppe_cstr restric
 static inline ppe_cstr ppe_cs_clone(const ppe_cstr restrict s)
 {
     return ppe_cs_create(s, ppe_cs_size(s));
+}
+
+static inline ppe_cstr ppe_cs_trim_left(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+{
+    return ppe_cs_trim_left_bytes(s, PPE_STR_SPACES);
+}
+
+static inline ppe_cstr ppe_cs_trim_right(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+{
+    return ppe_cs_trim_right_bytes(s, PPE_STR_SPACES);
+}
+
+static inline ppe_cstr ppe_cs_trim(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+{
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES);
 }
 
 /* ==== Declaration : String ================================================ */
