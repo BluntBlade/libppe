@@ -16,6 +16,152 @@ static const ppe_char * cs_empty_s = "";
 
 /* ---- Functions ----------------------------------------------------------- */
 
+/* -- Internals -- */
+
+static ppe_bool ppe_cs_join_imp(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_size dsz, const ppe_bool enable_delimiter, va_list * restrict args)
+{
+    ppe_str_join_action act = PPE_CS_JOIN_END;
+
+    ppe_string str = NULL;
+    ppe_cstr s = NULL;
+    ppe_size sz = 0;
+    ppe_size tsz = 0;
+    ppe_size cpsz = 0;
+
+    va_list cp;
+
+    va_copy(cp, *args);
+
+    act = va_arg(cp, ppe_str_join_action);
+    if (act == PPE_CS_JOIN_END) {
+        goto PPE_CS_JOIN_IMP_ERROR;
+    }
+
+    do {
+        switch (act) {
+            case PPE_CS_JOIN_ADD_ITEM_CSTR:
+                s = va_arg(cp, ppe_cstr);
+                if (! s) {
+                    goto PPE_CS_JOIN_IMP_ERROR;
+                }
+                sz = ppe_cs_size(s);
+                break;
+
+            case PPE_CS_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
+                s = va_arg(cp, ppe_cstr);
+                if (! s) {
+                    goto PPE_CS_JOIN_IMP_ERROR;
+                }
+                sz = va_arg(cp, ppe_size);
+                break;
+
+            case PPE_CS_JOIN_ADD_ITEM_STRING:
+                str = va_arg(cp, ppe_string);
+                if (! str) {
+                    goto PPE_CS_JOIN_IMP_ERROR;
+                }
+                sz = ppe_str_size(str);
+                break;
+
+            case PPE_CS_JOIN_SET_DELIMITER_CSTR:
+                /* Switch to a new delimiter in which next strings are being joined. */
+                d = va_arg(cp, ppe_cstr);
+                if (! d) {
+                    goto PPE_CS_JOIN_IMP_ERROR;
+                }
+                dsz = ppe_cs_size(d);
+                goto PPE_CS_JOIN_IMP_NONE_ITEM;
+
+            case PPE_CS_JOIN_SET_DELIMITER_CSTR_WITH_SIZE:
+                /* Switch to a new delimiter in which next strings are being joined. */
+                d = va_arg(cp, ppe_cstr);
+                if (! d) {
+                    goto PPE_CS_JOIN_IMP_ERROR;
+                }
+                dsz = va_arg(cp, ppe_size);
+                goto PPE_CS_JOIN_IMP_NONE_ITEM;
+
+            case PPE_CS_JOIN_SET_DELIMITER_STRING:
+                /* Switch to a new delimiter in which next strings are being joined. */
+                str = va_arg(cp, ppe_string);
+                if (! d) {
+                    goto PPE_CS_JOIN_IMP_ERROR;
+                }
+                d = ppe_str_addr(str);
+                dsz = ppe_str_size(str);
+                goto PPE_CS_JOIN_IMP_NONE_ITEM;
+
+            case PPE_CS_JOIN_UNSET_DELIMITER:
+                d = cs_empty_s;
+                dsz = 0;
+                goto PPE_CS_JOIN_IMP_NONE_ITEM;
+
+            default:
+                goto PPE_CS_JOIN_IMP_ERROR;
+        } /* switch */
+
+        if (! b) {
+            tsz += sz;
+
+            cnt += 1;
+            if (enable_delimiter && cnt > 1) {
+                tsz += dsz;
+            }
+        } else {
+            if (sz > 0) {
+                /* Copy as many bytes as the unused buffer can hold. */
+                cpsz = *bsz - tsz;
+                if (cpsz == 0) {
+                    ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+                    return ppe_false;
+                }
+
+                if (sz < cpsz) {
+                    cpsz = sz;
+                }
+                memcpy(b + tsz, s, cpsz);
+                tsz += cpsz;
+            }
+
+            cnt += 1;
+            if (enable_delimiter && cnt > 1 && dsz > 0) {
+                /* Copy as many bytes as the unused buffer can hold. */
+                cpsz = *bsz - tsz;
+                if (cpsz == 0) {
+                    ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+                    return ppe_false;
+                }
+
+                if (dsz < cpsz) {
+                    cpsz = dsz;
+                }
+                memcpy(b + tsz, d, cpsz);
+                tsz += cpsz;
+            }
+        } /* if */
+
+PPE_CS_JOIN_IMP_NONE_ITEM:
+        act = va_arg(cp, ppe_str_join_action);
+    } while (act != PPE_CS_JOIN_END);
+
+    va_end(cp);
+
+    if (! b) {
+        tsz += 1; /* Count the terminating NUL character. */
+    } else {
+        if (tsz + 1 < *bsz) {
+            b[tsz] = '\0';
+        }
+    }
+    *bsz = tsz;
+    return ppe_true;
+
+PPE_CS_JOIN_IMP_ERROR:
+    va_end(cp);
+    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+    return ppe_false;
+}
+
 /* -- Preset values -- */
 
 PPE_API const ppe_cstr ppe_cs_empty(void)
@@ -196,150 +342,6 @@ PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s)
 }
 
 /* -- Join & Concat -- */
-
-static ppe_bool ppe_cs_join_imp(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_size dsz, const ppe_bool enable_delimiter, va_list * restrict args)
-{
-    ppe_str_join_action act = PPE_CS_JOIN_END;
-
-    ppe_string str = NULL;
-    ppe_cstr s = NULL;
-    ppe_size sz = 0;
-    ppe_size tsz = 0;
-    ppe_size cpsz = 0;
-
-    va_list cp;
-
-    va_copy(cp, *args);
-
-    act = va_arg(cp, ppe_str_join_action);
-    if (act == PPE_CS_JOIN_END) {
-        goto PPE_CS_JOIN_IMP_ERROR;
-    }
-
-    do {
-        switch (act) {
-            case PPE_CS_JOIN_ADD_ITEM_CSTR:
-                s = va_arg(cp, ppe_cstr);
-                if (! s) {
-                    goto PPE_CS_JOIN_IMP_ERROR;
-                }
-                sz = ppe_cs_size(s);
-                break;
-
-            case PPE_CS_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
-                s = va_arg(cp, ppe_cstr);
-                if (! s) {
-                    goto PPE_CS_JOIN_IMP_ERROR;
-                }
-                sz = va_arg(cp, ppe_size);
-                break;
-
-            case PPE_CS_JOIN_ADD_ITEM_STRING:
-                str = va_arg(cp, ppe_string);
-                if (! str) {
-                    goto PPE_CS_JOIN_IMP_ERROR;
-                }
-                sz = ppe_str_size(str);
-                break;
-
-            case PPE_CS_JOIN_SET_DELIMITER_CSTR:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                d = va_arg(cp, ppe_cstr);
-                if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR;
-                }
-                dsz = ppe_cs_size(d);
-                goto PPE_CS_JOIN_IMP_NONE_ITEM;
-
-            case PPE_CS_JOIN_SET_DELIMITER_CSTR_WITH_SIZE:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                d = va_arg(cp, ppe_cstr);
-                if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR;
-                }
-                dsz = va_arg(cp, ppe_size);
-                goto PPE_CS_JOIN_IMP_NONE_ITEM;
-
-            case PPE_CS_JOIN_SET_DELIMITER_STRING:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                str = va_arg(cp, ppe_string);
-                if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR;
-                }
-                d = ppe_str_addr(str);
-                dsz = ppe_str_size(str);
-                goto PPE_CS_JOIN_IMP_NONE_ITEM;
-
-            case PPE_CS_JOIN_UNSET_DELIMITER:
-                d = cs_empty_s;
-                dsz = 0;
-                goto PPE_CS_JOIN_IMP_NONE_ITEM;
-
-            default:
-                goto PPE_CS_JOIN_IMP_ERROR;
-        } /* switch */
-
-        if (! b) {
-            tsz += sz;
-
-            cnt += 1;
-            if (enable_delimiter && cnt > 1) {
-                tsz += dsz;
-            }
-        } else {
-            if (sz > 0) {
-                /* Copy as many bytes as the unused buffer can hold. */
-                cpsz = *bsz - tsz;
-                if (cpsz == 0) {
-                    ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
-                    return ppe_false;
-                }
-
-                if (sz < cpsz) {
-                    cpsz = sz;
-                }
-                memcpy(b + tsz, s, cpsz);
-                tsz += cpsz;
-            }
-
-            cnt += 1;
-            if (enable_delimiter && cnt > 1 && dsz > 0) {
-                /* Copy as many bytes as the unused buffer can hold. */
-                cpsz = *bsz - tsz;
-                if (cpsz == 0) {
-                    ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
-                    return ppe_false;
-                }
-
-                if (dsz < cpsz) {
-                    cpsz = dsz;
-                }
-                memcpy(b + tsz, d, cpsz);
-                tsz += cpsz;
-            }
-        } /* if */
-
-PPE_CS_JOIN_IMP_NONE_ITEM:
-        act = va_arg(cp, ppe_str_join_action);
-    } while (act != PPE_CS_JOIN_END);
-
-    va_end(cp);
-
-    if (! b) {
-        tsz += 1; /* Count the terminating NUL character. */
-    } else {
-        if (tsz + 1 < *bsz) {
-            b[tsz] = '\0';
-        }
-    }
-    *bsz = tsz;
-    return ppe_true;
-
-PPE_CS_JOIN_IMP_ERROR:
-    va_end(cp);
-    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-    return ppe_false;
-}
  
 PPE_API ppe_bool ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ...)
 {
@@ -367,6 +369,53 @@ PPE_API ppe_bool ppe_cs_concat(ppe_char * restrict b, ppe_size * restrict bsz, .
     ret = ppe_cs_join_imp(b, bsz, cs_empty_s, 0, ppe_false, &args);
     va_end(args);
     return ret;
+}
+
+/* -- Split & Slice -- */
+
+PPE_API ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_cstr restrict s)
+{
+    const ppe_cstr p = NULL;
+    ppe_size cpsz = 0;
+
+    assert(bsz);
+    assert(d);
+    assert(s);
+
+    if (d[0] == '\0') {
+        /* Cannot use an empty string as delimiter. */
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    p = ppe_cs_find(s, d);
+    if (! p) {
+        /* Cannot find a delimiter in the source string. */
+        /* Take the whole source as a copying part. */
+        cpsz = ppe_cs_size(s);
+    } else if (s < p) {
+        /* Found a delimiter which is not at the beginning. */
+        cpsz = p - s;
+    } /* if (s == p) {
+        // Found a delimiter at the beginning.
+        cpsz = 0;
+    } */
+
+    if (! b) {
+        /* Detect the size of the part which is being sliced. */
+        *bsz = cpsz;
+        return ppe_true;
+    }
+    if (*bsz < cpsz) {
+        ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+        return ppe_false;
+    }
+
+    if (cpsz > 0) {
+        memcpy(b, s, cpsz); /* Include no terminating NUL character. */
+    }
+    *bsz = cpsz;
+    return ppe_true;
 }
 
 /* ==== Definitions : String ================================================ */
