@@ -24,14 +24,14 @@ typedef struct ppe_string_st * ppe_string;
 
 typedef enum
 {
-    PPE_CS_JOIN_END = 0,
-    PPE_CS_JOIN_UNSET_DELIMITER = 1,
-    PPE_CS_JOIN_SET_DELIMITER_CSTR = 2,
-    PPE_CS_JOIN_SET_DELIMITER_CSTR_WITH_SIZE = 3,
-    PPE_CS_JOIN_SET_DELIMITER_STRING = 4,
-    PPE_CS_JOIN_ADD_ITEM_CSTR = 5,
-    PPE_CS_JOIN_ADD_ITEM_CSTR_WITH_SIZE = 6,
-    PPE_CS_JOIN_ADD_ITEM_STRING = 7
+    PPE_PTR_JOIN_END = 0,
+    PPE_PTR_JOIN_UNSET_DELIMITER = 1,
+    PPE_PTR_JOIN_SET_DELIMITER_CSTR = 2,
+    PPE_PTR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE = 3,
+    PPE_PTR_JOIN_SET_DELIMITER_STRING = 4,
+    PPE_PTR_JOIN_ADD_ITEM_CSTR = 5,
+    PPE_PTR_JOIN_ADD_ITEM_CSTR_WITH_SIZE = 6,
+    PPE_PTR_JOIN_ADD_ITEM_STRING = 7
 } ppe_str_join_action;
 
 typedef enum
@@ -244,12 +244,12 @@ static inline struct ppe_str_bunch_st * ppe_str_split(const ppe_string restrict 
 
 static inline struct ppe_string ppe_str_join_two(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(d, PPE_CS_JOIN_ADD_ITEM_STRING, s1, PPE_CS_JOIN_ADD_ITEM_STRING, s2, PPE_CS_JOIN_END);
+    return ppe_str_join(d, PPE_PTR_JOIN_ADD_ITEM_STRING, s1, PPE_PTR_JOIN_ADD_ITEM_STRING, s2, PPE_PTR_JOIN_END);
 }
 
 static inline struct ppe_string ppe_str_concat_two(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(ppe_str_empty(), PPE_CS_JOIN_ADD_ITEM_STRING, s1, PPE_CS_JOIN_ADD_ITEM_STRING, s2, PPE_CS_JOIN_END);
+    return ppe_str_join(ppe_str_empty(), PPE_PTR_JOIN_ADD_ITEM_STRING, s1, PPE_PTR_JOIN_ADD_ITEM_STRING, s2, PPE_PTR_JOIN_END);
 }
 
 #ifdef __cplusplus
