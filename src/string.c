@@ -252,18 +252,7 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size index, 
 
 /* -- Trim & Chomp -- */
 
-PPE_API ppe_cstr ppe_cs_trim_left_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept)
-{
-    assert(s);
-    assert(accept && ppe_cs_size(accept) > 0);
-
-    while (*s && strchr(accept, *s)) {
-        s++;
-    }
-    return ppe_cs_clone(s);
-}
-
-PPE_API ppe_cstr ppe_cs_trim_right_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt)
 {
     ppe_cstr p = NULL;
     ppe_size sz = 0;
@@ -271,32 +260,10 @@ PPE_API ppe_cstr ppe_cs_trim_right_bytes(const ppe_cstr restrict s, const ppe_cs
     assert(s);
     assert(accept && ppe_cs_size(accept) > 0);
 
-    sz = ppe_cs_size(s);
-    if (sz == 0) {
-        return cs_empty_s;
-    }
-
-    p = s + sz - 1;
-    while (s <= p && strchr(accept, *p)) {
-        p--;
-    }
-
-    if (p < s) {
-        return cs_empty_s;
-    }
-    return ppe_cs_create(s, p - s + 1);
-}
-
-PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept)
-{
-    ppe_cstr p = NULL;
-    ppe_size sz = 0;
-
-    assert(s);
-    assert(accept && ppe_cs_size(accept) > 0);
-
-    while (*s && strchr(accept, *s)) {
-        s++;
+    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
+        while (*s && strchr(accept, *s)) {
+            s++;
+        }
     }
 
     sz = ppe_cs_size(s);
@@ -304,14 +271,16 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
         return cs_empty_s;
     }
 
-    p = s + sz - 1;
-    while (s <= p && strchr(accept, *p)) {
-        p--;
-    }
+    if (opt & PPE_STR_OPT_DIRECT_RIGHT) 
+        p = s + sz - 1;
+        while (s <= p && strchr(accept, *p)) {
+            p--;
+        }
 
-    if (p < s) {
-        return cs_empty_s;
-    }
+        if (p < s) {
+            return cs_empty_s;
+        }
+    } /* if */
     return ppe_cs_create(s, p - s + 1);
 }
 

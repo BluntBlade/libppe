@@ -34,6 +34,14 @@ typedef enum
     PPE_CS_JOIN_ADD_ITEM_STRING = 7
 } ppe_str_join_action;
 
+typedef enum
+{
+    PPE_STR_OPT_DIRECT_LEFT = 0x00000001,
+    PPE_STR_OPT_DIRECT_RIGHT = 0x00000002,
+    PPE_STR_OPT_DIRECT_BOTH = 0x00000003,
+    PPE_STR_OPT_IN_PLACE = 0x80000000,
+} ppe_str_option;
+
 /* ---- Macros -------------------------------------------------------------- */
 
 #define PPE_STR_DETECT_SIZE ((ppe_ssize)-1L)
@@ -84,9 +92,7 @@ PPE_API extern ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size 
 
 /* -- Trim & Chomp -- */
 
-PPE_API extern ppe_cstr ppe_cs_trim_left_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept);
-PPE_API extern ppe_cstr ppe_cs_trim_right_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept);
-PPE_API extern ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept);
+PPE_API extern ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt);
 PPE_API extern ppe_cstr ppe_cs_chop(const ppe_cstr restrict s);
 PPE_API extern ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s);
 
@@ -150,17 +156,17 @@ static inline ppe_cstr ppe_cs_clone(const ppe_cstr restrict s)
 
 static inline ppe_cstr ppe_cs_trim_left(const ppe_cstr restrict s, const ppe_cstr restrict accept)
 {
-    return ppe_cs_trim_left_bytes(s, PPE_STR_SPACES);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_LEFT);
 }
 
 static inline ppe_cstr ppe_cs_trim_right(const ppe_cstr restrict s, const ppe_cstr restrict accept)
 {
-    return ppe_cs_trim_right_bytes(s, PPE_STR_SPACES);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_RIGHT);
 }
 
 static inline ppe_cstr ppe_cs_trim(const ppe_cstr restrict s, const ppe_cstr restrict accept)
 {
-    return ppe_cs_trim_bytes(s, PPE_STR_SPACES);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_BOTH);
 }
 
 /* ==== Declaration : String ================================================ */
