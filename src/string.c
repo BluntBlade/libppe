@@ -18,7 +18,7 @@ static const ppe_char * cs_empty_s = "";
 
 /* -- Internals -- */
 
-static ppe_bool ppe_cs_join_imp(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_size dsz, const ppe_bool enable_delimiter, va_list * restrict args)
+static ppe_cstr ppe_cs_join_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_size dsz, ppe_str_option opt, const ppe_bool enable_delimiter, va_list * restrict args)
 {
     ppe_str_join_action act = PPE_PTR_JOIN_END;
 
@@ -29,6 +29,8 @@ static ppe_bool ppe_cs_join_imp(ppe_char * restrict b, ppe_size * restrict bsz, 
     ppe_size cpsz = 0;
 
     va_list cp;
+
+PPE_PTR_JOIN_IMP_AGAIN:
 
     va_copy(cp, *args);
 
@@ -113,7 +115,7 @@ static ppe_bool ppe_cs_join_imp(ppe_char * restrict b, ppe_size * restrict bsz, 
                 cpsz = *bsz - tsz;
                 if (cpsz == 0) {
                     ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
-                    return ppe_false;
+                    return NULL;
                 }
 
                 if (sz < cpsz) {
@@ -154,12 +156,21 @@ PPE_PTR_JOIN_IMP_NONE_ITEM:
         }
     }
     *bsz = tsz;
-    return ppe_true;
+
+    if (! b && opt & PPE_STR_NEW_STRING) {
+        b = (ppe_cstr) ppe_mp_malloc(tsz + 1); /* Include the terminating NUL character. */
+        if (! b) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+        goto PPE_PTR_JOIN_IMP_AGAIN;
+    }
+    return b;
 
 PPE_PTR_JOIN_IMP_ERROR:
     va_end(cp);
     ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-    return ppe_false;
+    return NULL;
 }
 
 /* -- Preset values -- */
@@ -327,30 +338,30 @@ PPE_API ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt)
 
 /* -- Join & Concat -- */
  
-PPE_API ppe_bool ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ...)
+PPE_API ppe_cstr ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_str_option opt, ...)
 {
-    ppe_bool ret = ppe_false;
+    ppe_cstr ret = NULL;
     va_list args;
 
     assert(d);
     assert(bsz);
 
     va_start(args, d);
-    ret = ppe_cs_join_imp(b, bsz, d, ppe_cs_size(d), ppe_true, &args);
+    ret = ppe_cs_join_imp(b, bsz, d, ppe_cs_size(d), opt, ppe_true, &args);
     va_end(args);
     return ret;
 }
  
-PPE_API ppe_bool ppe_cs_concat(ppe_char * restrict b, ppe_size * restrict bsz, ...)
+PPE_API ppe_cstr ppe_cs_concat(ppe_char * restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...)
 {
-    ppe_bool ret = ppe_false;
+    ppe_cstr ret = NULL;
     va_list args;
 
     assert(d);
     assert(bsz);
 
     va_start(args, bsz);
-    ret = ppe_cs_join_imp(b, bsz, cs_empty_s, 0, ppe_false, &args);
+    ret = ppe_cs_join_imp(b, bsz, cs_empty_s, 0, opt, ppe_false, &args);
     va_end(args);
     return ret;
 }
@@ -529,7 +540,7 @@ PPE_API void ppe_str_destroy(ppe_string restrict s)
 
 PPE_API ppe_string ppe_str_join(const ppe_string restrict d, ...)
 {
-    ppe_bool ret = ppe_false;
+    ppe_cstr ret = NULL;
     ppe_string nw = NULL;
     ppe_size nwsz = 0;
     va_list args;
@@ -537,7 +548,7 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, ...)
     assert(d);
 
     va_start(args, d);
-    ret = ppe_cs_join_imp(NULL, &nwsz, d->buf, d->sz, ppe_true, &args);
+    ret = ppe_cs_join_imp(NULL, &nwsz, d->buf, d->sz, 0, ppe_true, &args);
     va_end(args);
     if (! ret) {
         return NULL;
@@ -550,7 +561,7 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, ...)
     }
 
     va_start(args, d);
-    ret = ppe_cs_join_imp(nw->buf, &nwsz, d->buf, d->sz, ppe_true, &args); /* Include the terminating NUL character. */
+    ret = ppe_cs_join_imp(nw->buf, &nwsz, d->buf, d->sz, 0, ppe_true, &args); /* Include the terminating NUL character. */
     va_end(args);
 
     if (! ret) {

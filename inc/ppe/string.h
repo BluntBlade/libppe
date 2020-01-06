@@ -39,7 +39,8 @@ typedef enum
     PPE_STR_OPT_DIRECT_LEFT = 0x00000001,
     PPE_STR_OPT_DIRECT_RIGHT = 0x00000002,
     PPE_STR_OPT_DIRECT_BOTH = 0x00000003,
-    PPE_STR_OPT_IN_PLACE = 0x80000000,
+    PPE_STR_OPT_IN_PLACE = 0x40000000,
+    PPE_STR_OPT_NEW_STRING = 0x80000000
 } ppe_str_option;
 
 /* ---- Macros -------------------------------------------------------------- */
@@ -98,8 +99,8 @@ PPE_API extern ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt);
 
 /* -- Join & Concat -- */
 
-PPE_API extern ppe_bool ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ...);
-PPE_API extern ppe_bool ppe_cs_concat(ppe_char * restrict b, ppe_size * restrict bsz, ...);
+PPE_API extern ppe_cstr ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_str_option opt, ...);
+PPE_API extern ppe_cstr ppe_cs_concat(ppe_char * restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...);
 
 /* -- Split & Slice -- */
 
