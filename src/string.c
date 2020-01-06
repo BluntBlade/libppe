@@ -252,8 +252,9 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size index, 
 
 /* -- Trim & Chomp -- */
 
-PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt)
+PPE_API ppe_cstr ppe_cs_trim_bytes(ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt)
 {
+    ppe_cstr b = s;
     ppe_cstr p = NULL;
     ppe_size sz = 0;
 
@@ -261,30 +262,34 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
     assert(accept && ppe_cs_size(accept) > 0);
 
     if (opt & PPE_STR_OPT_DIRECT_LEFT) {
-        while (*s && strchr(accept, *s)) {
-            s++;
+        while (*b && strchr(accept, *b)) {
+            b++;
         }
     }
 
-    sz = ppe_cs_size(s);
+    sz = ppe_cs_size(b);
     if (sz == 0) {
         return cs_empty_s;
     }
 
     if (opt & PPE_STR_OPT_DIRECT_RIGHT) 
-        p = s + sz - 1;
-        while (s <= p && strchr(accept, *p)) {
+        p = b + sz - 1;
+        while (b <= p && strchr(accept, *p)) {
             p--;
         }
 
-        if (p < s) {
+        if (p < b) {
             return cs_empty_s;
         }
     } /* if */
-    return ppe_cs_create(s, p - s + 1);
+    if (opt & PPE_STR_OPT_IN_PLACE) {
+        memmove(s, b, p - b + 1);
+        return s;
+    }
+    return ppe_cs_create(s, p - b + 1);
 }
 
-PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s)
+PPE_API ppe_cstr ppe_cs_chop(ppe_cstr restrict s, ppe_str_option opt)
 {
     ppe_size sz = 0;
 
@@ -294,16 +299,26 @@ PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s)
     if (sz <= 1) {
         return cs_empty_s;
     }
+    if (opt & PPE_STR_OPT_IN_PLACE) {
+        s[sz - 1] = '\0';
+        return s;
+    }
     return ppe_cs_create(s, sz - 1);
 }
 
-PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s)
+PPE_API ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt)
 {
     ppe_cstr p = 0;
 
     assert(s);
 
     p = strstr(s, PPE_STR_NEWLINE);
+    if (opt & PPE_STR_OPT_IN_PLACE) {
+        if (p) {
+            p[0] = '\0';
+        }
+        return s;
+    }
     if (p) {
         return ppe_cs_create(s, p - s);
     }

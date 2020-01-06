@@ -92,9 +92,9 @@ PPE_API extern ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size 
 
 /* -- Trim & Chomp -- */
 
-PPE_API extern ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt);
-PPE_API extern ppe_cstr ppe_cs_chop(const ppe_cstr restrict s);
-PPE_API extern ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s);
+PPE_API extern ppe_cstr ppe_cs_trim_bytes(ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt);
+PPE_API extern ppe_cstr ppe_cs_chop(ppe_cstr restrict s, ppe_str_option opt);
+PPE_API extern ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt);
 
 /* -- Join & Concat -- */
 
