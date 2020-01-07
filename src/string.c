@@ -293,11 +293,11 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(ppe_cstr restrict s, const ppe_cstr restrict 
             return cs_empty_s;
         }
     } /* if */
-    if (opt & PPE_STR_OPT_IN_PLACE) {
-        memmove(s, b, p - b + 1);
-        return s;
+    if (opt & PPE_STR_OPT_NEW_STRING) {
+        return ppe_cs_create(s, p - b + 1);
     }
-    return ppe_cs_create(s, p - b + 1);
+    memmove(s, b, p - b + 1);
+    return s;
 }
 
 PPE_API ppe_cstr ppe_cs_chop(ppe_cstr restrict s, ppe_str_option opt)
@@ -310,11 +310,11 @@ PPE_API ppe_cstr ppe_cs_chop(ppe_cstr restrict s, ppe_str_option opt)
     if (sz <= 1) {
         return cs_empty_s;
     }
-    if (opt & PPE_STR_OPT_IN_PLACE) {
-        s[sz - 1] = '\0';
-        return s;
+    if (opt & PPE_STR_OPT_NEW_STRING) {
+        return ppe_cs_create(s, sz - 1);
     }
-    return ppe_cs_create(s, sz - 1);
+    s[sz - 1] = '\0';
+    return s;
 }
 
 PPE_API ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt)
@@ -324,16 +324,16 @@ PPE_API ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt)
     assert(s);
 
     p = strstr(s, PPE_STR_NEWLINE);
-    if (opt & PPE_STR_OPT_IN_PLACE) {
+    if (opt & PPE_STR_OPT_NEW_STRING) {
         if (p) {
-            p[0] = '\0';
+            return ppe_cs_create(s, p - s);
         }
-        return s;
+        return ppe_cs_clone(s);
     }
     if (p) {
-        return ppe_cs_create(s, p - s);
+        p[0] = '\0';
     }
-    return ppe_cs_clone(s);
+    return s;
 }
 
 /* -- Join & Concat -- */
