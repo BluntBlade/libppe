@@ -39,6 +39,7 @@ typedef enum
     PPE_STR_OPT_DIRECT_LEFT = 0x00000001,
     PPE_STR_OPT_DIRECT_RIGHT = 0x00000002,
     PPE_STR_OPT_DIRECT_BOTH = 0x00000003,
+    PPE_STR_OPT_DONT_TRUNCATE = 0x40000000,
     PPE_STR_OPT_NEW_STRING = 0x80000000
 } ppe_str_option;
 
@@ -121,6 +122,10 @@ PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict b
  */
 PPE_API extern ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_cstr restrict s);
 /* TODO: ppe_bool ppe_cs_split(ppe_cs_array * restrict a, const ppe_cstr restrict d, const ppe_cstr restrict s); */
+
+/* -- Format -- */
+
+PPE_API extern ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict fmt, ...);
 
 /* -- Wrapper -- */
 

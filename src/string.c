@@ -418,6 +418,124 @@ PPE_API ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bs
     return ppe_true;
 }
 
+static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
+{
+    int ret = 0;
+
+    ret = vsnprintf(b, *bsz, fmt, *ap);
+    if (ret < 0) {
+        /* TODO: Error handling. */
+        return NULL;
+    }
+    *bsz = ((ppe_size) ret); /* Excluding the terminating '\0' byte. */
+    return b;
+}
+
+PPE_API ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict fmt, ...)
+{
+    ppe_cstr ret = NULL;
+    ppe_cstr nw = NULL;
+    ppe_size nwsz = 128;
+    ppe_size fmsz = 0;
+    ppe_size obsz = *bsz;
+    va_list args;
+
+    if (b) {
+        fmsz = obsz;
+
+        va_start(args, fmt);
+        ret = ppe_cs_sprintf_imp(b, &fmsz, fmt, &args);
+        va_end(args);
+
+        if (! ret) {
+            return NULL;
+        }
+
+        if (obsz <= fmsz && (opt & PPE_STR_OPT_DONT_TRUNCATE)) {
+            /* The output has been truncated but the caller want a fully formatted string. */
+            ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+            return NULL;
+        }
+
+        *bsz = fmsz;
+        return b;
+    }
+
+#if defined(PPE_CONF_SUPPORT_SUSV2)
+    nw = (ppe_cstr) ppe_mp_malloc(nwsz);
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+#endif
+
+    /* Detect the number of characters which would have been written to the final string if enough space have been available. */
+    fmsz = nwsz;
+
+    va_start(args, fmt);
+    ret = ppe_cs_sprintf_imp(nw, &fmsz, fmt, &args);
+    va_end(args);
+
+    if (! ret) {
+#if defined(PPE_CONF_SUPPORT_SUSV2)
+        ppe_mp_free(nw);
+#endif
+        return NULL;
+    }
+
+    if (opt & PPE_STR_OPT_NEW_STRING) {
+        /* The caller want a new string. */
+
+#if defined(PPE_CONF_SUPPORT_SUSV2)
+        if (fmsz < nwsz) {
+            ret = (ppe_cstr) ppe_mp_malloc(nw, fmsz + 1); /* Allocate a new buffer to avoid wasting memory. */
+            if (ret) {
+                /* Copy and replace the final string. */
+                memcpy(ret, nw, fmsz + 1);
+                ppe_mp_free(nw);
+                nw = ret;
+            }
+            *bsz = fmsz; /* Excluding the terminating '\0' byte. */
+            ppe_err_set(PPE_ERR_SUCCEED, NULL);
+            return nw;
+        }
+
+        fmsz += 1; /* Including the terminating '\0' byte. */
+
+        /* The final string would have been truncated. */
+        ret = (ppe_cstr) ppe_mp_realloc(nw, fmsz); /* Expand the buffer for reformatting. */
+        if (! ret) {
+            ppe_mp_free(nw);
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+        nw = ret;
+#else
+        nw = (ppe_cstr) ppe_mp_malloc(fmsz);
+        if (! nw) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+#endif
+
+        /* Try to reformat again. */
+        va_start(args, fmt);
+        ret = ppe_cs_sprintf_imp(nw, &fmsz, fmt, &args); /* The terminating '\0' byte shall be written. */
+        va_end(args);
+
+        if (! ret) {
+            ppe_mp_free(nw);
+            return NULL;
+        }
+
+        b = nw;
+    } /* if */
+
+    *bsz = fmsz; /* Excluding the terminating '\0' byte. */
+    ppe_err_set(PPE_ERR_SUCCEED, NULL);
+    return b; /* Return Whatever the caller passed. */
+}
+
 /* ==== Definitions : String ================================================ */
 
 /* ---- Types --------------------------------------------------------------- */
