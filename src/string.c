@@ -338,7 +338,7 @@ PPE_API ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt)
 
 /* -- Join & Concat -- */
  
-PPE_API ppe_cstr ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_str_option opt, ...)
+PPE_API ppe_cstr ppe_cs_join(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, ppe_str_option opt, ...)
 {
     ppe_cstr ret = NULL;
     va_list args;
@@ -352,7 +352,7 @@ PPE_API ppe_cstr ppe_cs_join(ppe_char * restrict b, ppe_size * restrict bsz, con
     return ret;
 }
  
-PPE_API ppe_cstr ppe_cs_concat(ppe_char * restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...)
+PPE_API ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...)
 {
     ppe_cstr ret = NULL;
     va_list args;
