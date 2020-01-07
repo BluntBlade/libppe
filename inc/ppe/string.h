@@ -88,7 +88,7 @@ PPE_API extern ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size 
 
 /* -- Substring -- */
 
-PPE_API extern ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size index, const ppe_size bytes);
+PPE_API extern ppe_cstr ppe_cs_substr(ppe_cstr restrict s, const ppe_size index, const ppe_size bytes, ppe_str_option opt);
 
 /* -- Trim & Chomp -- */
 

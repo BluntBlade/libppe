@@ -244,7 +244,7 @@ PPE_API ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size sz)
 
 /* -- Substring -- */
 
-PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size index, const ppe_size bytes)
+PPE_API ppe_cstr ppe_cs_substr(ppe_cstr restrict s, const ppe_size index, const ppe_size bytes, ppe_str_option opt)
 {
     ppe_size sz = 0;
     ppe_size cpsz = 0;
@@ -258,7 +258,12 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size index, 
     }
 
     cpsz = (index + bytes <= sz) ? bytes : sz - index;
-    return ppe_cs_create(s + index, cpsz);
+
+    if (opt & PPE_STR_OPT_NEW_STRING) {
+        return ppe_cs_create(s + index, cpsz);
+    }
+    memmove(s, s + index, cpsz);
+    return s;
 }
 
 /* -- Trim & Chomp -- */
