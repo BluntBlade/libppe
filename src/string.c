@@ -114,7 +114,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 /* Copy as many bytes as the unused buffer can hold. */
                 cpsz = *bsz - tsz;
                 if (cpsz == 0) {
-                    ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+                    ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
                     return NULL;
                 }
 
@@ -130,7 +130,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 /* Copy as many bytes as the unused buffer can hold. */
                 cpsz = *bsz - tsz;
                 if (cpsz == 0) {
-                    ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+                    ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
                     return ppe_false;
                 }
 
@@ -407,7 +407,7 @@ PPE_API ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bs
         return ppe_true;
     }
     if (*bsz < cpsz) {
-        ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
         return ppe_false;
     }
 
@@ -453,7 +453,7 @@ PPE_API ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, co
 
         if (obsz <= fmsz && (opt & PPE_STR_OPT_DONT_TRUNCATE)) {
             /* The output has been truncated but the caller want a fully formatted string. */
-            ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
             return NULL;
         }
 
