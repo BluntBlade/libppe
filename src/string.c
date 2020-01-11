@@ -373,7 +373,7 @@ PPE_API ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe
 
 /* -- Split & Slice -- */
 
-PPE_API ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_cstr restrict s)
+PPE_API ppe_cstr ppe_cs_slice(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_str_option opt, const ppe_cstr restrict s)
 {
     const ppe_cstr p = NULL;
     ppe_size cpsz = 0;
@@ -385,7 +385,7 @@ PPE_API ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bs
     if (d[0] == '\0') {
         /* Cannot use an empty string as delimiter. */
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
+        return NULL;
     }
 
     p = ppe_cs_find(s, d);
@@ -401,21 +401,26 @@ PPE_API ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bs
         cpsz = 0;
     } */
 
+    if (opt & PPE_STR_OPT_NEW_STRING) {
+        return ppe_cs_create(s, cpsz);
+    }
+
     if (! b) {
         /* Detect the size of the part which is being sliced. */
         *bsz = cpsz;
-        return ppe_true;
+        /* TODO: Set appropriate error(CALL_AGAIN). */
+        return NULL;
     }
     if (*bsz < cpsz) {
         ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-        return ppe_false;
+        return NULL;
     }
 
     if (cpsz > 0) {
         memcpy(b, s, cpsz); /* Include no terminating NUL character. */
     }
     *bsz = cpsz;
-    return ppe_true;
+    return b;
 }
 
 static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)

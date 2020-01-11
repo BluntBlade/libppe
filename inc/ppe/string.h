@@ -104,23 +104,27 @@ PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict b
 
 /* -- Split & Slice -- */
 
-/* Slice the substring which is before the delimiter in the source string.
+/* Slice out the substring which resides between the begining of the source string and the first occurrence of the delimiter in it.
  *
  * Parameters:
- *      b    A buffer which will hold the substring. If pass a NULL, detect and save the size of the substring into the parameter `bsz`. Include no terminating NUL character.
+ *      b    A buffer which will hold the substring. If pass a NULL, detect the size of the substring and save to the parameter `bsz`. Excludes the terminating NUL character('\0').
  *      bsz  A pointer to the size variable of the buffer `b`. **MUST NOT** be a NULL.
+ *      opt  An option parameter which can be any combination of the following options:
+ *           1) PPE_STR_OPT_NEW_STRING: Create a new string instead of writing the substring to the buffer.
  *      d    A non-emtpy string used as a delimiter. **MUST NOT** be a NULL.
  *      s    The source string in which the delimiter is being found. **MUST NOT** be a NULL.
  *
  * Return values:
- *      ppe_true    The substring is copyed into the buffer, and the size of it is saved in the bsz.
- *      ppe_false   Something wrong happened.
+ *      The value of `b`        The substring has been written to `b`, and the size of it saved in `bsz`.
+ *      Other NON-NULL value    The created string's address.
+ *      NULL                    Something wrong happened.
  *
  * Errors:
  *      PPE_ERR_INVALID_ARGUMENT    The delmiter string is empty.
- *      PPE_ERR_OUT_OF_BUFFER       No enough space in the buffer.
+ *      PPE_ERR_OUT_OF_CAPACITY     No enough space for writing the substring.
  */
-PPE_API extern ppe_bool ppe_cs_slice_into(ppe_char * restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_cstr restrict s);
+PPE_API extern ppe_cstr ppe_cs_slice(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_str_option opt, const ppe_cstr restrict s);
+
 /* TODO: ppe_bool ppe_cs_split(ppe_cs_array * restrict a, const ppe_cstr restrict d, const ppe_cstr restrict s); */
 
 /* -- Format -- */
