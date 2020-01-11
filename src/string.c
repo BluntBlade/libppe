@@ -423,6 +423,131 @@ PPE_API ppe_cstr ppe_cs_slice(ppe_cstr restrict b, ppe_size * restrict bsz, cons
     return b;
 }
 
+PPE_API pp_cs_cstr * ppe_cs_split(ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict d, const ppe_cstr restrict s)
+{
+    ppe_cstr * a = NULL;
+    ppe_cstr * t = NULL;
+    ppe_cstr p = 0;
+    ppe_cstr q = 0;
+    ppe_size dsz = 0;
+    ppe_size nbsz = 0;
+    ppe_size sz = 0;
+    ppe_uint i = 0;
+    ppe_uint n = 0;
+
+    assert(d);
+    assert(s);
+
+    if (ppe_cs_is_empty(d)) {
+        /* Cannot use an empty string as delimiter. */
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (! cnt) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    if (opt & PPE_STR_OPT_MEASURE_SIZE) {
+        dsz = ppe_cs_size(d);
+        p = s;
+        while ((q = ppe_cs_find(p, d))) {
+            n += 1;
+            nbsz += (q - p) + 1; /* Including the terminating NUL character('\0'). */
+            p = q + dsz;
+        } /* while */
+
+        /* Counted N delimiters, so there must be N+1 substrings including empty ones. */
+        n += 1;
+        nbsz += ppe_cs_size(p) + 1; /* Including the terminating NUL character('\0'). */
+
+        *cnt = n;
+        if (bsz) {
+            *bsz = nbsz;
+        }
+        /* TODO: Set appropriate error(CALL_AGAIN). */
+        return NULL;
+    } /* if */
+
+    if (arr) {
+        a = arr;
+    } else {
+        n = *cnt > 0 ? *cnt : 16;
+        a = ppe_mp_malloc(sizeof(arr[0]) * n);
+        if (! a) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+    } /* if */
+
+    dsz = ppe_cs_size(d);
+    p = s;
+    while (p) {
+        if ((q = ppe_cs_find(p, d))) {
+            sz = q - p;
+        } else {
+            sz = ppe_cs_size(p);
+        }
+
+        if (b) {
+            if (*bsz < nbsz + sz + 1) {
+                ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+                if (! arr) {
+                    ppe_me_free(a);
+                }
+                return NULL;
+            }
+
+            if (sz > 0) {
+                memcpy(b + nbsz, p, sz);
+            }
+            a[i] = b + nbsz;
+
+            nbsz += sz;
+            b[nbsz++] = '\0';
+        } else {
+            if (sz == 0) {
+                a[i] == cs_empty_s;
+            } else {
+                a[i] = ppe_cs_create(p, sz);
+                if (! a[i]) {
+                    do { ppe_cs_destroy(a[--i]); } while (i > 0);
+                    if (! arr) {
+                        ppe_me_free(a);
+                    }
+                    return NULL;
+                }
+            } /* if */
+        } /* if */
+
+        i += 1;
+        p = q + dsz;
+        if (i == *cnt) {
+            break;
+        }
+
+        if (i == n) {
+            n += 16;
+            t = ppe_mp_realloc(a, sizeof(arr[0]) * n);
+            if (! t) {
+                do { ppe_cs_destroy(a[--i]); } while (i > 0);
+                if (! arr) {
+                    ppe_me_free(a);
+                }
+                ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+                return NULL;
+            } /* if */
+            a = t;
+        } /* if */
+    } /* for */
+
+    *cnt = i;
+    if (b && bsz) {
+        *bsz = nbsz;
+    }
+    return a;
+}
+
 static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
 {
     int ret = 0;
