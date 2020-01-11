@@ -423,6 +423,143 @@ PPE_API ppe_cstr ppe_cs_slice(ppe_cstr restrict b, ppe_size * restrict bsz, cons
     return b;
 }
 
+PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict s, ppe_size * restrict off) 
+{
+    ppe_cstr * a = NULL;
+    ppe_cstr * t = NULL;
+    ppe_cstr p = 0;
+    ppe_cstr q = 0;
+    ppe_size dsz = 0;
+    ppe_size nbsz = 0;
+    ppe_size sz = 0;
+    ppe_uint i = 0;
+    ppe_uint n = 0;
+
+    if (! d || ! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    if (ppe_cs_is_empty(d)) {
+        /* Cannot use an empty string as delimiter. */
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    if (! arr) {
+        if (cnt) {
+            if (*cnt == 0) {
+                /* Measure the count of substrings, and/or the total bytes of them. Include the terminating NUL character('\0'). */
+                dsz = ppe_cs_size(d);
+                p = off ? s + *off : s;
+                while ((q = ppe_cs_find(p, d))) {
+                    n += 1;
+                    nbsz += (q - p) + 1; /* Including the terminating NUL character('\0'). */
+                    p = q + dsz;
+                } /* while */
+
+                /* Counted N delimiters, so there must be N+1 substrings including empty ones. */
+                n += 1;
+                nbsz += ppe_cs_size(p) + 1; /* Including the terminating NUL character('\0'). */
+
+                *cnt = n;
+                if (bsz) {
+                    *bsz = nbsz;
+                }
+                /* TODO: Set appropriate error(CALL_AGAIN). */
+                return NULL;
+            }
+            n = *cnt;
+        } else {
+            /* CASE: No count limit on the array of substrings. */
+            n = 16;
+        } /* if */
+
+        a = ppe_mp_malloc(sizeof(arr[0]) * n);
+        if (! a) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+    } else {
+        /* CASE: Write references of substrings to the given array. */
+        if (! cnt || *cnt == 0) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        a = arr;
+    } /* if */
+
+    dsz = ppe_cs_size(d);
+    p = off ? s + *off : s;
+    while (p) {
+        if ((q = ppe_cs_find(p, d))) {
+            sz = q - p;
+        } else {
+            sz = ppe_cs_size(p);
+        }
+
+        if (b) {
+            if (*bsz < nbsz + sz + 1) {
+                ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+                if (! arr) {
+                    ppe_me_free(a);
+                }
+                return NULL;
+            }
+
+            if (sz > 0) {
+                memcpy(b + nbsz, p, sz);
+            }
+            a[i] = b + nbsz;
+
+            nbsz += sz;
+            b[nbsz++] = '\0';
+        } else {
+            if (sz == 0) {
+                a[i] == cs_empty_s;
+            } else {
+                a[i] = ppe_cs_create(p, sz);
+                if (! a[i]) {
+                    do { ppe_cs_destroy(a[--i]); } while (i > 0);
+                    if (! arr) {
+                        ppe_me_free(a);
+                    }
+                    return NULL;
+                }
+            } /* if */
+        } /* if */
+
+        i += 1;
+        p = q + dsz;
+        if (off) {
+            *off += sz + dsz;
+        }
+        if (i == *cnt) {
+            break;
+        }
+
+        if (i == n) {
+            n += 16;
+            t = ppe_mp_realloc(a, sizeof(arr[0]) * n);
+            if (! t) {
+                do { ppe_cs_destroy(a[--i]); } while (i > 0);
+                if (! arr) {
+                    ppe_me_free(a);
+                }
+                ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+                return NULL;
+            } /* if */
+            a = t;
+        } /* if */
+    } /* for */
+
+    *cnt = i;
+    if (b && bsz) {
+        *bsz = nbsz;
+    }
+    return a;
+}
+
 static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
 {
     int ret = 0;
