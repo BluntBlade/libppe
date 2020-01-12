@@ -108,12 +108,12 @@ PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict b
 /* Slice out the substring which resides between the begining of the source string and the first occurrence of the delimiter in it.
  *
  * Parameters:
+ *      d    A non-emtpy string used as a delimiter. **MUST NOT** be a NULL.
+ *      s    The source string in which the delimiter is being found. **MUST NOT** be a NULL.
  *      b    A buffer which will hold the substring. If pass a NULL, detect the size of the substring and save to the parameter `bsz`. Excludes the terminating NUL character('\0').
  *      bsz  A pointer to the size variable of the buffer `b`. **MUST NOT** be a NULL.
  *      opt  An option parameter which can be any combination of the following options:
  *           1) PPE_STR_OPT_NEW_STRING: Create a new string instead of writing the substring to the buffer.
- *      d    A non-emtpy string used as a delimiter. **MUST NOT** be a NULL.
- *      s    The source string in which the delimiter is being found. **MUST NOT** be a NULL.
  *
  * Return values:
  *      The value of `b`        The substring has been written to `b`, and the size of it saved in `bsz`.
@@ -124,9 +124,9 @@ PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict b
  *      PPE_ERR_INVALID_ARGUMENT    The delmiter string is empty.
  *      PPE_ERR_OUT_OF_CAPACITY     No enough space for writing the substring.
  */
-PPE_API extern ppe_cstr ppe_cs_slice(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_str_option opt, const ppe_cstr restrict s);
+PPE_API extern ppe_cstr ppe_cs_slice(const ppe_cstr restrict d, const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
 
-PPE_API extern pp_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict s, ppe_size * restrict off);
+PPE_API extern pp_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, const ppe_cstr restrict s, ppe_size * restrict off, ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
 
 /* -- Format -- */
 

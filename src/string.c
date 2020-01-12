@@ -373,16 +373,17 @@ PPE_API ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe
 
 /* -- Split & Slice -- */
 
-PPE_API ppe_cstr ppe_cs_slice(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict d, const ppe_str_option opt, const ppe_cstr restrict s)
+PPE_API ppe_cstr ppe_cs_slice(const ppe_cstr restrict d, const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
 {
     const ppe_cstr p = NULL;
     ppe_size cpsz = 0;
 
-    assert(bsz);
-    assert(d);
-    assert(s);
+    if (! d || ! s || ! bsz) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
 
-    if (d[0] == '\0') {
+    if (ppe_cs_is_empty(d)) {
         /* Cannot use an empty string as delimiter. */
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
@@ -423,7 +424,7 @@ PPE_API ppe_cstr ppe_cs_slice(ppe_cstr restrict b, ppe_size * restrict bsz, cons
     return b;
 }
 
-PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict s, ppe_size * restrict off) 
+PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, const ppe_cstr restrict s, ppe_size * restrict off, ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt) 
 {
     ppe_cstr * a = NULL;
     ppe_cstr * t = NULL;
