@@ -561,6 +561,77 @@ PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, const ppe_cstr res
     return a;
 }
 
+/* -- Replace & Substitute -- */
+
+PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size rsz, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
+{
+    ppe_size sz = 0;
+    ppe_size tosz = 0;
+    ppe_size nwsz = 0;
+
+    if (! s || ! to) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    sz = ppe_cs_size(s);
+    if (sz < off) {
+        ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
+        return NULL;
+    }
+
+    tosz = ppe_cs_size(to);
+    nwsz = (off + rsz <= sz) ? sz - rsz + tosz : sz - rsz + tosz - (off + rsz - sz);
+
+    if (! b) {
+        if (bsz) {
+            /* MEASURE MODE */
+            *bsz = nwsz + 1; /* Include the terminating NUL byte. */
+            return s;
+        }
+
+        /* NEW-STRING MODE */
+        b = ppe_mp_malloc(nwsz + 1); /* Include the terminating NUL byte. */
+        if (! b) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+    } else {
+        /* COPY MODE */
+        if (! bsz) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        if (*bsz < nwsz + 1) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return NULL;
+        }
+    } /* if */
+
+    /* The part before the substring which is being replaced. */
+    memcpy(b, s, off);
+
+    /* The part which is replacing the substring. */
+    memcpy(b + off, to, tosz);
+
+    if (off + rsz < sz) {
+        /* The part after the substring which is being replaced. */
+        memcpy(b + off + tosz, s + (off + rsz), sz - (off + rsz));
+    }
+
+    b[nwsz] = '\0';
+    if (bsz) {
+        *bsz = nwsz;
+    }
+    return b;
+}
+
+PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict src, const ppe_cstr restrict dst, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
+{
+    /* TODO: Implementation */
+    return NULL;
+}
+
 static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
 {
     int ret = 0;
