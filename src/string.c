@@ -626,10 +626,83 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
     return b;
 }
 
-PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict src, const ppe_cstr restrict dst, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
+PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
 {
-    /* TODO: Implementation */
-    return NULL;
+    const ppe_cstr p = NULL;
+    const ppe_cstr q = NULL;
+    ppe_size rsz = 0;
+    ppe_size frsz = 0;
+    ppe_size tosz = 0;
+    ppe_size nwsz = 0;
+    ppe_size cpsz = 0;
+
+    if (! s || ppe_cs_is_empty(s)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (! from || ppe_cs_is_empty(from)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (! to) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    frsz = ppe_cs_size(from);
+    tosz = ppe_cs_size(to);
+    p = s;
+    while ((q = ppe_cs_find(p, src))) {
+        nwsz += q - p;
+        nwsz += tosz;
+        p += frsz;
+    } /* while */
+    rsz = ppe_cs_size(p);
+    nwsz += rsz;
+
+    if (! b) {
+        if (bsz) {
+            /* MEASURE MODE */
+            *bsz = nwsz + 1; /* Include the terminating NUL byte. */
+            return s;
+        }
+
+        /* NEW-STRING MODE */
+        b = ppe_mp_malloc(nwsz + 1); /* Include the terminating NUL byte. */
+        if (! b) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+    } else {
+        /* COPY MODE */
+        if (! bsz) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        if (*bsz < nwsz + 1) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return NULL;
+        }
+    } /* if */
+
+    p = s;
+    while ((q = ppe_cs_find(p, src))) {
+        memcpy(b + cpsz, p, q - p); 
+        cpsz += q - p;
+
+        memcpy(b + cpsz, to, tosz); 
+        cpsz += tosz;
+
+        p += frsz;
+    } /* while */
+    memcpy(b + cpsz, p, rsz); 
+    nwsz += rsz;
+
+    b[nwsz] = '\0';
+    if (bsz) {
+        *bsz = nwsz;
+    }
+    return b;
 }
 
 static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
