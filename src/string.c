@@ -563,11 +563,12 @@ PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, const ppe_cstr res
 
 /* -- Replace & Substitute -- */
 
-PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size rsz, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
+PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size rsz, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, const ppe_cstr * restrict ss, const ppe_str_option opt)
 {
     ppe_size sz = 0;
     ppe_size tosz = 0;
-    ppe_size nwsz = 0;
+    ppe_size cpsz = 0;
+    ppe_size bytes = 0;
 
     if (! s || ! to) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -580,32 +581,91 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
         return NULL;
     }
 
-    tosz = ppe_cs_size(to);
-    nwsz = (off + rsz <= sz) ? sz - rsz + tosz : sz - rsz + tosz - (off + rsz - sz);
+    if (sz < off + rsz) {
+        rsz -= (off + rsz) - sz;
+    }
 
     if (! b) {
+        tosz = ppe_cs_size(to);
+        cpsz = (off + rsz <= sz) ? sz - rsz + tosz : sz - rsz + tosz - (off + rsz - sz);
+
         if (bsz) {
             /* MEASURE MODE */
-            *bsz = nwsz + 1; /* Include the terminating NUL byte. */
+            *bsz = cpsz + 1; /* Include the terminating NUL byte. */
             return s;
         }
 
         /* NEW-STRING MODE */
-        b = ppe_mp_malloc(nwsz + 1); /* Include the terminating NUL byte. */
+        b = ppe_mp_malloc(cpsz + 1); /* Include the terminating NUL byte. */
         if (! b) {
             ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
             return NULL;
         }
-    } else {
+    } else if (! ss) {
         /* COPY MODE */
         if (! bsz) {
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
             return NULL;
         }
-        if (*bsz < nwsz + 1) {
+        if (*bsz < cpsz + 1) {
             ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
             return NULL;
         }
+    } else {
+        /* STREAM MODE */
+        if (! bsz) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+
+        if (! *ss || (s <= *ss && *ss <= s + off)) {
+            if (! *ss) {
+                *ss = s;
+            }
+            bytes = *bsz < (off - (*ss - s)) ? *bsz : (off - (*ss - s));
+            memcpy(b, *ss, bytes);
+            *ss += bytes;
+            cpsz += bytes;
+
+            if (cpsz == *bsz) {
+                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+                return NULL;
+            }
+            *ss = to;
+        } /* if */
+
+        if (to <= *ss && *ss <= to + (tosz = ppe_cs_size(to))) {
+            bytes = (*bsz - cpsz) < (tosz - (*ss - to)) ? (*bsz - cpsz) : (tosz - (*ss - to));
+            memcpy(b + cpsz, *ss, bytes);
+            *ss += bytes;
+            cpsz += bytes;
+
+            if (cpsz == *bsz) {
+                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+                return NULL;
+            }
+            *ss = s + off + rsz;
+        } /* if */
+
+        if (s + off + rsz <= *ss && *ss <= s + sz) {
+            bytes = (*bsz - cpsz) < (sz - (*ss - s)) ? (*bsz - cpsz) : (sz - (*ss - s));
+            memcpy(b + cpsz, *ss, bytes);
+            *ss += bytes;
+            cpsz += bytes;
+
+            if (cpsz == *bsz) {
+                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+                return NULL;
+            }
+        } else {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        } /* if */
+
+        b[cpsz] = '\0';
+        *bsz = cpsz;
+        *ss = NULL;
+        return b;
     } /* if */
 
     /* The part before the substring which is being replaced. */
@@ -614,14 +674,12 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
     /* The part which is replacing the substring. */
     memcpy(b + off, to, tosz);
 
-    if (off + rsz < sz) {
-        /* The part after the substring which is being replaced. */
-        memcpy(b + off + tosz, s + (off + rsz), sz - (off + rsz));
-    }
+    /* The part after the substring which is being replaced. */
+    memcpy(b + off + tosz, s + (off + rsz), sz - (off + rsz));
 
-    b[nwsz] = '\0';
+    b[cpsz] = '\0';
     if (bsz) {
-        *bsz = nwsz;
+        *bsz = cpsz;
     }
     return b;
 }
