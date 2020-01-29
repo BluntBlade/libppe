@@ -124,9 +124,9 @@ PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict b
  *      PPE_ERR_INVALID_ARGUMENT    The delmiter string is empty.
  *      PPE_ERR_OUT_OF_CAPACITY     No enough space for writing the substring.
  */
-PPE_API extern ppe_cstr ppe_cs_slice(const ppe_cstr restrict d, const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
+PPE_API extern ppe_cstr ppe_cs_slice(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
 
-PPE_API extern ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict d, const ppe_cstr restrict s, ppe_size * restrict off, ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
+PPE_API extern ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_size * restrict off, ppe_cs_cstr * restrict arr, ppe_uint * cnt, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
 
 /* -- Replace & Substitute -- */
 
