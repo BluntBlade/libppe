@@ -684,7 +684,7 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
     return b;
 }
 
-PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt)
+PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, ppe_uint * restrict cnt, const ppe_cstr * restrict ss, const ppe_str_option opt)
 {
     const ppe_cstr p = NULL;
     const ppe_cstr q = NULL;
@@ -709,7 +709,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (n && *n == 0) {
+    if (cnt && *cnt == 0) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -726,7 +726,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
             p = q + frsz;
 
             i += 1;
-            if (n && i == *n) {
+            if (cnt && i == *cnt) {
                 break;
             } /* if */
         } /* while */
@@ -737,8 +737,8 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         if (bsz) {
             /* MEASURE MODE */
             *bsz = cpsz + 1; /* Include the terminating NUL byte. */
-            if (n) {
-                *n = i;
+            if (cnt) {
+                *cnt = i;
             }
             ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
             return NULL;
@@ -762,7 +762,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
             p = q + frsz;
 
             i += 1;
-            if (n && i == *n) {
+            if (cnt && i == *cnt) {
                 break;
             } /* if */
         } /* while */
@@ -795,7 +795,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
             p = q + frsz;
 
             i += 1;
-            if (n && i == *n) {
+            if (cnt && i == *cnt) {
                 break;
             } /* if */
         } /* while */
@@ -812,8 +812,8 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
     if (bsz) {
         *bsz = cpsz;
     }
-    if (n) {
-        *n = i;
+    if (cnt) {
+        *cnt = i;
     }
     return b;
 
