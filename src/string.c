@@ -13,6 +13,7 @@ extern "C"
 /* ---- Preset Values ------------------------------------------------------- */
 
 static const ppe_char * cs_empty_s = "";
+static const ppe_char * cs_empty_arr[2] = {cs_empty_s, NULL};
 
 /* ---- Functions ----------------------------------------------------------- */
 
@@ -440,23 +441,28 @@ PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr res
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-
     if (! d || ppe_cs_is_empty(d)) {
         /* Cannot use a null or empty string as delimiter. */
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
 
+    p = (ss && *ss) ? *ss : s;
     if (! arr) {
         if (! cnt) {
             /* CASE: No number limit on the array of substrings. */
-            n = 16;
+            n = 16 + 1; /* Include a final NULL entry as indicator of the end. */
         } else if (*cnt == 0) {
             /* MEASURE MODE */
+            if (ppe_cs_is_empty(p)) {
+                *cnt = 1 + 1; /* Include a final NULL entry as indicator of the end. */
+                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+                return NULL;
+            }
+
             /* Measure the number of substrings, and/or the total bytes of them which would be written. 
              * Include the terminating NUL character('\0'). */
             dsz = ppe_cs_size(d);
-            p = (ss && *ss) ? *ss : s;
             while ((q = ppe_cs_find(p, d))) {
                 n += 1;
                 nbsz += (q - p) + 1; /* Including the terminating NUL character('\0'). */
@@ -475,8 +481,12 @@ PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr res
             return NULL;
         } else {
             /* CASE: Split at most *cnt substrings. */
-            n = *cnt;
+            n = *cnt + 1; /* Include a final NULL entry as indicator of the end. */
         } /* if */
+
+        if (ppe_cs_is_empty(p)) {
+            return cs_empty_arr;
+        }
 
         /* NEW-ARRAY MODE */
         a = ppe_mp_malloc(sizeof(arr[0]) * n);
@@ -484,6 +494,7 @@ PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr res
             ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
             return NULL;
         }
+        a[n] = NULL;
     } else {
         /* REFERENCE-ARRAY MODE */
         /* CASE: Record references to the substrings to the given array. */
@@ -491,11 +502,16 @@ PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr res
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
             return NULL;
         }
+
+        if (ppe_cs_is_empty(p)) {
+            arr[0] = cs_empty_s;
+            *cnt = 1;
+            return arr;
+        }
         a = arr;
     } /* if */
 
     dsz = ppe_cs_size(d);
-    p = (ss && *ss) ? *ss : s;
     while (p) {
         if ((q = ppe_cs_find(p, d))) {
             sz = q - p;
@@ -554,6 +570,7 @@ PPE_API ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr res
                 return NULL;
             } /* if */
             a = t;
+            a[n] = NULL;
         } /* if */
     } /* for */
 
@@ -571,7 +588,7 @@ PPE_CS_SPLIT_REACHING_LIMIT:
         *ss = p;
     }
     return a;
-}
+} /* ppe_cs_split */
 
 /* -- Replace & Substitute -- */
 
