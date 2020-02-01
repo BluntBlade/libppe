@@ -19,6 +19,9 @@ struct ppe_str_bunch_st;
 
 typedef char * ppe_cstr;
 
+struct ppe_cs_snippet_st;
+typedef struct ppe_cs_snippet_st * ppe_cs_snippet;
+
 struct ppe_string_st; 
 typedef struct ppe_string_st * ppe_string;
 
@@ -61,6 +64,35 @@ typedef enum
 #endif
 
 #define PPE_STR_ARG_END NULL
+
+/* ==== Declaration : C-String Snippet ====================================== */
+
+/* -- Property -- */
+
+PPE_API extern ppe_uint ppe_cspt_count(const ppe_cs_snippet restrict spt);
+PPE_API extern ppe_uint ppe_cspt_capacity(const ppe_cs_snippet restrict spt);
+
+/* -- Create & Destroy -- */
+
+PPE_API extern ppe_cs_snippet ppe_cspt_create(const ppe_uint max);
+PPE_API extern void ppe_cspt_destroy(ppe_cs_snippet restrict spt);
+PPE_API extern void ppe_cspt_reset(ppe_cs_snippet restrict spt);
+
+/* -- Manipulators -- */
+
+PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr s, const ppe_size sz);
+
+/* -- Wrappers -- */
+
+static inline ppe_bool ppe_cspt_is_empty(const ppe_cs_snippet restrict spt)
+{
+    return ppe_cspt_count(spt) == 0;
+}
+
+static inline ppe_bool ppe_cspt_is_full(const ppe_cs_snippet restrict spt)
+{
+    return ppe_cspt_count(spt) == ppe_cspt_capacity(spt);
+}
 
 /* ==== Declaration : C-String ============================================== */
 
@@ -127,6 +159,7 @@ PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict b
 PPE_API extern ppe_cstr ppe_cs_slice(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
 
 PPE_API extern ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_cs_cstr * restrict arr, ppe_uint * cnt, const ppe_cstr * restrict ss, const ppe_str_option opt);
+PPE_API extern ppe_cs_snippet ppe_cs_split_snippets(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict arr, ppe_uint * cnt, const ppe_cstr * restrict ss, const ppe_str_option opt);
 
 /* -- Replace & Substitute -- */
 

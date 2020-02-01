@@ -8,6 +8,87 @@ extern "C"
 {
 #endif
 
+/* ==== Declaration : C-String Snippet ====================================== */
+
+/* ---- Types --------------------------------------------------------------- */
+
+typedef struct PPE_CS_SNIPPET {
+    const ppe_cstr s;
+    ppe_size sz;
+} ppe_cs_snippet_st;
+
+typedef struct PPE_CSPT_CONTRL {
+    ppe_uint cnt;
+    ppe_uint cap;
+    ppe_cs_snippet_st items[1];
+} ppe_cspt_control_st, *ppe_cspt_control;
+
+/* -- Property -- */
+
+static inline ppe_cspt_control ppe_cspt_to_control(const ppe_cs_snippet restrict spt)
+{
+    return (ppe_cspt_control) ( ((void*) spt) - ((void*) &(((ppe_cspt_control) 0)->items[0])) );
+}
+
+PPE_API ppe_uint ppe_cspt_count(const ppe_cs_snippet restrict spt)
+{
+    return ppe_cspt_to_control(spt)->cnt;
+}
+
+PPE_API ppe_uint ppe_cspt_capacity(const ppe_cs_snippet restrict spt)
+{
+    return ppe_cspt_to_control(spt)->cap;
+}
+
+/* -- Create & Destroy -- */
+
+PPE_API ppe_cs_snippet ppe_cspt_create(const ppe_uint max)
+{
+    ppe_cspt_control nw = NULL;
+    nw = ppe_mp_malloc(sizeof(ppe_cspt_control_st) + sizeof(ppe_cs_snippet_st) * (max - 1));
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+    nw->cnt = 0;
+    nw->cap = max;
+    return nw->items;
+}
+
+PPE_API void ppe_cspt_destroy(ppe_cs_snippet restrict spt)
+{
+    if (spt) {
+        ppe_mp_free(ppe_cspt_to_control(spt));
+    }
+}
+
+PPE_API void ppe_cspt_reset(ppe_cs_snippet restrict spt)
+{
+    ppe_cspt_to_control(spt)->cnt = 0;
+}
+
+/* -- Manipulators -- */
+
+PPE_API ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr s, const ppe_size sz)
+{
+    ppe_cspt_control ctl = NULL;
+    if (! spt) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+
+    ctl = ppe_cspt_to_control(spt);
+    if (ctl->cnt == ctl->cap) {
+        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+        return ppe_false;
+    }
+
+    ctl->items[ctl->cnt].s = s;
+    ctl->items[ctl->cnt].sz = sz;
+    ctl->cnt += 1;
+    return ppe_true;
+}
+
 /* ==== Definitions : C-String ============================================== */
 
 /* ---- Preset Values ------------------------------------------------------- */
