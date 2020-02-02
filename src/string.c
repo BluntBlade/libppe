@@ -63,7 +63,7 @@ PPE_API ppe_cs_snippet ppe_cspt_create(const ppe_uint cap)
 
 PPE_API void ppe_cspt_destroy(ppe_cs_snippet restrict spt)
 {
-    if (spt) {
+    if (spt && spt != cspt_empty_s) {
         ppe_mp_free(spt);
     }
 }
