@@ -159,8 +159,7 @@ PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict b
  */
 PPE_API extern ppe_cstr ppe_cs_slice(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
 
-PPE_API extern ppe_cs_cstr * ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_cs_cstr * restrict arr, ppe_uint * cnt, const ppe_cstr * restrict ss, const ppe_str_option opt);
-PPE_API extern ppe_cs_snippet ppe_cs_split_snippets(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict arr, ppe_uint * cnt, const ppe_cstr * restrict ss, const ppe_str_option opt);
+PPE_API extern ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, const ppe_cstr * restrict ss, const ppe_str_option opt);
 
 /* -- Replace & Substitute -- */
 
