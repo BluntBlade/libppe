@@ -74,13 +74,14 @@ PPE_API extern ppe_uint ppe_cspt_capacity(const ppe_cs_snippet restrict spt);
 
 /* -- Create & Destroy -- */
 
-PPE_API extern ppe_cs_snippet ppe_cspt_create(const ppe_uint max);
+PPE_API extern ppe_cs_snippet ppe_cspt_create(const ppe_uint cap);
 PPE_API extern void ppe_cspt_destroy(ppe_cs_snippet restrict spt);
 PPE_API extern void ppe_cspt_reset(ppe_cs_snippet restrict spt);
 
 /* -- Manipulators -- */
 
-PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr s, const ppe_size sz);
+PPE_API extern ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr * restrict s, ppe_size * restrict sz);
+PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr restrict s, const ppe_size sz);
 
 /* -- Wrappers -- */
 

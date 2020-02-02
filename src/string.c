@@ -12,80 +12,88 @@ extern "C"
 
 /* ---- Types --------------------------------------------------------------- */
 
-typedef struct PPE_CS_SNIPPET {
+typedef struct PPE_CSPT_ITEM {
     const ppe_cstr s;
     ppe_size sz;
-} ppe_cs_snippet_st;
+} ppe_cspt_item_st;
 
-typedef struct PPE_CSPT_CONTRL {
+typedef struct PPE_CS_SNIPPET {
     ppe_uint cnt;
     ppe_uint cap;
-    ppe_cs_snippet_st items[1];
-} ppe_cspt_control_st, *ppe_cspt_control;
+    ppe_cspt_item_st items[1];
+} ppe_cs_snippet_st;
 
 /* -- Property -- */
 
-static inline ppe_cspt_control ppe_cspt_to_control(const ppe_cs_snippet restrict spt)
-{
-    return (ppe_cspt_control) ( ((void*) spt) - ((void*) &(((ppe_cspt_control) 0)->items[0])) );
-}
-
 PPE_API ppe_uint ppe_cspt_count(const ppe_cs_snippet restrict spt)
 {
-    return ppe_cspt_to_control(spt)->cnt;
+    return spt->cnt;
 }
 
 PPE_API ppe_uint ppe_cspt_capacity(const ppe_cs_snippet restrict spt)
 {
-    return ppe_cspt_to_control(spt)->cap;
+    return spt->cap;
 }
 
 /* -- Create & Destroy -- */
 
-PPE_API ppe_cs_snippet ppe_cspt_create(const ppe_uint max)
+PPE_API ppe_cs_snippet ppe_cspt_create(const ppe_uint cap)
 {
-    ppe_cspt_control nw = NULL;
-    nw = ppe_mp_malloc(sizeof(ppe_cspt_control_st) + sizeof(ppe_cs_snippet_st) * (max - 1));
+    ppe_cs_snippet nw = NULL;
+    nw = ppe_mp_malloc(sizeof(ppe_cs_snippet_st) + sizeof(ppe_cspt_item_st) * (cap - 1));
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
     nw->cnt = 0;
-    nw->cap = max;
-    return nw->items;
+    nw->cap = cap;
+    return nw;
 }
 
 PPE_API void ppe_cspt_destroy(ppe_cs_snippet restrict spt)
 {
     if (spt) {
-        ppe_mp_free(ppe_cspt_to_control(spt));
+        ppe_mp_free(spt);
     }
 }
 
 PPE_API void ppe_cspt_reset(ppe_cs_snippet restrict spt)
 {
-    ppe_cspt_to_control(spt)->cnt = 0;
+    spt->cnt = 0;
 }
 
 /* -- Manipulators -- */
 
-PPE_API ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr s, const ppe_size sz)
+PPE_API ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr * restrict s, ppe_size * restrict sz)
 {
-    ppe_cspt_control ctl = NULL;
+    if (! spt || ! s || ! sz) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    if (spt->cnt < idx) {
+        ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
+        return ppe_false;
+    }
+
+    *s = spt->items[idx].s;
+    *sz = spt->items[idx].sz;
+    return ppe_true;
+}
+
+PPE_API ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr restrict s, const ppe_size sz)
+{
     if (! spt) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return ppe_false;
     }
-
-    ctl = ppe_cspt_to_control(spt);
-    if (ctl->cnt == ctl->cap) {
+    if (spt->cnt == spt->cap) {
         ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
         return ppe_false;
     }
 
-    ctl->items[ctl->cnt].s = s;
-    ctl->items[ctl->cnt].sz = sz;
-    ctl->cnt += 1;
+    spt->items[spt->cnt].s = s;
+    spt->items[spt->cnt].sz = sz;
+    spt->cnt += 1;
     return ppe_true;
 }
 
