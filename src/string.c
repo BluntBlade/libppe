@@ -576,7 +576,7 @@ PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr re
     } /* if */
 
     p = (ss && *ss) ? *ss : s;
-    for (i = 0; i < n && p; i += 1) {
+    for (i = 0; i < n && p[0] != '\0'; i += 1) {
         if ((q = ppe_cs_find(p, d))) {
             sz = q - p;
             ppe_cspt_append(nw, p, sz);
