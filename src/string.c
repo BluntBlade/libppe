@@ -524,7 +524,9 @@ PPE_API ppe_cstr ppe_cs_slice(const ppe_cstr restrict s, const ppe_cstr restrict
     return b;
 }
 
-PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, const ppe_cstr * restrict ss, const ppe_str_option opt)
+#define PPE_CONF_CSTR_SNIPPET_UPPER_BOUND 64
+
+PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt)
 {
     ppe_cs_snippet nw = NULL;
     ppe_cstr p = 0;
@@ -532,7 +534,7 @@ PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr re
     ppe_size dsz = 0;
     ppe_size sz = 0;
     ppe_uint i = 0;
-    ppe_uint n = 0;
+    ppe_uint max = PPE_CONF_CSTR_SNIPPET_UPPER_BOUND; /* Dont search infinitely. */
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -543,53 +545,74 @@ PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr re
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
+    if (n) {
+        if (n == 0) {
+            /* Cannot use a null or empty string as delimiter. */
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        max = *n;
+    }
 
     dsz = ppe_cs_size(d);
-
+    p = (ss && *ss) ? *ss : s;
     if (! spt) {
         /* NEW-SNIPPET MODE */
-        p = (ss && *ss) ? *ss : s;
         if (ppe_cs_is_empty(p)) {
             return cspt_empty_s;
         }
 
-        /* Measure the number of substrings. */
-        /* TODO: Use PPE_CONF_CSTRING_SNIPPET_UPPER_BOUND to prevent infinity search. */
-        while ((q = ppe_cs_find(p, d))) {
-            n += 1;
+        /* Count the number of substrings. */
+        for (i = 0; i < max - 1 && (q = ppe_cs_find(p, d)); i += 1) {
             p = q + dsz;
-        } /* while */
+        } /* for */
 
         /* Counted N delimiters, so there must be N+1 substrings, including empty ones. */
-        n += 1;
+        i += 1;
 
-        nw = ppe_cspt_create(n);
+        nw = ppe_cspt_create(i);
         if (! nw) {
             ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
             return NULL;
         }
+
+        p = (ss && *ss) ? *ss : s;
     } else {
         /* FILL-SNIPPET MODE */
         ppe_cspt_reset(spt);
-        n = ppe_cspt_capacity(spt);
+        if (ppe_cs_is_empty(p)) {
+            ppe_cspt_append(spt, cs_empty_s, 0);
+            return spt;
+        }
+
+        i = ppe_cspt_capacity(spt);
         nw = spt;
     } /* if */
 
-    p = (ss && *ss) ? *ss : s;
-    for (i = 0; i < n && p[0] != '\0'; i += 1) {
-        if ((q = ppe_cs_find(p, d))) {
-            sz = q - p;
-            ppe_cspt_append(nw, p, sz);
-            p = q + dsz;
-        } else {
-            sz = ppe_cs_size(p);
-            ppe_cspt_append(nw, p, sz);
-            p += sz;
-        } /* if */
+    if (i < max) {
+        max = i;
+    }
+    for (i = 0; i < max - 1 && (q = ppe_cs_find(p, d)); i += 1) {
+        sz = q - p;
+        ppe_cspt_append(nw, p, sz);
+        p = q + dsz;
     } /* for */
 
-    if (ss) {
-        *ss = (p[0] != '\0') ? p : NULL;
+    if (i == max - 1 && (q = ppe_cs_find(p, d)) && ss) {
+        sz = q - p;
+        ppe_cspt_append(nw, p, sz);
+        p += sz;
+        *ss = p;
+    } else {
+        sz = ppe_cs_size(p);
+        ppe_cspt_append(nw, p, sz);
+        p += sz;
+        if (ss) {
+            *ss = NULL;
+        }
+    } /* if */
+    if (n) {
+        *n = i + 1;
     }
     return nw;
 } /* ppe_cs_split */
