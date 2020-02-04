@@ -524,7 +524,7 @@ PPE_API ppe_cstr ppe_cs_slice(const ppe_cstr restrict s, const ppe_cstr restrict
     return b;
 }
 
-#define PPE_CONF_CSTR_SNIPPET_UPPER_BOUND 64
+#define PPE_CONF_STR_SNIPPET_MAX 64
 
 PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt)
 {
@@ -534,7 +534,7 @@ PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr re
     ppe_size dsz = 0;
     ppe_size sz = 0;
     ppe_uint i = 0;
-    ppe_uint max = PPE_CONF_CSTR_SNIPPET_UPPER_BOUND; /* Dont search infinitely. */
+    ppe_uint max = PPE_CONF_STR_SNIPPET_MAX; /* Dont search infinitely. */
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -740,6 +740,8 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
     return b;
 }
 
+#define PPE_CONF_STR_SUBSTITUTE_MAX 64
+
 PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt)
 {
     const ppe_cstr p = NULL;
@@ -748,10 +750,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
     ppe_size frsz = 0;
     ppe_size tosz = 0;
     ppe_size cpsz = 0;
-
-    if (ss && *ss) {
-        s = *ss;
-    }
+    ppe_uint max = PPE_CONF_STR_SUBSTITUTE_MAX;
 
     if (! s || ppe_cs_is_empty(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -765,24 +764,27 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (n && *n == 0) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
+    if (n) {
+        if (*n == 0) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        if (*n < PPE_CONF_STR_SUBSTITUTE_MAX) {
+            max = *n;
+        }
+    } /* if */
 
     frsz = ppe_cs_size(from);
     tosz = ppe_cs_size(to);
 
     if (! b) {
         i = 0;
-        p = s;
+        p = (ss && *ss) ? *ss : s;
         while ((q = ppe_cs_find(p, src))) {
             cpsz += q - p;
             cpsz += tosz;
             p = q + frsz;
-
-            i += 1;
-            if (n && i == *n) {
+            if (++i == max) {
                 break;
             } /* if */
         } /* while */
@@ -791,7 +793,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         cpsz += rmsz;
 
         if (bsz) {
-            /* MEASURE MODE */
+            /* MEASURE-SIZE MODE */
             *bsz = cpsz + 1; /* Include the terminating NUL byte. */
             if (n) {
                 *n = i;
@@ -809,31 +811,30 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
 
         cpsz = 0;
         i = 0;
-        p = s;
+        p = (ss && *ss) ? *ss : s;
         while ((q = ppe_cs_find(p, from))) {
             memcpy(b + cpsz, p, q - p); 
             cpsz += q - p;
             memcpy(b + cpsz, to, tosz); 
             cpsz += tosz;
             p = q + frsz;
-
-            i += 1;
-            if (n && i == *n) {
+            if (++i == max) {
                 break;
             } /* if */
         } /* while */
 
         memcpy(b + cpsz, p, rmsz); 
         cpsz += rmsz;
+        b[cpsz] = '\0';
     } else {
-        /* COPY MODE or STREAM MODE */
+        /* ONESHOT-COPY MODE or STREAM-COPY MODE */
         if (! bsz) {
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
             return NULL;
         }
 
         i = 0;
-        p = s;
+        p = (ss && *ss) ? *ss : s;
         while ((q = ppe_cs_find(p, from))) {
             if (*bsz < cpsz + (q - p)) {
                 goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
@@ -850,8 +851,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
 
             p = q + frsz;
 
-            i += 1;
-            if (n && i == *n) {
+            if (++i == max) {
                 break;
             } /* if */
         } /* while */
@@ -864,7 +864,6 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         cpsz += rmsz;
     } /* if */
 
-    b[cpsz] = '\0';
     if (bsz) {
         *bsz = cpsz;
     }
