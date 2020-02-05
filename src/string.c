@@ -322,7 +322,7 @@ PPE_API const ppe_cstr ppe_cs_empty(void)
 
 /* -- Property -- */
 
-PPE_API ppe_cs_size(const ppe_cstr restrict s)
+PPE_API ppe_size ppe_cs_size(const ppe_cstr restrict s)
 {
     assert(s);
     return strlen(s);
@@ -365,13 +365,16 @@ PPE_API ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size sz)
 {
     ppe_cstr nw = NULL;
 
-    assert(s);
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
 
     if (ppe_cs_is_empty(s) || sz == 0) {
         return cs_empty_s;
     }
 
-    nw = (ppe_cstr) ppe_mp_malloc(sz);
+    nw = (ppe_cstr) ppe_mp_malloc(sz + 1); /* Include the terminating NUL byte. */
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
@@ -384,26 +387,46 @@ PPE_API ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size sz)
 
 /* -- Substring -- */
 
-PPE_API ppe_cstr ppe_cs_substr(ppe_cstr restrict s, const ppe_size index, const ppe_size bytes, ppe_str_option opt)
+PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt)
 {
     ppe_size sz = 0;
     ppe_size cpsz = 0;
 
-    assert(s);
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
 
     sz = ppe_cstr_size(s);
-    if (sz <= index) {
+    if (sz <= off) {
         ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
         return NULL;
     }
 
-    cpsz = (index + bytes <= sz) ? bytes : sz - index;
-
-    if (opt & PPE_STR_OPT_NEW_STRING) {
-        return ppe_cs_create(s + index, cpsz);
+    if (sz < off + ssz) {
+        if (opt & PPE_STR_OPT_TRUNCATE) {
+            cpsz = sz - off;
+        } else {
+            ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
+            return NULL;
+        }
+    } else {
+        cpsz = ssz;
     }
-    memmove(s, s + index, cpsz);
-    return s;
+
+    if (b) {
+        if (! bsz) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        if (*bsz < cpsz) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return NULL;
+        }
+        memcpy(b, s + off, cpsz);
+        return b;
+    }
+    return ppe_cs_create(s + off, cpsz);
 }
 
 /* -- Trim & Chomp -- */
