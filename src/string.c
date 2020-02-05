@@ -153,6 +153,11 @@ static ppe_cstr ppe_cs_join_imp(const ppe_cstr restrict d, const ppe_size dsz, p
     va_list cp;
 
     if (b) {
+        if (! bsz || *bsz == 0) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+
         nw = b;
         nwsz = *bsz;
     }
@@ -163,7 +168,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
 
     act = va_arg(cp, ppe_str_join_action);
     if (act == PPE_PTR_JOIN_END) {
-        goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+        goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
     }
 
     do {
@@ -171,7 +176,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
             case PPE_PTR_JOIN_ADD_ITEM_CSTR:
                 s = va_arg(cp, ppe_cstr);
                 if (! s) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 sz = ppe_cs_size(s);
                 break;
@@ -179,7 +184,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
             case PPE_PTR_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
                 s = va_arg(cp, ppe_cstr);
                 if (! s) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 sz = va_arg(cp, ppe_size);
                 break;
@@ -187,15 +192,16 @@ PPE_PTR_JOIN_IMP_AGAIN:
             case PPE_PTR_JOIN_ADD_ITEM_STRING:
                 str = va_arg(cp, ppe_string);
                 if (! str) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
+                s = ppe_str_addr(str);
                 sz = ppe_str_size(str);
                 break;
 
             case PPE_PTR_JOIN_ADD_ITEM_SNIPPET:
                 spt = va_arg(cp, ppe_cs_snippet);
-                if (! str) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                if (! spt) {
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 sz = 0;
                 for (i = 0; i < ppe_cspt_count(spt); i += 1) {
@@ -212,7 +218,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 d = va_arg(cp, ppe_cstr);
                 if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 dsz = ppe_cs_size(d);
                 goto PPE_PTR_JOIN_IMP_NONE_ITEM;
@@ -221,7 +227,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 d = va_arg(cp, ppe_cstr);
                 if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 dsz = va_arg(cp, ppe_size);
                 goto PPE_PTR_JOIN_IMP_NONE_ITEM;
@@ -229,8 +235,8 @@ PPE_PTR_JOIN_IMP_AGAIN:
             case PPE_PTR_JOIN_SET_DELIMITER_STRING:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 str = va_arg(cp, ppe_string);
-                if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                if (! str) {
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 d = ppe_str_addr(str);
                 dsz = ppe_str_size(str);
@@ -242,7 +248,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 goto PPE_PTR_JOIN_IMP_NONE_ITEM;
 
             default:
-                goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
+                goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
         } /* switch */
 
         if (! nw) {
@@ -254,21 +260,11 @@ PPE_PTR_JOIN_IMP_AGAIN:
             for (i = 0; i < ppe_cspt_count(spt); i += 1) {
                 ppe_cspt_get(spt, i, &s, &sz);
                 if (! ppe_cs_join_imp_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
-                    if (! b) {
-                        ppe_mp_free(nw);
-                    }
-                    va_end(cp);
-                    return NULL;
+                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
                 }
             } /* for */
-        } else {
-            if (! ppe_cs_join_imp_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
-                if (! b) {
-                    ppe_mp_free(nw);
-                }
-                va_end(cp);
-                return NULL;
-            }
+        } else if (! ppe_cs_join_imp_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
+            goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
         } /* if */
 
 PPE_PTR_JOIN_IMP_NONE_ITEM:
@@ -306,13 +302,14 @@ PPE_PTR_JOIN_IMP_NONE_ITEM:
     } /* if */
     return nw;
 
+PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT:
+    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
 PPE_CS_JOIN_IMP_ERROR_HANDLING:
     if (! b) {
         ppe_mp_free(nw);
         return NULL;
     }
     va_end(cp);
-    ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
     return NULL;
 }
 
