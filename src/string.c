@@ -431,7 +431,7 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, co
 
 /* -- Trim & Chomp -- */
 
-PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz, ppe_str_option opt)
+PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     ppe_cstr p = NULL;
     ppe_cstr q = NULL;
@@ -493,7 +493,7 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
     return b;
 }
 
-PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr * restrict b, ppe_size * bsz, ppe_str_option opt)
+PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     ppe_size sz = 0;
 
