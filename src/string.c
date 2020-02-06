@@ -435,7 +435,7 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
 {
     ppe_cstr p = NULL;
     ppe_cstr q = NULL;
-    ppe_size sz = 0;
+    ppe_size cpsz = 0;
 
     if (! s || ! t || ppe_cs_size(t) == 0) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -449,32 +449,32 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
         }
     } /* if */
 
-    sz = ppe_cs_size(p);
+    cpsz = ppe_cs_size(p);
     if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
-        q = p + sz - 1;
+        q = p + cpsz - 1;
         while (p <= q && strchr(t, *q)) {
             q--;
         }
-        sz = q < p ? 0 : q - p + 1;
+        cpsz = q < p ? 0 : q - p + 1;
     } /* if */
 
     if (! b) {
         if (*bsz == 0) {
             /* MEASURE-SIZE MODE */
-            *bsz = sz;
+            *bsz = cpsz;
             ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
             return NULL;
         }
         /* NEW-STRING MODE */
-        return sz > 0 ? ppe_cs_create(p, sz) : cs_empty_s;
+        return cpsz > 0 ? ppe_cs_create(p, cpsz) : cs_empty_s;
     }
 
     if (b == s) {
         /* IN-PLACE MODE */
         if (p == s) {
-            b[sz] = '\0';
+            b[cpsz] = '\0';
         } else {
-            memmove(b, p, sz);
+            memmove(b, p, cpsz);
         }
         return b;
     } /* if */
@@ -484,65 +484,17 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (*bsz < sz) {
+    if (*bsz < cpsz) {
         ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
         return NULL;
     }
-    memcpy(b, p, sz);
-    *bsz = sz;
+    memcpy(b, p, cpsz);
+    *bsz = cpsz;
     return b;
 }
 
 PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
-    ppe_size sz = 0;
-
-    if (! s) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-
-    sz = ppe_cs_size(s);
-    if (! b) {
-        if (bsz) {
-            /* MEASURE-SIZE MODE */
-            *bsz = sz > 0 ? sz - 1 : 0;
-            ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
-            return NULL;
-        }
-        /* NEW-STRING MODE */
-        return sz > 0 ? ppe_cs_create(s, sz - 1) : ppe_cs_empty;
-    } /* if */
-
-    if (b == s) {
-        /* IN-PLACE MODE */
-        if (sz > 0) {
-            s[sz - 1] = '\0';
-        }
-        return b;
-    }
-
-    /* FILL-BUFFER MODE */
-    if (! bsz) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-    if (sz > 0) {
-        if (*bsz < sz - 1) {
-            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-            return NULL;
-        }
-        memcpy(b, s, sz - 1);
-    }
-    *bsz = sz;
-    return b;
-}
-
-PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
-{
-    const ppe_cstr p = NULL;
-    const ppe_size nlsz = strlen(PPE_STR_NEWLINE);
-    ppe_size sz = 0;
     ppe_size cpsz = 0;
 
     if (! s) {
@@ -550,9 +502,58 @@ PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, pp
         return NULL;
     }
 
-    sz = ppe_cs_size(s);
-    p = ppe_cs_find(s + sz - nlsz, PPE_STR_NEWLINE);
-    cpsz = p ? p - s : sz; /* Exclude the terminating NUL byte. */
+    cpsz = ppe_cs_size(s);
+    if (! b) {
+        if (bsz) {
+            /* MEASURE-SIZE MODE */
+            *bsz = cpsz > 0 ? cpsz - 1 : 0;
+            ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+            return NULL;
+        }
+        /* NEW-STRING MODE */
+        return cpsz > 0 ? ppe_cs_create(s, cpsz - 1) : ppe_cs_empty;
+    } /* if */
+
+    if (b == s) {
+        /* IN-PLACE MODE */
+        if (cpsz > 0) {
+            b[cpsz - 1] = '\0';
+        }
+        return b;
+    }
+
+    /* FILL-BUFFER MODE */
+    if (! bsz) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (cpsz > 0) {
+        if (*bsz < cpsz - 1) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return NULL;
+        }
+        memcpy(b, s, cpsz - 1);
+    } /* if */
+    *bsz = cpsz;
+    return b;
+}
+
+PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+{
+    const ppe_cstr p = NULL;
+    const ppe_size nlsz = strlen(PPE_STR_NEWLINE);
+    ppe_size cpsz = 0;
+
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    cpsz = ppe_cs_size(s);
+    p = ppe_cs_find(s + cpsz - nlsz, PPE_STR_NEWLINE);
+    if (p) {
+        cpsz = p - s; /* Exclude the terminating NUL byte. */
+    }
 
     if (! b) {
         if (bsz) {
