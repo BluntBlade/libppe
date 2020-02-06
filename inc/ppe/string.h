@@ -128,7 +128,7 @@ PPE_API extern ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size 
 
 /* -- Trim & Chomp -- */
 
-PPE_API extern ppe_cstr ppe_cs_trim_bytes(ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt);
+PPE_API extern ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz, ppe_str_option opt);
 PPE_API extern ppe_cstr ppe_cs_chop(ppe_cstr restrict s, ppe_str_option opt);
 PPE_API extern ppe_cstr ppe_cs_chomp(ppe_cstr restrict s, ppe_str_option opt);
 
@@ -203,19 +203,19 @@ static inline ppe_cstr ppe_cs_clone(const ppe_cstr restrict s)
     return ppe_cs_create(s, ppe_cs_size(s));
 }
 
-static inline ppe_cstr ppe_cs_trim_left(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+static inline ppe_cstr ppe_cs_trim_left(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz)
 {
-    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_LEFT);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_DIRECT_LEFT);
 }
 
-static inline ppe_cstr ppe_cs_trim_right(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+static inline ppe_cstr ppe_cs_trim_right(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz)
 {
-    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_RIGHT);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_DIRECT_RIGHT);
 }
 
-static inline ppe_cstr ppe_cs_trim(const ppe_cstr restrict s, const ppe_cstr restrict accept)
+static inline ppe_cstr ppe_cs_trim(const ppe_cstr restrict s, ppe_cstr * restring b, ppe_size * bsz)
 {
-    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_BOTH);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_DIRECT_BOTH);
 }
 
 /* ==== Declaration : String ================================================ */

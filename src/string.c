@@ -405,10 +405,10 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, co
 
     if (sz < off + ssz) {
         if (opt & PPE_STR_OPT_DONT_TRUNCATE) {
-            ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
+            ppe_err_set(PPE_ERR_WOULD_TRUNCATE, NULL);
             return NULL;
         } else {
-            cpsz = sz - off;
+            cpsz = sz - off
         }
     } else {
         cpsz = ssz;
@@ -431,41 +431,56 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, co
 
 /* -- Trim & Chomp -- */
 
-PPE_API ppe_cstr ppe_cs_trim_bytes(ppe_cstr restrict s, const ppe_cstr restrict accept, ppe_str_option opt)
+PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz, ppe_str_option opt)
 {
-    ppe_cstr b = s;
     ppe_cstr p = NULL;
+    ppe_cstr q = NULL;
     ppe_size sz = 0;
 
-    assert(s);
-    assert(accept && ppe_cs_size(accept) > 0);
+    if (! s || ! t || ppe_cs_size(t) == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
 
+    p = s;
     if (opt & PPE_STR_OPT_DIRECT_LEFT) {
-        while (*b && strchr(accept, *b)) {
-            b++;
-        }
-    }
-
-    sz = ppe_cs_size(b);
-    if (sz == 0) {
-        return cs_empty_s;
-    }
-
-    if (opt & PPE_STR_OPT_DIRECT_RIGHT) 
-        p = b + sz - 1;
-        while (b <= p && strchr(accept, *p)) {
-            p--;
-        }
-
-        if (p < b) {
-            return cs_empty_s;
+        while (*p && strchr(t, *p)) {
+            p++;
         }
     } /* if */
-    if (opt & PPE_STR_OPT_NEW_STRING) {
-        return ppe_cs_create(s, p - b + 1);
+
+    sz = ppe_cs_size(p);
+    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
+        q = p + sz - 1;
+        while (p <= q && strchr(t, *q)) {
+            q--;
+        }
+    } /* if */
+
+    if (! b) {
+        /* NEW-STRING MODE */
+        return q < p ? cs_empty_s : ppe_cs_create(p, q - p + 1);
     }
-    memmove(s, b, p - b + 1);
-    return s;
+    if (! bsz) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    sz = q < p ? 0 : q - p + 1;
+    if (*bsz == 0) {
+        /* MEASURE-SIZE MODE */
+        *bsz = sz;
+        ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+        return NULL;
+    }
+    if (*bsz < sz) {
+        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+        return NULL;
+    }
+    /* FILL-BUFFER MODE */
+    memcpy(b, p, sz);
+    *bsz = sz;
+    return b;
 }
 
 PPE_API ppe_cstr ppe_cs_chop(ppe_cstr restrict s, ppe_str_option opt)
