@@ -404,11 +404,11 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, co
     }
 
     if (sz < off + ssz) {
-        if (opt & PPE_STR_OPT_TRUNCATE) {
-            cpsz = sz - off;
-        } else {
+        if (opt & PPE_STR_OPT_DONT_TRUNCATE) {
             ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
             return NULL;
+        } else {
+            cpsz = sz - off;
         }
     } else {
         cpsz = ssz;
