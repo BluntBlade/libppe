@@ -433,8 +433,8 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, co
 
 PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
-    ppe_cstr p = NULL;
-    ppe_cstr q = NULL;
+    const ppe_cstr p = NULL;
+    const ppe_cstr q = NULL;
     ppe_size cpsz = 0;
 
     if (! s || ! t || ppe_cs_size(t) == 0) {
