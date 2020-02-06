@@ -477,8 +477,17 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
         ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
         return NULL;
     }
-    /* FILL-BUFFER MODE */
-    memcpy(b, p, sz);
+    if (b == s) {
+        /* IN-PLACE MODE */
+        if (p == s) {
+            b[sz] = '\0';
+        } else {
+            memmove(b, p, sz);
+        }
+    } else {
+        /* FILL-BUFFER MODE */
+        memcpy(b, p, sz);
+    }
     *bsz = sz;
     return b;
 }
