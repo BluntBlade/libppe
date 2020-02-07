@@ -84,7 +84,10 @@ PPE_API extern void ppe_cspt_reset(ppe_cs_snippet restrict spt);
 PPE_API extern ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, const ppe_cstr * restrict s, ppe_size * restrict sz);
 PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr restrict s, const ppe_size sz);
 
+/* -- Producer -- */
+
 PPE_API extern ppe_cstr ppe_cspt_clone(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr restrict b, ppe_size * bsz);
+PPE_API extern ppe_cstr * ppe_cspt_clone_some(const ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_uint * restrict n);
 
 /* -- Wrappers -- */
 

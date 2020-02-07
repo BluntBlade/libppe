@@ -108,6 +108,8 @@ PPE_API ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr res
     return ppe_true;
 }
 
+/* -- Producer -- */
+
 PPE_API ppe_cstr ppe_cspt_clone(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr restrict b, ppe_size * bsz)
 {
     const ppe_cstr s = NULL;
@@ -150,6 +152,48 @@ PPE_API ppe_cstr ppe_cspt_clone(ppe_cs_snippet restrict spt, const ppe_uint idx,
     *bsz = cpsz;
     return b;
 } /* ppe_cspt_clone */
+
+PPE_API ppe_cstr * ppe_cspt_clone_some(const ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_uint * restrict n)
+{
+    ppe_cstr * nw = NULL;
+    ppe_uint max = 0;
+    ppe_uint i = 0;
+
+    if (! spt) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (spt->cnt <= idx) {
+        ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
+        return NULL;
+    }
+
+    if (n && *n > 0) {
+        max = spt->cnt < idx + *n ? spt->cnt - idx : *n;
+    } else {
+        max = spt->cnt;
+    }
+
+    nw = (ppe_cstr *) malloc(sizeof(ppe_cstr) * (max + 1));
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    for (i = 0; i < max; i += 1) {
+        nw[i] = ppe_cs_create(spt->items[idx + i].s, spt->items[idx + i].sz);
+        if (! nw[i]) {
+            while (i > 0) { ppe_cs_destroy(nw[--i]); }
+            ppe_mp_free(nw);
+            return NULL;
+        } /* if */
+    } /* for */
+    nw[max] = NULL;
+    if (n) {
+        *n = max;
+    }
+    return nw;
+} /* ppe_cspt_clone_some */
 
 /* ==== Definitions : C-String ============================================== */
 
