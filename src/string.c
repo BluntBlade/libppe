@@ -992,7 +992,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
     if (! b) {
         i = 0;
         p = (ss && *ss) ? *ss : s;
-        while ((q = ppe_cs_find(p, src))) {
+        while ((q = ppe_cs_find(p, from))) {
             cpsz += q - p;
             cpsz += tosz;
             p = q + frsz;
@@ -1015,7 +1015,12 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         }
 
         /* NEW-STRING MODE */
-        b = ppe_mp_malloc(cpsz + 1); /* Include the terminating NUL byte. */
+        if (i == 0) {
+            /* Subtitute no substrings. */
+            return ppe_cs_create((ss && *ss) ? *ss : s);
+        }
+
+        b = (ppe_cstr) ppe_mp_malloc(cpsz + 1); /* Include the terminating NUL byte. */
         if (! b) {
             ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
             return NULL;
@@ -1069,16 +1074,18 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         } /* while */
 
         rmsz = ppe_cs_size(p);
-        if (*bsz < cpsz + rmsz) {
+        if (*bsz < cpsz + rmsz + 1) {
             goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
         }
         memcpy(b + cpsz, p, rmsz); 
         cpsz += rmsz;
+        b[cpsz] = '\0';
+
+        if (bsz) {
+            *bsz = cpsz;
+        }
     } /* if */
 
-    if (bsz) {
-        *bsz = cpsz;
-    }
     if (n) {
         *n = i;
     }
