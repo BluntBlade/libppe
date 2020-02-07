@@ -75,7 +75,7 @@ PPE_API void ppe_cspt_reset(ppe_cs_snippet restrict spt)
 
 /* -- Manipulators -- */
 
-PPE_API ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr * restrict s, ppe_size * restrict sz)
+PPE_API ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, const ppe_cstr * restrict s, ppe_size * restrict sz)
 {
     if (! spt || ! s || ! sz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -107,6 +107,49 @@ PPE_API ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr res
     spt->cnt += 1;
     return ppe_true;
 }
+
+PPE_API ppe_cstr ppe_cspt_clone(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr restrict b, ppe_size * bsz)
+{
+    const ppe_cstr s = NULL;
+    ppe_size cpsz = 0;
+
+    if (! spt) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (spt->cnt <= idx) {
+        ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
+        return NULL;
+    }
+
+    s = spt->items[idx].s;
+    cpsz = spt->items[idx].sz;
+
+    if (! b) {
+        if (bsz) {
+            /* MEASURE-SIZE MODE */
+            *bsz = cpsz;
+            ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+            return NULL;
+        }
+        /* NEW-STRING MODE */
+        return ppe_cs_create(s, cpsz);
+    } /* if */
+
+    /* FILL-BUFFER MODE */
+    if (! bsz) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (*bsz < cpsz + 1) {
+        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+        return NULL;
+    }
+    memcpy(b, s, cpsz);
+    b[cpsz] = '\0';
+    *bsz = cpsz;
+    return b;
+} /* ppe_cspt_clone */
 
 /* ==== Definitions : C-String ============================================== */
 
@@ -648,57 +691,6 @@ PPE_API ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe
 }
 
 /* -- Split & Slice -- */
-
-PPE_API ppe_cstr ppe_cs_slice(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
-{
-    const ppe_cstr p = NULL;
-    ppe_size cpsz = 0;
-
-    if (! d || ! s || ! bsz) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-
-    if (ppe_cs_is_empty(d)) {
-        /* Cannot use an empty string as delimiter. */
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-
-    p = ppe_cs_find(s, d);
-    if (! p) {
-        /* Cannot find a delimiter in the source string. */
-        /* Take the whole source as a copying part. */
-        cpsz = ppe_cs_size(s);
-    } else if (s < p) {
-        /* Found a delimiter which is not at the beginning. */
-        cpsz = p - s;
-    } /* if (s == p) {
-        // Found a delimiter at the beginning.
-        cpsz = 0;
-    } */
-
-    if (opt & PPE_STR_OPT_NEW_STRING) {
-        return ppe_cs_create(s, cpsz);
-    }
-
-    if (! b) {
-        /* Detect the size of the part which is being sliced. */
-        *bsz = cpsz;
-        /* TODO: Set appropriate error(CALL_AGAIN). */
-        return NULL;
-    }
-    if (*bsz < cpsz) {
-        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-        return NULL;
-    }
-
-    if (cpsz > 0) {
-        memcpy(b, s, cpsz); /* Include no terminating NUL character. */
-    }
-    *bsz = cpsz;
-    return b;
-}
 
 #define PPE_CONF_STR_SNIPPET_MAX 64
 

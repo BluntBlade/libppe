@@ -81,8 +81,10 @@ PPE_API extern void ppe_cspt_reset(ppe_cs_snippet restrict spt);
 
 /* -- Manipulators -- */
 
-PPE_API extern ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr * restrict s, ppe_size * restrict sz);
+PPE_API extern ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, const ppe_cstr * restrict s, ppe_size * restrict sz);
 PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr restrict s, const ppe_size sz);
+
+PPE_API extern ppe_cstr ppe_cspt_clone(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr restrict b, ppe_size * bsz);
 
 /* -- Wrappers -- */
 
@@ -137,28 +139,7 @@ PPE_API extern ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restric
 PPE_API extern ppe_cstr ppe_cs_join(const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...);
 PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...);
 
-/* -- Split & Slice -- */
-
-/* Slice out the substring which resides between the begining of the source string and the first occurrence of the delimiter in it.
- *
- * Parameters:
- *      d    A non-emtpy string used as a delimiter. **MUST NOT** be a NULL.
- *      s    The source string in which the delimiter is being found. **MUST NOT** be a NULL.
- *      b    A buffer which will hold the substring. If pass a NULL, detect the size of the substring and save to the parameter `bsz`. Excludes the terminating NUL character('\0').
- *      bsz  A pointer to the size variable of the buffer `b`. **MUST NOT** be a NULL.
- *      opt  An option parameter which can be any combination of the following options:
- *           1) PPE_STR_OPT_NEW_STRING: Create a new string instead of writing the substring to the buffer.
- *
- * Return values:
- *      The value of `b`        The substring has been written to `b`, and the size of it saved in `bsz`.
- *      Other NON-NULL value    The created string's address.
- *      NULL                    Something wrong happened.
- *
- * Errors:
- *      PPE_ERR_INVALID_ARGUMENT    The delmiter string is empty.
- *      PPE_ERR_OUT_OF_CAPACITY     No enough space for writing the substring.
- */
-PPE_API extern ppe_cstr ppe_cs_slice(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
+/* -- Split -- */
 
 PPE_API extern ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt);
 
