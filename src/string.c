@@ -524,7 +524,7 @@ PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe
     if (! b) {
         if (bsz) {
             /* MEASURE-SIZE MODE */
-            *bsz = cpsz > 0 ? cpsz - 1 : 0;
+            *bsz = cpsz; /* Include the terminating NUL byte. */
             ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
             return NULL;
         }
@@ -537,6 +537,9 @@ PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe
         if (cpsz > 0) {
             b[cpsz - 1] = '\0';
         }
+        if (bsz) {
+            *bsz = cpsz > 0 ? cpsz - 1 : 0;
+        }
         return b;
     }
 
@@ -546,15 +549,19 @@ PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe
         return NULL;
     }
     if (cpsz > 0) {
-        if (*bsz < cpsz - 1) {
+        if (*bsz < cpsz) {
             ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
             return NULL;
         }
         memcpy(b, s, cpsz - 1);
+    } else if (*bsz == 0) {
+        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+        return NULL;
     } /* if */
+    b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
-}
+} /* ppe_cs_chop */
 
 PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
