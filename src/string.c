@@ -474,9 +474,9 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
     } /* if */
 
     if (! b) {
-        if (*bsz == 0) {
+        if (bsz) {
             /* MEASURE-SIZE MODE */
-            *bsz = cpsz;
+            *bsz = cpsz + 1; /* Include the terminating NUL byte. */
             ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
             return NULL;
         }
@@ -486,10 +486,12 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
 
     if (b == s) {
         /* IN-PLACE MODE */
-        if (p == s) {
-            b[cpsz] = '\0';
-        } else {
+        if (s < p) {
             memmove(b, p, cpsz);
+        }
+        b[cpsz] = '\0';
+        if (bsz) {
+            *bsz = cpsz;
         }
         return b;
     } /* if */
@@ -499,14 +501,15 @@ PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr res
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (*bsz < cpsz) {
+    if (*bsz < cpsz + 1) {
         ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
         return NULL;
     }
     memcpy(b, p, cpsz);
+    b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
-}
+} /* ppe_cs_trim_bytes */
 
 PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
