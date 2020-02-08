@@ -952,11 +952,11 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
     return b;
 }
 
-#define PPE_CONF_STR_SUBSTITUTE_MAX 64
+#define PPE_CONF_STR_SUBSTITUTE_MAX 256
 
-static ppe_cs_cstr ppe_cs_substitute_imp_copy(const ppe_cstr restrict s, const ppe_size sz, ppe_cs_cstr b, ppe_size * bsz, ppe_size * restrict cpsz, const ppe_bool streaming)
+static ppe_cs_cstr ppe_cs_substitute_imp_copy(const ppe_cstr restrict s, const ppe_size sz, ppe_cs_cstr b, ppe_size bsz, ppe_size * restrict cpsz, const ppe_bool streaming)
 {
-    ppe_size bytes = *bsz < *cpsz + sz ? *bsz - *cpsz : sz;
+    ppe_size bytes = bsz < *cpsz + sz ? bsz - *cpsz : sz;
 
     if (bytes < sz) {
         if (! streaming) {
@@ -981,9 +981,9 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
     ppe_size tosz = 0;
     ppe_size cpsz = 0;
     ppe_uint i = 0;
-    ppe_uint j = 0;
     ppe_uint max = PPE_CONF_STR_SUBSTITUTE_MAX;
     ppe_bool streaming = ppe_false;
+    ppe_bool in_place = ppe_false;
 
     if (! s || ! from || ! to || ppe_cs_is_empty(from)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -1035,7 +1035,8 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         }
 
         cpsz = 0;
-        for (j = 0, p = s; j < i && (q = ppe_cs_find(p, from)); j += 1, p = q + frsz) {
+        max = i;
+        for (i = 0, p = s; i < max && (q = ppe_cs_find(p, from)); i += 1, p = q + frsz) {
             memcpy(b + cpsz, p, q - p); 
             cpsz += q - p;
             memcpy(b + cpsz, to, tosz); 
@@ -1051,42 +1052,61 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
             return NULL;
         }
-        if (b == s && frsz < tosz) {
-            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-            return NULL;
-        }
 
-        streaming = ss1 && ss2;
-        if (streaming && *ss2) {
-            /* Continue copying in the `to` string. */
-            if ((cont2 = ppe_cs_substitute_imp_copy(*ss2, ppe_cs_size(*ss2), b, bsz, &cpsz, streaming))) {
-                goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
-            }
+        if (b == s) {
+            /* IN-PLACE MODE */
+            if (frsz < tosz) {
+                ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+                return NULL;
+            } else if (frsz == tosz) {
+                in_place = ppe_true;
+            } /* if */
+            p = s;
+        } else (ss1 && ss2) {
+            /* STREAMING MODE */
+            streaming = ppe_true;
+            if (*ss2) {
+                /* Continue copying in the `to` string. */
+                if ((cont2 = ppe_cs_substitute_imp_copy(*ss2, ppe_cs_size(*ss2), b, *bsz, &cpsz, streaming))) {
+                    goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
+                }
+            } /* if */
+            p = *ss1 ? *ss1 : s;
+        } else {
+            /* FILL-BUFFER MODE */
+            p = s;
         } /* if */
 
-        p = (streaming && *ss1) ? *ss1 : s;
-        for (i = 0; i < max && (q = ppe_cs_find(p, from)); i += 1, p = q + frsz) {
-            if ((cont1 = ppe_cs_substitute_imp_copy(p, q - p, b, bsz, &cpsz, streaming))) {
-                goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
-            }
-            if ((cont2 = ppe_cs_substitute_imp_copy(to, tosz, b, bsz, &cpsz, streaming))) {
-                goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
-            }
-        } /* for */
-
-        if ((cont1 = ppe_cs_substitute_imp_copy(p, ppe_cs_size(p), b, bsz, &cpsz, streaming))) {
-            goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
-        }
-
-        if (streaming) {
-            *ss1 = NULL;
-            *ss2 = NULL;
+        if (in_place) {
+            for (i = 0; i < max && (q = ppe_cs_find(p, from)); i += 1, p = q + frsz) {
+                memcpy(b + (q - s), to, tosz);
+                cpsz += (q - p) + tosz;
+            } /* for */
+            cpsz += ppe_cs_size(p);
         } else {
-            if (*bsz < cpsz + 1) {
-                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+            for (i = 0; i < max && (q = ppe_cs_find(p, from)); i += 1, p = q + frsz) {
+                if ((cont1 = ppe_cs_substitute_imp_copy(p, q - p, b, *bsz, &cpsz, streaming))) {
+                    goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
+                }
+                if ((cont2 = ppe_cs_substitute_imp_copy(to, tosz, b, *bsz, &cpsz, streaming))) {
+                    goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
+                }
+            } /* for */
+
+            if ((cont1 = ppe_cs_substitute_imp_copy(p, ppe_cs_size(p), b, *bsz, &cpsz, streaming))) {
                 goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
             }
-            b[cpsz] = '\0';
+
+            if (streaming) {
+                *ss1 = NULL;
+                *ss2 = NULL;
+            } else {
+                if (*bsz < cpsz + 1) {
+                    ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+                    goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
+                }
+                b[cpsz] = '\0';
+            } /* if */
         } /* if */
 
         *bsz = cpsz;
