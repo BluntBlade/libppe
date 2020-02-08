@@ -954,15 +954,34 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
 
 #define PPE_CONF_STR_SUBSTITUTE_MAX 64
 
-PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt)
+static ppe_cs_cstr ppe_cs_substitute_imp_copy(const ppe_cstr restrict s, const ppe_size sz, ppe_cs_cstr b, ppe_size * bsz, ppe_size * restrict cpsz, const ppe_bool streaming)
+{
+    ppe_size bytes = *bsz < *cpsz + sz ? *bsz - *cpsz : sz;
+
+    if (bytes < sz) {
+        if (! streaming) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return s;
+        }
+        ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+    } /* if */
+    memcpy(b + *cpsz, s, bytes);
+    *cpsz += bytes;
+    return bytes < sz ? s + bytes : NULL;
+} /* ppe_cs_substitute_imp_copy */
+
+PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_cstr * restrict ss1, const ppe_cstr * restrict ss2, const ppe_str_option opt)
 {
     const ppe_cstr p = NULL;
     const ppe_cstr q = NULL;
+    const ppe_cstr cont1 = NULL;
+    const ppe_cstr cont2 = NULL;
     ppe_size rmsz = 0;
     ppe_size frsz = 0;
     ppe_size tosz = 0;
     ppe_size cpsz = 0;
     ppe_uint max = PPE_CONF_STR_SUBSTITUTE_MAX;
+    ppe_bool streaming = ppe_false;
 
     if (! s || ppe_cs_is_empty(s)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -991,14 +1010,12 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
 
     if (! b) {
         i = 0;
-        p = (ss && *ss) ? *ss : s;
+        p = s;
         while ((q = ppe_cs_find(p, from))) {
             cpsz += q - p;
             cpsz += tosz;
             p = q + frsz;
-            if (++i == max) {
-                break;
-            } /* if */
+            if (++i == max) { break; }
         } /* while */
 
         rmsz = ppe_cs_size(p);
@@ -1017,7 +1034,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         /* NEW-STRING MODE */
         if (i == 0) {
             /* Subtitute no substrings. */
-            return ppe_cs_create((ss && *ss) ? *ss : s);
+            return ppe_cs_create(s, cpsz);
         }
 
         b = (ppe_cstr) ppe_mp_malloc(cpsz + 1); /* Include the terminating NUL byte. */
@@ -1028,62 +1045,66 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
 
         cpsz = 0;
         i = 0;
-        p = (ss && *ss) ? *ss : s;
+        p = s;
         while ((q = ppe_cs_find(p, from))) {
             memcpy(b + cpsz, p, q - p); 
             cpsz += q - p;
             memcpy(b + cpsz, to, tosz); 
             cpsz += tosz;
             p = q + frsz;
-            if (++i == max) {
-                break;
-            } /* if */
+            if (++i == max) { break; }
         } /* while */
 
         memcpy(b + cpsz, p, rmsz); 
         cpsz += rmsz;
         b[cpsz] = '\0';
     } else {
-        /* ONESHOT-COPY MODE or STREAM-COPY MODE */
+        /* IN-PLACE, FILL-BUFFER or STREAMING MODE */
         if (! bsz) {
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
             return NULL;
         }
+        if (b == s && frsz < tosz) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return NULL;
+        }
+
+        streaming = ss1 && ss2;
+        if (streaming && *ss2) {
+            /* Continue copying in the `to` string. */
+            if ((cont2 = ppe_cs_substitute_imp_copy(*ss2, ppe_cs_size(*ss2), b, bsz, &cpsz, streaming))) {
+                goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
+            }
+        } /* if */
 
         i = 0;
-        p = (ss && *ss) ? *ss : s;
+        p = (streaming && *ss1) ? *ss1 : s;
         while ((q = ppe_cs_find(p, from))) {
-            if (*bsz < cpsz + (q - p)) {
+            if ((cont1 = ppe_cs_substitute_imp_copy(p, q - p, b, bsz, &cpsz, streaming))) {
                 goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
             }
-            memcpy(b + cpsz, p, q - p); 
-            cpsz += q - p;
-
-            if (*bsz < cpsz + tosz) {
-                p = q;
+            if ((cont2 = ppe_cs_substitute_imp_copy(to, tosz, b, bsz, &cpsz, streaming))) {
                 goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
             }
-            memcpy(b + cpsz, to, tosz); 
-            cpsz += tosz;
-
             p = q + frsz;
-
-            if (++i == max) {
-                break;
-            } /* if */
+            if (++i == max) { break; }
         } /* while */
 
-        rmsz = ppe_cs_size(p);
-        if (*bsz < cpsz + rmsz + 1) {
+        if ((cont1 = ppe_cs_substitute_imp_copy(p, ppe_cs_size(p), b, bsz, &cpsz, streaming))) {
             goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
         }
-        memcpy(b + cpsz, p, rmsz); 
-        cpsz += rmsz;
+
+        if (*bsz < cpsz + 1) {
+            cont1 = p;
+            goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
+        }
         b[cpsz] = '\0';
 
-        if (bsz) {
-            *bsz = cpsz;
+        if (streaming) {
+            *ss1 = NULL;
+            *ss2 = NULL;
         }
+        *bsz = cpsz;
     } /* if */
 
     if (n) {
@@ -1092,18 +1113,15 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
     return b;
 
 PPE_CS_SUBSTITUTE_ERROR_HANDLING:
-    if (ss) {
-        ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
-        *ss = p;
-    } else {
-        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-    }
-    if (bsz) {
-        *bsz = cpsz;
+    if (streaming) {
+        assert((cont1 && ! cont2) || (! cont1 && cont2));
+        *ss1 = cont1;
+        *ss2 = cont2;
     }
     if (n) {
         *n = i;
     }
+    *bsz = cpsz;
     return NULL;
 }
 
