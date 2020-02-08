@@ -980,18 +980,12 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
     ppe_size frsz = 0;
     ppe_size tosz = 0;
     ppe_size cpsz = 0;
+    ppe_uint i = 0;
+    ppe_uint j = 0;
     ppe_uint max = PPE_CONF_STR_SUBSTITUTE_MAX;
     ppe_bool streaming = ppe_false;
 
-    if (! s || ppe_cs_is_empty(s)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-    if (! from || ppe_cs_is_empty(from)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-    if (! to) {
+    if (! s || ! from || ! to || ppe_cs_is_empty(from)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -1009,14 +1003,12 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
     tosz = ppe_cs_size(to);
 
     if (! b) {
-        i = 0;
         p = s;
-        while ((q = ppe_cs_find(p, from))) {
-            cpsz += q - p;
-            cpsz += tosz;
-            p = q + frsz;
-            if (++i == max) { break; }
-        } /* while */
+        if (frsz != tosz) {
+            for (i = 0; i < max && (q = ppe_cs_find(p, from)); i += 1, p = q + frsz) {
+                cpsz += (q - p) + tosz;
+            } /* while */
+        } /* if */
 
         rmsz = ppe_cs_size(p);
         cpsz += rmsz;
@@ -1024,18 +1016,17 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         if (bsz) {
             /* MEASURE-SIZE MODE */
             *bsz = cpsz + 1; /* Include the terminating NUL byte. */
-            if (n) {
-                *n = i;
-            }
+            if (n) { *n = i; }
             ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
             return NULL;
-        }
+        } /* if */
 
         /* NEW-STRING MODE */
         if (i == 0) {
             /* Subtitute no substrings. */
+            if (n) { *n = i; }
             return ppe_cs_create(s, cpsz);
-        }
+        } /* if */
 
         b = (ppe_cstr) ppe_mp_malloc(cpsz + 1); /* Include the terminating NUL byte. */
         if (! b) {
@@ -1044,16 +1035,12 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
         }
 
         cpsz = 0;
-        i = 0;
-        p = s;
-        while ((q = ppe_cs_find(p, from))) {
+        for (j = 0, p = s; j < i && (q = ppe_cs_find(p, from)); j += 1, p = q + frsz) {
             memcpy(b + cpsz, p, q - p); 
             cpsz += q - p;
             memcpy(b + cpsz, to, tosz); 
             cpsz += tosz;
-            p = q + frsz;
-            if (++i == max) { break; }
-        } /* while */
+        } /* for */
 
         memcpy(b + cpsz, p, rmsz); 
         cpsz += rmsz;
@@ -1077,39 +1064,35 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
             }
         } /* if */
 
-        i = 0;
         p = (streaming && *ss1) ? *ss1 : s;
-        while ((q = ppe_cs_find(p, from))) {
+        for (i = 0; i < max && (q = ppe_cs_find(p, from)); i += 1, p = q + frsz) {
             if ((cont1 = ppe_cs_substitute_imp_copy(p, q - p, b, bsz, &cpsz, streaming))) {
                 goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
             }
             if ((cont2 = ppe_cs_substitute_imp_copy(to, tosz, b, bsz, &cpsz, streaming))) {
                 goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
             }
-            p = q + frsz;
-            if (++i == max) { break; }
-        } /* while */
+        } /* for */
 
         if ((cont1 = ppe_cs_substitute_imp_copy(p, ppe_cs_size(p), b, bsz, &cpsz, streaming))) {
             goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
         }
 
-        if (*bsz < cpsz + 1) {
-            cont1 = p;
-            goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
-        }
-        b[cpsz] = '\0';
-
         if (streaming) {
             *ss1 = NULL;
             *ss2 = NULL;
-        }
+        } else {
+            if (*bsz < cpsz + 1) {
+                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+                goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
+            }
+            b[cpsz] = '\0';
+        } /* if */
+
         *bsz = cpsz;
     } /* if */
 
-    if (n) {
-        *n = i;
-    }
+    if (n) { *n = i; }
     return b;
 
 PPE_CS_SUBSTITUTE_ERROR_HANDLING:
@@ -1118,12 +1101,10 @@ PPE_CS_SUBSTITUTE_ERROR_HANDLING:
         *ss1 = cont1;
         *ss2 = cont2;
     }
-    if (n) {
-        *n = i;
-    }
     *bsz = cpsz;
+    if (n) { *n = i; }
     return NULL;
-}
+} /* ppe_cs_substitute */
 
 static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
 {
