@@ -847,14 +847,13 @@ static ppe_cs_cstr ppe_cs_buffer_or_stream_copy(const ppe_cstr restrict s, const
     return bytes < sz ? s + bytes : NULL;
 } /* ppe_cs_buffer_or_stream_copy */
 
-PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr * restrict ss, const ppe_str_option opt)
+PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
 {
     ppe_size sz = 0;
     ppe_size tosz = 0;
     ppe_size cpsz = 0;
-    ppe_size bytes = 0;
 
-    if (! s || ! to) {
+    if (! s || ! to || to == s || b == s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -865,15 +864,14 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
         return NULL;
     }
 
+    tosz = ppe_cs_size(to);
     if (sz < off + ssz) {
         /* Shrink the range of the substring. */
         ssz -= (off + ssz) - sz;
     }
+    cpsz = sz - ssz + tosz;
 
     if (! b) {
-        tosz = ppe_cs_size(to);
-        cpsz = (off + ssz <= sz) ? (sz - ssz + tosz) : (sz - ssz + tosz - (off + ssz - sz));
-
         if (bsz) {
             /* MEASURE MODE */
             *bsz = cpsz + 1; /* Include the terminating NUL byte. */
@@ -886,8 +884,8 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
             ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
             return NULL;
         }
-    } else if (! ss) {
-        /* COPY MODE */
+    } else {
+        /* FILL-BUFFER MODE */
         if (! bsz) {
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
             return NULL;
@@ -896,61 +894,7 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
             ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
             return NULL;
         }
-    } else {
-        /* STREAM MODE */
-        if (! bsz) {
-            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-            return NULL;
-        }
-
-        if (! *ss || (s <= *ss && *ss <= s + off)) {
-            if (! *ss) {
-                *ss = s;
-            }
-            bytes = *bsz < (off - (*ss - s)) ? *bsz : (off - (*ss - s));
-            memcpy(b, *ss, bytes);
-            *ss += bytes;
-            cpsz += bytes;
-
-            if (cpsz == *bsz) {
-                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
-                return NULL;
-            }
-            *ss = to;
-        } /* if */
-
-        if (to <= *ss && *ss <= to + (tosz = ppe_cs_size(to))) {
-            bytes = (*bsz - cpsz) < (tosz - (*ss - to)) ? (*bsz - cpsz) : (tosz - (*ss - to));
-            memcpy(b + cpsz, *ss, bytes);
-            *ss += bytes;
-            cpsz += bytes;
-
-            if (cpsz == *bsz) {
-                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
-                return NULL;
-            }
-            *ss = s + off + ssz;
-        } /* if */
-
-        if (s + off + ssz <= *ss && *ss <= s + sz) {
-            bytes = (*bsz - cpsz) < (sz - (*ss - s)) ? (*bsz - cpsz) : (sz - (*ss - s));
-            memcpy(b + cpsz, *ss, bytes);
-            *ss += bytes;
-            cpsz += bytes;
-
-            if (cpsz == *bsz) {
-                ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
-                return NULL;
-            }
-        } else {
-            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-            return NULL;
-        } /* if */
-
-        b[cpsz] = '\0';
         *bsz = cpsz;
-        *ss = NULL;
-        return b;
     } /* if */
 
     /* The part before the substring which is being replaced. */
@@ -963,11 +907,8 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
     memcpy(b + off + tosz, s + (off + ssz), sz - (off + ssz));
 
     b[cpsz] = '\0';
-    if (bsz) {
-        *bsz = cpsz;
-    }
     return b;
-}
+} /* ppe_cs_replace */
 
 #define PPE_CONF_STR_SUBSTITUTE_MAX 256
 

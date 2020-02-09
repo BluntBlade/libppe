@@ -148,7 +148,7 @@ PPE_API extern ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_
 
 /* -- Replace & Substitute -- */
 
-PPE_API extern ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr * restrict ss, const ppe_str_option opt);
+PPE_API extern ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
 PPE_API extern ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_cstr * restrict ss1, const ppe_cstr * restrict ss2, const ppe_str_option opt);
 
 /* -- Format -- */
