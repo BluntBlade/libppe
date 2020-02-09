@@ -831,7 +831,23 @@ PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr re
 
 /* -- Replace & Substitute -- */
 
-PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size rsz, const ppe_cstr restrict to, ppe_cs_cstr * restrict b, ppe_size * restrict bsz, const ppe_cstr * restrict ss, const ppe_str_option opt)
+static ppe_cs_cstr ppe_cs_buffer_or_stream_copy(const ppe_cstr restrict s, const ppe_size sz, ppe_cs_cstr b, ppe_size bsz, ppe_size * restrict cpsz, const ppe_bool streaming)
+{
+    ppe_size bytes = bsz < *cpsz + sz ? bsz - *cpsz : sz;
+
+    if (bytes < sz) {
+        if (! streaming) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return s;
+        }
+        ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
+    } /* if */
+    memcpy(b + *cpsz, s, bytes);
+    *cpsz += bytes;
+    return bytes < sz ? s + bytes : NULL;
+} /* ppe_cs_buffer_or_stream_copy */
+
+PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr * restrict ss, const ppe_str_option opt)
 {
     ppe_size sz = 0;
     ppe_size tosz = 0;
@@ -849,13 +865,14 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
         return NULL;
     }
 
-    if (sz < off + rsz) {
-        rsz -= (off + rsz) - sz;
+    if (sz < off + ssz) {
+        /* Shrink the range of the substring. */
+        ssz -= (off + ssz) - sz;
     }
 
     if (! b) {
         tosz = ppe_cs_size(to);
-        cpsz = (off + rsz <= sz) ? sz - rsz + tosz : sz - rsz + tosz - (off + rsz - sz);
+        cpsz = (off + ssz <= sz) ? (sz - ssz + tosz) : (sz - ssz + tosz - (off + ssz - sz));
 
         if (bsz) {
             /* MEASURE MODE */
@@ -912,10 +929,10 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
                 ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
                 return NULL;
             }
-            *ss = s + off + rsz;
+            *ss = s + off + ssz;
         } /* if */
 
-        if (s + off + rsz <= *ss && *ss <= s + sz) {
+        if (s + off + ssz <= *ss && *ss <= s + sz) {
             bytes = (*bsz - cpsz) < (sz - (*ss - s)) ? (*bsz - cpsz) : (sz - (*ss - s));
             memcpy(b + cpsz, *ss, bytes);
             *ss += bytes;
@@ -943,7 +960,7 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
     memcpy(b + off, to, tosz);
 
     /* The part after the substring which is being replaced. */
-    memcpy(b + off + tosz, s + (off + rsz), sz - (off + rsz));
+    memcpy(b + off + tosz, s + (off + ssz), sz - (off + ssz));
 
     b[cpsz] = '\0';
     if (bsz) {
@@ -953,22 +970,6 @@ PPE_API ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off
 }
 
 #define PPE_CONF_STR_SUBSTITUTE_MAX 256
-
-static ppe_cs_cstr ppe_cs_substitute_imp_copy(const ppe_cstr restrict s, const ppe_size sz, ppe_cs_cstr b, ppe_size bsz, ppe_size * restrict cpsz, const ppe_bool streaming)
-{
-    ppe_size bytes = bsz < *cpsz + sz ? bsz - *cpsz : sz;
-
-    if (bytes < sz) {
-        if (! streaming) {
-            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-            return s;
-        }
-        ppe_err_set(PPE_ERR_CALL_AGAIN, NULL);
-    } /* if */
-    memcpy(b + *cpsz, s, bytes);
-    *cpsz += bytes;
-    return bytes < sz ? s + bytes : NULL;
-} /* ppe_cs_substitute_imp_copy */
 
 PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_cstr * restrict ss1, const ppe_cstr * restrict ss2, const ppe_str_option opt)
 {
@@ -1067,7 +1068,7 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
             streaming = ppe_true;
             if (*ss2) {
                 /* Continue copying in the `to` string. */
-                if ((cont2 = ppe_cs_substitute_imp_copy(*ss2, ppe_cs_size(*ss2), b, *bsz, &cpsz, streaming))) {
+                if ((cont2 = ppe_cs_buffer_or_stream_copy(*ss2, ppe_cs_size(*ss2), b, *bsz, &cpsz, streaming))) {
                     goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
                 }
             } /* if */
@@ -1085,15 +1086,15 @@ PPE_API ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr 
             cpsz += ppe_cs_size(p);
         } else {
             for (i = 0; i < max && (q = ppe_cs_find(p, from)); i += 1, p = q + frsz) {
-                if ((cont1 = ppe_cs_substitute_imp_copy(p, q - p, b, *bsz, &cpsz, streaming))) {
+                if ((cont1 = ppe_cs_buffer_or_stream_copy(p, q - p, b, *bsz, &cpsz, streaming))) {
                     goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
                 }
-                if ((cont2 = ppe_cs_substitute_imp_copy(to, tosz, b, *bsz, &cpsz, streaming))) {
+                if ((cont2 = ppe_cs_buffer_or_stream_copy(to, tosz, b, *bsz, &cpsz, streaming))) {
                     goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
                 }
             } /* for */
 
-            if ((cont1 = ppe_cs_substitute_imp_copy(p, ppe_cs_size(p), b, *bsz, &cpsz, streaming))) {
+            if ((cont1 = ppe_cs_buffer_or_stream_copy(p, ppe_cs_size(p), b, *bsz, &cpsz, streaming))) {
                 goto PPE_CS_SUBSTITUTE_ERROR_HANDLING;
             }
 
