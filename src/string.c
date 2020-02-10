@@ -1286,9 +1286,13 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_str_optio
 
 /* -- Split -- */
 
-PPE_API ppe_cs_snippet ppe_str_split(const ppe_string restrict d, const ppe_string restrict s, const const ppe_uint * restrict n, const ppe_str_option opt)
+PPE_API ppe_cs_snippet ppe_str_split(const ppe_string restrict s, const ppe_string restrict d, ppe_cs_snippet restrict spt, const const ppe_uint * restrict n, const ppe_str_option opt)
 {
-    return NULL;
+    if (! s || ! d) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    return ppe_cs_split(s->buf, d->buf, spt, n, NULL, opt);
 }
 
 #ifdef __cplusplus
