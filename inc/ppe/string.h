@@ -245,6 +245,11 @@ PPE_API extern ppe_string ppe_str_join(const ppe_string restrict d, const ppe_st
 
 PPE_API extern ppe_cs_snippet ppe_str_split(const ppe_string restrict s, const ppe_string restrict d, ppe_cs_snippet restrict spt, const const ppe_uint * restrict n, const ppe_str_option opt);
 
+/* -- Substitute -- */
+
+PPE_API extern ppe_string ppe_str_substitute(const ppe_string restrict s, const ppe_string restrict from, const ppe_string restrict to, ppe_uint * restrict n, const ppe_str_option opt);
+PPE_API extern ppe_string ppe_str_substitute_cs(const ppe_string restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_uint * restrict n, const ppe_str_option opt);
+
 /* -- Wrapper -- */
 
 static inline ppe_string ppe_str_join_two(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)

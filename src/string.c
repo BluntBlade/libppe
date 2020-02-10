@@ -1295,6 +1295,78 @@ PPE_API ppe_cs_snippet ppe_str_split(const ppe_string restrict s, const ppe_stri
     return ppe_cs_split(s->buf, d->buf, spt, n, NULL, opt);
 }
 
+/* -- Substitute -- */
+
+PPE_API ppe_string ppe_str_substitute(const ppe_string restrict s, const ppe_string restrict from, const ppe_string restrict to, ppe_uint * restrict n, const ppe_str_option opt)
+{
+    ppe_cstr ret = NULL;
+    ppe_string nw = NULL;
+    ppe_size nwsz = 0;
+
+    if (! s || ! from || ! to) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    ret = ppe_cs_substitute(s->buf, from->buf, to->buf, NULL, &nwsz, n, opt);
+    if (! ret && ppe_err_get_code() != PPE_ERR_CALL_AGAIN) {
+        return NULL;
+    }
+
+    if (nwsz == 1) {
+        return &str_empty_s;
+    }
+
+    nw = (ppe_string) malloc(sizeof(ppe_string_st) + nwsz - 1); /* The terminating NUL byte has been counted twice. */
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    ret = ppe_cs_substitute(s->buf, from->buf, to->buf, nw->buf, &nwsz, n, opt);
+    if (! ret) {
+        ppe_mp_free(nw);
+        return NULL;
+    }
+    nw->sz = nwsz;
+    return nw;
+} /* ppe_str_substitute */
+
+PPE_API ppe_string ppe_str_substitute_cs(const ppe_string restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_uint * restrict n, const ppe_str_option opt)
+{
+    ppe_cstr ret = NULL;
+    ppe_string nw = NULL;
+    ppe_size nwsz = 0;
+
+    if (! s || ! from || ! to) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    ret = ppe_cs_substitute(s->buf, from, to, NULL, &nwsz, n, opt);
+    if (! ret && ppe_err_get_code() != PPE_ERR_CALL_AGAIN) {
+        return NULL;
+    }
+
+    if (nwsz == 1) {
+        return &str_empty_s;
+    }
+
+    nw = (ppe_string) malloc(sizeof(ppe_string_st) + nwsz - 1); /* The terminating NUL byte has been counted twice. */
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    ret = ppe_cs_substitute(s->buf, from, to, nw->buf, &nwsz, n, opt);
+    if (! ret) {
+        ppe_mp_free(nw);
+        return NULL;
+    }
+    nw->sz = nwsz;
+    return nw;
+} /* ppe_str_substitute_cs */
+
 #ifdef __cplusplus
 }
 #endif
