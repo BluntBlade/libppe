@@ -400,6 +400,89 @@ PPE_CS_JOIN_IMP_ERROR_HANDLING:
     return NULL;
 }
 
+#define PPE_CONF_STR_SNIPPET_MAX 64
+
+static ppe_cs_snippet ppe_cs_split_imp(const ppe_cstr restrict s, const ppe_cstr restrict d, const ppe_size dsz, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt)
+{
+    ppe_cs_snippet nw = NULL;
+    ppe_cstr p = 0;
+    ppe_cstr q = 0;
+    ppe_size dsz = 0;
+    ppe_size sz = 0;
+    ppe_uint i = 0;
+    ppe_uint max = PPE_CONF_STR_SNIPPET_MAX; /* Dont search infinitely. */
+
+    if (n) {
+        if (n == 0) {
+            /* Cannot use a null or empty string as delimiter. */
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        max = *n;
+    }
+
+    p = (ss && *ss) ? *ss : s;
+    if (! spt) {
+        /* NEW-SNIPPET MODE */
+        if (ppe_cs_is_empty(p)) {
+            return cspt_empty_s;
+        }
+
+        /* Count the number of substrings. */
+        for (i = 0; i < max - 1 && (q = ppe_cs_find(p, d)); i += 1) {
+            p = q + dsz;
+        } /* for */
+
+        /* Counted N delimiters, so there must be N+1 substrings, including empty ones. */
+        i += 1;
+
+        nw = ppe_cspt_create(i);
+        if (! nw) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+
+        p = (ss && *ss) ? *ss : s;
+    } else {
+        /* FILL-SNIPPET MODE */
+        ppe_cspt_reset(spt);
+        if (ppe_cs_is_empty(p)) {
+            ppe_cspt_append(spt, cs_empty_s, 0);
+            return spt;
+        }
+
+        i = ppe_cspt_capacity(spt);
+        nw = spt;
+    } /* if */
+
+    if (i < max) {
+        max = i;
+    }
+    for (i = 0; i < max - 1 && (q = ppe_cs_find(p, d)); i += 1) {
+        sz = q - p;
+        ppe_cspt_append(nw, p, sz);
+        p = q + dsz;
+    } /* for */
+
+    if (i == max - 1 && (q = ppe_cs_find(p, d)) && ss) {
+        sz = q - p;
+        ppe_cspt_append(nw, p, sz);
+        p += sz;
+        *ss = p;
+    } else {
+        sz = ppe_cs_size(p);
+        ppe_cspt_append(nw, p, sz);
+        p += sz;
+        if (ss) {
+            *ss = NULL;
+        }
+    } /* if */
+    if (n) {
+        *n = i + 1;
+    }
+    return nw;
+} /* ppe_cs_split_imp */
+
 #define PPE_CONF_STR_SUBSTITUTE_MAX 256
 
 static ppe_cs_cstr ppe_cs_substitute_imp(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_size frsz, const ppe_cstr restrict to, const ppe_size tosz, ppe_cs_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_str_option opt)
@@ -833,97 +916,18 @@ PPE_API ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe
 
 /* -- Split & Slice -- */
 
-#define PPE_CONF_STR_SNIPPET_MAX 64
-
 PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt)
 {
-    ppe_cs_snippet nw = NULL;
-    ppe_cstr p = 0;
-    ppe_cstr q = 0;
-    ppe_size dsz = 0;
-    ppe_size sz = 0;
-    ppe_uint i = 0;
-    ppe_uint max = PPE_CONF_STR_SNIPPET_MAX; /* Dont search infinitely. */
-
-    if (! s) {
+    if (! s || ! d || s == d) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (! d || ppe_cs_is_empty(d)) {
+    if (ppe_cs_is_empty(d)) {
         /* Cannot use a null or empty string as delimiter. */
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (n) {
-        if (n == 0) {
-            /* Cannot use a null or empty string as delimiter. */
-            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-            return NULL;
-        }
-        max = *n;
-    }
-
-    dsz = ppe_cs_size(d);
-    p = (ss && *ss) ? *ss : s;
-    if (! spt) {
-        /* NEW-SNIPPET MODE */
-        if (ppe_cs_is_empty(p)) {
-            return cspt_empty_s;
-        }
-
-        /* Count the number of substrings. */
-        for (i = 0; i < max - 1 && (q = ppe_cs_find(p, d)); i += 1) {
-            p = q + dsz;
-        } /* for */
-
-        /* Counted N delimiters, so there must be N+1 substrings, including empty ones. */
-        i += 1;
-
-        nw = ppe_cspt_create(i);
-        if (! nw) {
-            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-            return NULL;
-        }
-
-        p = (ss && *ss) ? *ss : s;
-    } else {
-        /* FILL-SNIPPET MODE */
-        ppe_cspt_reset(spt);
-        if (ppe_cs_is_empty(p)) {
-            ppe_cspt_append(spt, cs_empty_s, 0);
-            return spt;
-        }
-
-        i = ppe_cspt_capacity(spt);
-        nw = spt;
-    } /* if */
-
-    if (i < max) {
-        max = i;
-    }
-    for (i = 0; i < max - 1 && (q = ppe_cs_find(p, d)); i += 1) {
-        sz = q - p;
-        ppe_cspt_append(nw, p, sz);
-        p = q + dsz;
-    } /* for */
-
-    if (i == max - 1 && (q = ppe_cs_find(p, d)) && ss) {
-        sz = q - p;
-        ppe_cspt_append(nw, p, sz);
-        p += sz;
-        *ss = p;
-    } else {
-        sz = ppe_cs_size(p);
-        ppe_cspt_append(nw, p, sz);
-        p += sz;
-        if (ss) {
-            *ss = NULL;
-        }
-    } /* if */
-    if (n) {
-        *n = i + 1;
-    }
-    return nw;
+    return ppe_cs_split_imp(s, d, ppe_cs_size(d), spt, n, ss, opt);
 } /* ppe_cs_split */
 
 /* -- Replace & Substitute -- */
@@ -1288,11 +1292,29 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_str_optio
 
 PPE_API ppe_cs_snippet ppe_str_split(const ppe_string restrict s, const ppe_string restrict d, ppe_cs_snippet restrict spt, const const ppe_uint * restrict n, const ppe_str_option opt)
 {
+    if (! s || ! d || s == d) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (ppe_str_is_empty(d)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    return ppe_cs_split_imp(s->buf, d->buf, d->sz, spt, n, NULL, opt);
+}
+
+PPE_API ppe_cs_snippet ppe_str_split_cs(const ppe_string restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, const const ppe_uint * restrict n, const ppe_str_option opt)
+{
     if (! s || ! d) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_split(s->buf, d->buf, spt, n, NULL, opt);
+    if (ppe_cs_is_empty(d)) {
+        /* Cannot use a null or empty string as delimiter. */
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    return ppe_cs_split_imp(s->buf, d, ppe_cs_size(d), spt, n, NULL, opt);
 }
 
 /* -- Substitute -- */
