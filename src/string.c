@@ -1148,53 +1148,6 @@ static inline ppe_ssize ppe_cs_detect_size(const ppe_char * restrict s, const pp
     return (sz == PPE_STR_DETECT_SIZE) ? strlen(s) : sz;
 }
 
-static ppe_string ppe_cs_join_2_imp(const ppe_char * restrict d, ppe_ssize dsz, const ppe_char * restrict s1, const ppe_ssize sz1, const ppe_char * restrict s2, const ppe_ssize sz2)
-{
-    ppe_string nw = NULL;
-    ppe_ssize rem = PPE_STR_MAX_SIZE;
-
-    if ((rem -= sz1) < 0) {
-        ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
-        return NULL;
-    }
-    if ((rem -= dsz) < 0) {
-        ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
-        return NULL;
-    }
-    if ((rem -= sz2) < 0) {
-        ppe_err_set(PPE_ERR_OVERFLOW_UPPER_BOUND, NULL);
-        return NULL;
-    }
-
-    if (PPE_STR_MAX_SIZE - rem == dsz) {
-        /* Both source strings are empty. */
-        return ppe_cs_clone(d, dsz);
-    }
-
-    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + (PPE_STR_MAX_SIZE - rem));
-    if (! nw) {
-        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-        return NULL;
-    }
-    nw->sz = 0;
-
-    if (sz1 > 0) {
-        memcpy(nw->buf + nw->sz, s1, sz1);
-        nw->sz += sz1;
-    }
-    if (dsz > 0) {
-        memcpy(nw->buf + nw->sz, d, dsz);
-        nw->sz += dsz;
-    }
-    if (sz2 > 0) {
-        memcpy(nw->buf + nw->sz, s2, sz2);
-        nw->sz += sz2;
-    }
-
-    nw->buf[nw->sz] = '\0';
-    return nw;
-}
-
 /* -- Preset values -- */
 
 PPE_API const ppe_string ppe_str_empty(void)
@@ -1241,12 +1194,95 @@ PPE_API ppe_bool ppe_str_greater_than(const ppe_string restrict s1, const ppe_st
 
 /* -- Create & Destroy -- */
 
+PPE_API ppe_string ppe_str_create(const ppe_cstr restrict s, const ppe_size sz)
+{
+    ppe_string nw = NULL;
+
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (ppe_cs_is_empty(s)) {
+        return &str_empty_s;
+    }
+
+    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + sz); /* Including the terminating NUL byte. */
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    memcpy(nw->buf, s, sz);
+    nw->buf[sz] = '\0';
+    nw->sz = sz;
+    return nw;
+} /* ppe_str_create */
+
 PPE_API void ppe_str_destroy(ppe_string restrict s)
 {
     if (s && s != &str_empty_s) {
         ppe_mp_free(s);
     }
-}
+} /* ppe_str_destroy */
+
+/* -- Manipulate -- */
+
+static ppe_string ppe_str_trim_bytes_imp(const ppe_string restrict s, const ppe_cstr t, const ppe_str_option opt)
+{
+    const ppe_cstr p = NULL;
+    const ppe_cstr q = NULL;
+    ppe_size cpsz = 0;
+
+    p = s->buf;
+    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
+        while (*p && strchr(t, *p)) {
+            p++;
+        }
+    } /* if */
+
+    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
+        q = s->buf + s->sz - 1;
+        while (p <= q && strchr(t, *q)) {
+            q--;
+        }
+        cpsz = q < p ? 0 : q - p + 1;
+    } else {
+        cpsz = s->sz - (p - s->buf);
+    } /* if */
+    return ppe_str_create(p, cpsz);
+} /* ppe_str_trim_bytes_imp */
+
+PPE_API ppe_string ppe_str_trim_bytes(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
+{
+    if (! s || ! t || s == t || ppe_str_is_empty(t)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (ppe_str_is_empty(s)) {
+        return &str_empty_s;
+    }
+    return ppe_str_trim_bytes_imp(s, t->buf, opt);
+} /* ppe_str_trim_bytes */
+
+PPE_API ppe_string ppe_str_trim_bytes_cs(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
+{
+    if (! s || ! t || s->buf == t || ppe_cs_is_empty(t)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (ppe_str_is_empty(s)) {
+        return &str_empty_s;
+    }
+    return ppe_str_trim_bytes_imp(s, t, opt);
+} /* ppe_str_trim_bytes_cs */
+
+PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt)
+{
+} /* ppe_str_chop */
+
+PPE_API ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_string accept, const ppe_str_option opt)
+{
+} /* ppe_str_chomp */
 
 /* -- Join & Concat -- */
 
