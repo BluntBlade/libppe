@@ -1202,7 +1202,7 @@ PPE_API ppe_string ppe_str_create(const ppe_cstr restrict s, const ppe_size sz)
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (ppe_cs_is_empty(s)) {
+    if (sz == 0 || ppe_cs_is_empty(s)) {
         return &str_empty_s;
     }
 
@@ -1217,6 +1217,11 @@ PPE_API ppe_string ppe_str_create(const ppe_cstr restrict s, const ppe_size sz)
     nw->sz = sz;
     return nw;
 } /* ppe_str_create */
+
+PPE_API ppe_string ppe_str_clone(const ppe_string restrict s)
+{
+    return ppe_str_create(s->buf, s->sz);
+} /* ppe_str_clone */
 
 PPE_API void ppe_str_destroy(ppe_string restrict s)
 {

@@ -234,6 +234,7 @@ static inline ppe_bool ppe_str_greater_than_or_equals_to(const ppe_string restri
 /* -- Create & Destroy -- */
 
 PPE_API extern ppe_string ppe_str_create(const ppe_cstr restrict s, const ppe_size sz);
+PPE_API extern ppe_string ppe_str_clone(const ppe_string restrict s);
 PPE_API extern void ppe_str_destroy(ppe_string restrict s);
 
 /* -- Manipulate -- */
@@ -264,6 +265,11 @@ PPE_API extern ppe_string ppe_str_substitute(const ppe_string restrict s, const 
 PPE_API extern ppe_string ppe_str_substitute_cs(const ppe_string restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_uint * restrict n, const ppe_str_option opt);
 
 /* -- Wrapper -- */
+
+static inline ppe_string ppe_str_clone_cs(const ppe_cstr restrict s)
+{
+    return ppe_str_create(s, ppe_cs_size(s));
+} /* ppe_str_clone_cs */
 
 static inline ppe_string ppe_str_join_two(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)
 {
