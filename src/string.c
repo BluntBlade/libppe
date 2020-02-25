@@ -381,7 +381,7 @@ PPE_PTR_JOIN_IMP_NONE_ITEM:
         /* NEW-STRING MODE */
         nw[cpsz] = '\0';
     } else {
-        /* ONESHOT-COPY MODE */
+        /* FILL-BUFFER MODE */
         if (cpsz + 1 < *bsz) {
             nw[cpsz] = '\0';
         }
@@ -391,6 +391,7 @@ PPE_PTR_JOIN_IMP_NONE_ITEM:
 
 PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT:
     ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+
 PPE_CS_JOIN_IMP_ERROR_HANDLING:
     if (! b) {
         ppe_mp_free(nw);
