@@ -248,8 +248,7 @@ PPE_API extern ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_s
 /* -- Join & Concat -- */
 
 PPE_API extern ppe_string ppe_str_join(const ppe_string restrict d, const ppe_str_option opt, ...);
-
-/* TODO: ppe_str_concat() as a macro with variable arguments. Need C99 support. */
+PPE_API extern ppe_string ppe_str_concat(const ppe_str_option opt, ...);
 
 /* -- Split -- */
 

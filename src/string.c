@@ -1292,21 +1292,21 @@ PPE_API ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_string a
 
 /* -- Join & Concat -- */
 
-PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_str_option opt, ...)
+static ppe_string ppe_str_join_imp(const ppe_string restrict d, const ppe_str_option opt, va_list * restrict args)
 {
     ppe_cstr ret = NULL;
     ppe_string nw = NULL;
     ppe_size nwsz = 0;
-    va_list args;
+    va_list cp;
 
     if (! d) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
 
-    va_start(args, opt);
-    ret = ppe_cs_join_imp(d->buf, d->sz, NULL, &nwsz, opt, ppe_true, &args);
-    va_end(args);
+    va_copy(cp, *args);
+    ret = ppe_cs_join_imp(d->buf, d->sz, NULL, &nwsz, opt, ppe_true, &cp);
+    va_end(cp);
     if (! ret) {
         return NULL;
     }
@@ -1317,9 +1317,9 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_str_optio
         return NULL;
     }
 
-    va_start(args, opt);
-    ret = ppe_cs_join_imp(d->buf, d->sz, nw->buf, &nwsz, opt, ppe_true, &args); /* Include the terminating NUL character. */
-    va_end(args);
+    va_copy(cp, *args);
+    ret = ppe_cs_join_imp(d->buf, d->sz, nw->buf, &nwsz, opt, ppe_true, &cp); /* Include the terminating NUL character. */
+    va_end(cp);
     if (! ret) {
         ppe_mp_free(nw);
         return NULL;
@@ -1327,7 +1327,34 @@ PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_str_optio
 
     nw->sz = nwsz;
     return nw;
+} /* ppe_str_join_imp */
+
+PPE_API ppe_string ppe_str_join(const ppe_string restrict d, const ppe_str_option opt, ...)
+{
+    ppe_string ret = NULL;
+    va_list args;
+
+    if (! d) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+
+    va_start(args, opt);
+    ret = ppe_str_join_imp(d, &nwsz, opt, ppe_true, &args);
+    va_end(args);
+    return ret;
 } /* ppe_str_join */
+
+PPE_API ppe_string ppe_str_concat(const ppe_str_option opt, ...)
+{
+    ppe_string ret = NULL;
+    va_list args;
+
+    va_start(args, opt);
+    ret = ppe_str_join_imp(&str_empty_s, NULL, &nwsz, opt, ppe_true, &args);
+    va_end(args);
+    return ret;
+} /* ppe_str_concat */
 
 /* -- Split -- */
 
