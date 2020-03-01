@@ -884,21 +884,17 @@ PPE_API ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe
     return b;
 } /* ppe_cs_chop */
 
-PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+static ppe_cs_chomp_imp(const ppe_cstr restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     const ppe_cstr p = NULL;
     const ppe_size nlsz = strlen(PPE_STR_NEWLINE);
     ppe_size cpsz = 0;
 
-    if (! s) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    }
-
-    cpsz = ppe_cs_size(s);
-    p = ppe_cs_find(s + cpsz - nlsz, PPE_STR_NEWLINE);
+    p = ppe_cs_find(s + sz - nlsz, PPE_STR_NEWLINE);
     if (p) {
         cpsz = p - s; /* Exclude the terminating NUL byte. */
+    } else {
+        cpsz = sz;
     }
 
     if (! b) {
@@ -936,6 +932,15 @@ PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, pp
     b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
+} /* ppe_cs_chomp_imp */
+
+PPE_API ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+{
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    return ppe_cs_chomp(s, ppe_cs_size(s), b, bsz, opt);
 } /* ppe_cs_chomp */
 
 /* -- Join & Concat -- */
@@ -1284,10 +1289,40 @@ PPE_API ppe_string ppe_str_trim_bytes_cs(const ppe_string restrict s, const ppe_
 
 PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt)
 {
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (ppe_cs_is_empty(s)) {
+        return &str_empty_s;
+    }
+    return ppe_str_create(s->buf, s->sz - 1);
 } /* ppe_str_chop */
 
-PPE_API ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_string accept, const ppe_str_option opt)
+PPE_API ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_str_option opt)
 {
+    ppe_cstr ret = NULL;
+    ppe_string nw = NULL;
+    ppe_size nwsz = 0;
+
+    if (! s || ! t || s == t || ppe_cs_is_empty(t)) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (ppe_str_is_empty(s)) {
+        return &str_empty_s;
+    }
+
+    ppe_cs_chomp(s->buf, s->sz, NULL, &nwsz, opt);
+    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + nwsz - 1); /* The terminating NUL byte have been counted twice. */
+    if (! nw) {
+        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+        return NULL;
+    }
+
+    ppe_cs_chomp(s->buf, s->sz, nw->buf, &nwsz, opt);
+    nw->sz = nwsz;
+    return nw;
 } /* ppe_str_chomp */
 
 /* -- Join & Concat -- */

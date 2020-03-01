@@ -242,8 +242,8 @@ PPE_API extern void ppe_str_destroy(ppe_string restrict s);
 PPE_API extern ppe_string ppe_str_trim_bytes(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt);
 PPE_API extern ppe_string ppe_str_trim_bytes_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt);
 
-PPE_API extern ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt);
-PPE_API extern ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_string accept, const ppe_str_option opt);
+PPE_API extern ppe_string ppe_str_chop(const ppe_string restrict s, cnst ppe_str_option opt);
+PPE_API extern ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_str_option opt);
 
 /* -- Join & Concat -- */
 
