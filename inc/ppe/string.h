@@ -43,6 +43,7 @@ typedef enum
     PPE_STR_OPT_DIRECT_LEFT = 0x00000001,
     PPE_STR_OPT_DIRECT_RIGHT = 0x00000002,
     PPE_STR_OPT_DIRECT_BOTH = 0x00000003,
+    PPE_STR_OPT_VA_CSTR = 0x01000000,
     PPE_STR_OPT_MEASURE_SIZE = 0x20000000,
     PPE_STR_OPT_DONT_TRUNCATE = 0x40000000,
     PPE_STR_OPT_NEW_STRING = 0x80000000
@@ -243,7 +244,22 @@ PPE_API extern ppe_string ppe_str_trim_bytes(const ppe_string restrict s, const 
 PPE_API extern ppe_string ppe_str_trim_bytes_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt);
 
 PPE_API extern ppe_string ppe_str_chop(const ppe_string restrict s, cnst ppe_str_option opt);
-PPE_API extern ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_str_option opt);
+PPE_API extern ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz);
+
+static inline ppe_string ppe_str_chomp_newline(const ppe_string restrict s, const ppe_str_option opt)
+{
+    return ppe_str_chomp_ex(s, (opt | PPE_STR_OPT_VA_CSTR), NULL, 0);
+} /* ppe_str_chomp_newline */
+
+static inline ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
+{
+    return ppe_str_chomp_ex(s, (opt & (~PPE_STR_OPT_VA_CSTR)), (void *) t, 0);
+} /* ppe_str_chomp */
+
+static inline ppe_string ppe_str_chomp_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
+{
+    return ppe_str_chomp_ex(s, (opt | PPE_STR_OPT_VA_CSTR), (void *) t, ppe_cs_size(t));
+} /* ppe_str_chomp_cs */
 
 /* -- Join & Concat -- */
 

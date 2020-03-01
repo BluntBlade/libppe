@@ -1154,6 +1154,17 @@ static inline ppe_ssize ppe_cs_detect_size(const ppe_char * restrict s, const pp
     return (sz == PPE_STR_DETECT_SIZE) ? strlen(s) : sz;
 }
 
+static inline void ppe_str_get_var_args(const ppe_str_option opt, const void * restrict v, const ppe_size vsz, const ppe_cstr restrict * t, const ppe_size * tsz)
+{
+    if (opt & PPE_STR_OPT_VA_CSTR) {
+        *t = (const ppe_cstr) v;
+        *tsz = vsz;
+    } else {
+        *t = ((const ppe_string) v)->buf;
+        *tsz = ((const ppe_string) v)->sz;
+    } /* if */
+} /* ppe_str_get_var_args */
+
 /* -- Preset values -- */
 
 PPE_API const ppe_string ppe_str_empty(void)
@@ -1299,19 +1310,30 @@ PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_optio
     return ppe_str_create(s->buf, s->sz - 1);
 } /* ppe_str_chop */
 
-PPE_API ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_str_option opt)
+PPE_API ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz)
 {
-    ppe_cstr ret = NULL;
     ppe_string nw = NULL;
+    ppe_cstr ret = NULL;
+    ppe_cstr t = NULL;
+    ppe_size tsz = 0;
     ppe_size nwsz = 0;
 
-    if (! s || ! t || s == t || ppe_cs_is_empty(t)) {
+    ppe_str_get_var_args(opt, v, vsz, &t, &tsz);
+
+    if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
-    }
-    if (ppe_str_is_empty(s)) {
+    } else if (ppe_str_is_empty(s)) {
         return &str_empty_s;
-    }
+    } /* if */
+
+    if (! t) {
+        t = PPE_STR_NEWLINE;
+        tsz = strlen(PPE_STR_NEWLINE);
+    } else if (tsz == 0 || ppe_cs_is_empty(t) || s->buf == t) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    } /* if */
 
     ppe_cs_chomp(s->buf, s->sz, NULL, &nwsz, opt);
     nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + nwsz - 1); /* The terminating NUL byte have been counted twice. */
