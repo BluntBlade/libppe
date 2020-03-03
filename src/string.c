@@ -1249,6 +1249,18 @@ PPE_API void ppe_str_destroy(ppe_string restrict s)
 
 /* -- Manipulate -- */
 
+PPE_API ppe_string ppe_str_substr(const ppe_string restrict s, const ppe_size off, const ppe_size rsz, const ppe_str_option opt)
+{
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return NULL;
+    }
+    if (s->sz <= off) {
+        return &str_empty_s;
+    }
+    return ppe_str_create(s->buf + off, (s->sz - off < rsz) ? (s->sz - off) : rsz);
+} /* ppe_str_substr */
+
 static ppe_string ppe_str_trim_bytes_imp(const ppe_string restrict s, const ppe_cstr t, const ppe_str_option opt)
 {
     const ppe_cstr p = NULL;

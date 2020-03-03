@@ -240,6 +240,8 @@ PPE_API extern void ppe_str_destroy(ppe_string restrict s);
 
 /* -- Manipulate -- */
 
+PPE_API extern ppe_string ppe_str_substr(const ppe_string restrict s, const ppe_size off, const ppe_size rsz, const ppe_str_option opt);
+
 PPE_API extern ppe_string ppe_str_trim_bytes(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt);
 PPE_API extern ppe_string ppe_str_trim_bytes_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt);
 
