@@ -28,6 +28,25 @@ typedef struct PPE_CS_SNIPPET {
 static const ppe_char * cs_empty_s;
 static const ppe_cs_snippet_st cspt_empty_s = {1, 1, {cs_empty_s, 0}};
 
+/* -- Internals -- */
+
+static const ppe_cstr ppe_cs_get_trim_position(const ppe_cstr restrict p, const ppe_cstr restrict q, const ppe_cstr restrict t, const ppe_size * restrict sz, const ppe_str_option opt)
+{
+    assert(p <= q && q[1] == '\0');
+    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
+        while (*p && strchr(t, *p)) { ++p; }
+    } /* if */
+    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
+        while (p <= q && strchr(t, *q)) { --q; }
+    } /* if */
+    if (q < p) {
+        *sz = 0;
+        return NULL;
+    }
+    *sz = q - p + 1;
+    return p;
+} /* ppe_cs_get_trim_position */
+
 /* -- Property -- */
 
 PPE_API ppe_uint ppe_cspt_count(const ppe_cs_snippet restrict spt)
@@ -770,29 +789,14 @@ PPE_API ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, co
 PPE_API ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     const ppe_cstr p = NULL;
-    const ppe_cstr q = NULL;
     ppe_size cpsz = 0;
 
-    if (! s || ! t || ppe_cs_size(t) == 0) {
+    if (! s || ! t || s == t || ppe_cs_is_empty(t)) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
 
-    p = s;
-    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
-        while (*p && strchr(t, *p)) {
-            p++;
-        }
-    } /* if */
-
-    cpsz = ppe_cs_size(p);
-    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
-        q = p + cpsz - 1;
-        while (p <= q && strchr(t, *q)) {
-            q--;
-        }
-        cpsz = q < p ? 0 : q - p + 1;
-    } /* if */
+    p = ppe_cs_get_trim_position(s, s->buf + s->sz - 1, t, &cpsz, opt);
 
     if (! b) {
         if (bsz) {
@@ -1274,7 +1278,7 @@ PPE_API ppe_string ppe_str_trim_ex(const ppe_string restrict s, const ppe_str_op
 {
     const ppe_cstr t = NULL;
     const ppe_cstr p = NULL;
-    const ppe_cstr q = NULL;
+    ppe_size cpsz = 0;
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -1291,17 +1295,11 @@ PPE_API ppe_string ppe_str_trim_ex(const ppe_string restrict s, const ppe_str_op
         return NULL;
     } /* if */
 
-    p = s->buf;
-    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
-        while (*p && strchr(t, *p)) { p++; }
-    } /* if */
-
-    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
-        q = s->buf + s->sz - 1;
-        while (p <= q && strchr(t, *q)) { q--; }
-        return ppe_str_create(p, q < p ? 0 : q - p + 1);
-    } /* if */
-    return ppe_str_create(p, s->sz - (p - s->buf));
+    p = ppe_cs_get_trim_position(s->buf, s->buf + s->sz - 1, t, &cpsz, opt);
+    if (! p) {
+        return &str_empty_s;
+    }
+    return ppe_str_create(p, cpsz);
 } /* ppe_str_trim_ex */
 
 PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt)
