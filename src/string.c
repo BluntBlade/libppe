@@ -1154,7 +1154,7 @@ static inline ppe_ssize ppe_cs_detect_size(const ppe_char * restrict s, const pp
     return (sz == PPE_STR_DETECT_SIZE) ? strlen(s) : sz;
 }
 
-static inline void ppe_str_get_var_args(const ppe_str_option opt, const void * restrict v, const ppe_size vsz, const ppe_cstr restrict * t, const ppe_size * tsz)
+static inline void ppe_str_get_var_args_with_size(const ppe_str_option opt, const void * restrict v, const ppe_size vsz, const ppe_cstr restrict * t, const ppe_size * tsz)
 {
     if (opt & PPE_STR_OPT_VA_CSTR) {
         *t = (const ppe_cstr) v;
@@ -1162,6 +1162,15 @@ static inline void ppe_str_get_var_args(const ppe_str_option opt, const void * r
     } else {
         *t = ((const ppe_string) v)->buf;
         *tsz = ((const ppe_string) v)->sz;
+    } /* if */
+} /* ppe_str_get_var_args_with_size */
+
+static inline void ppe_str_get_var_args(const ppe_str_option opt, const void * restrict v, const ppe_size vsz, const ppe_cstr restrict * t)
+{
+    if (opt & PPE_STR_OPT_VA_CSTR) {
+        *t = (const ppe_cstr) v;
+    } else {
+        *t = ((const ppe_string) v)->buf;
     } /* if */
 } /* ppe_str_get_var_args */
 
@@ -1261,7 +1270,7 @@ PPE_API ppe_string ppe_str_substr(const ppe_string restrict s, const ppe_size of
     return ppe_str_create(s->buf + off, (s->sz - off < rsz) ? (s->sz - off) : rsz);
 } /* ppe_str_substr */
 
-static ppe_string ppe_str_trim_bytes_imp(const ppe_string restrict s, const ppe_cstr t, const ppe_str_option opt)
+static ppe_string ppe_str_trim_ex_imp(const ppe_string restrict s, const ppe_cstr t, const ppe_str_option opt)
 {
     const ppe_cstr p = NULL;
     const ppe_cstr q = NULL;
@@ -1284,31 +1293,29 @@ static ppe_string ppe_str_trim_bytes_imp(const ppe_string restrict s, const ppe_
         cpsz = s->sz - (p - s->buf);
     } /* if */
     return ppe_str_create(p, cpsz);
-} /* ppe_str_trim_bytes_imp */
+} /* ppe_str_trim_ex_imp */
 
-PPE_API ppe_string ppe_str_trim_bytes(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
+PPE_API ppe_string ppe_str_trim_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz)
 {
-    if (! s || ! t || s == t || ppe_str_is_empty(t)) {
+    ppe_cstr t = NULL;
+
+    if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
-    }
-    if (ppe_str_is_empty(s)) {
+    } else if (ppe_str_is_empty(s)) {
         return &str_empty_s;
-    }
-    return ppe_str_trim_bytes_imp(s, t->buf, opt);
-} /* ppe_str_trim_bytes */
+    } /* if */
 
-PPE_API ppe_string ppe_str_trim_bytes_cs(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
-{
-    if (! s || ! t || s->buf == t || ppe_cs_is_empty(t)) {
+    ppe_str_get_var_args(opt, v, vsz, &t);
+    if (! t) {
+        t = PPE_STR_SPACES;
+    } else if (tsz == 0 || ppe_cs_is_empty(t) || s->buf == t) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
-    }
-    if (ppe_str_is_empty(s)) {
-        return &str_empty_s;
-    }
-    return ppe_str_trim_bytes_imp(s, t, opt);
-} /* ppe_str_trim_bytes_cs */
+    } /* if */
+
+    return ppe_str_trim_ex_imp(s, t, opt);
+} /* ppe_str_trim_ex */
 
 PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt)
 {
@@ -1330,7 +1337,7 @@ PPE_API ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const ppe_str_o
     ppe_size tsz = 0;
     ppe_size nwsz = 0;
 
-    ppe_str_get_var_args(opt, v, vsz, &t, &tsz);
+    ppe_str_get_var_args_with_size(opt, v, vsz, &t, &tsz);
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);

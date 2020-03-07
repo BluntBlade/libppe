@@ -242,8 +242,41 @@ PPE_API extern void ppe_str_destroy(ppe_string restrict s);
 
 PPE_API extern ppe_string ppe_str_substr(const ppe_string restrict s, const ppe_size off, const ppe_size rsz, const ppe_str_option opt);
 
-PPE_API extern ppe_string ppe_str_trim_bytes(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt);
-PPE_API extern ppe_string ppe_str_trim_bytes_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt);
+/* ---- */
+
+PPE_API extern ppe_string ppe_str_trim_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz);
+
+static inline ppe_string ppe_str_trim_left(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
+{
+    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_LEFT, (void *) t, 0);
+} /* ppe_str_trim_left */
+
+static inline ppe_string ppe_str_trim_right(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
+{
+    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_RIGHT, (void *) t, 0);
+} /* ppe_str_trim_right */
+
+static inline ppe_string ppe_str_trim(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
+{
+    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_BOTH, (void *) t, 0);
+} /* ppe_str_trim */
+
+static inline ppe_string ppe_str_trim_left_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
+{
+    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_LEFT | PPE_STR_OPT_VA_CSTR, (void *) t, 0);
+} /* ppe_str_trim_left_cs */
+
+static inline ppe_string ppe_str_trim_right_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
+{
+    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_RIGHT | PPE_STR_OPT_VA_CSTR, (void *) t, 0);
+} /* ppe_str_trim_right_cs */
+
+static inline ppe_string ppe_str_trim_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
+{
+    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_BOTH | PPE_STR_OPT_VA_CSTR, (void *) t, 0);
+} /* ppe_str_trim_cs */
+
+/* ---- */
 
 PPE_API extern ppe_string ppe_str_chop(const ppe_string restrict s, cnst ppe_str_option opt);
 PPE_API extern ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz);
@@ -297,21 +330,6 @@ static inline ppe_string ppe_str_concat_two(const ppe_string restrict s1, const 
 {
     return ppe_str_join(ppe_str_empty(), PPE_PTR_JOIN_ADD_ITEM_STRING, s1, PPE_PTR_JOIN_ADD_ITEM_STRING, s2, PPE_PTR_JOIN_END);
 }
-
-static inline ppe_string ppe_str_trim_left(const ppe_string restrict s, const ppe_str_option opt)
-{
-    return ppe_str_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_LEFT);
-} /* ppe_str_trim_left */
-
-static inline ppe_string ppe_str_trim_right(const ppe_string restrict s, const ppe_str_option opt)
-{
-    return ppe_str_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_RIGHT);
-} /* ppe_str_trim_right */
-
-static inline ppe_string ppe_str_trim(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
-{
-    return ppe_str_trim_bytes(s, PPE_STR_SPACES, PPE_STR_OPT_DIRECT_BOTH);
-} /* ppe_str_trim */
 
 #ifdef __cplusplus
 }
