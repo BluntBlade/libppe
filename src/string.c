@@ -1270,34 +1270,11 @@ PPE_API ppe_string ppe_str_substr(const ppe_string restrict s, const ppe_size of
     return ppe_str_create(s->buf + off, (s->sz - off < rsz) ? (s->sz - off) : rsz);
 } /* ppe_str_substr */
 
-static ppe_string ppe_str_trim_ex_imp(const ppe_string restrict s, const ppe_cstr t, const ppe_str_option opt)
-{
-    const ppe_cstr p = NULL;
-    const ppe_cstr q = NULL;
-    ppe_size cpsz = 0;
-
-    p = s->buf;
-    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
-        while (*p && strchr(t, *p)) {
-            p++;
-        }
-    } /* if */
-
-    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
-        q = s->buf + s->sz - 1;
-        while (p <= q && strchr(t, *q)) {
-            q--;
-        }
-        cpsz = q < p ? 0 : q - p + 1;
-    } else {
-        cpsz = s->sz - (p - s->buf);
-    } /* if */
-    return ppe_str_create(p, cpsz);
-} /* ppe_str_trim_ex_imp */
-
 PPE_API ppe_string ppe_str_trim_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz)
 {
-    ppe_cstr t = NULL;
+    const ppe_cstr t = NULL;
+    const ppe_cstr p = NULL;
+    const ppe_cstr q = NULL;
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -1309,12 +1286,22 @@ PPE_API ppe_string ppe_str_trim_ex(const ppe_string restrict s, const ppe_str_op
     ppe_str_get_var_args(opt, v, vsz, &t);
     if (! t) {
         t = PPE_STR_SPACES;
-    } else if (tsz == 0 || ppe_cs_is_empty(t) || s->buf == t) {
+    } else if (ppe_cs_is_empty(t) || s->buf == t) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     } /* if */
 
-    return ppe_str_trim_ex_imp(s, t, opt);
+    p = s->buf;
+    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
+        while (*p && strchr(t, *p)) { p++; }
+    } /* if */
+
+    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
+        q = s->buf + s->sz - 1;
+        while (p <= q && strchr(t, *q)) { q--; }
+        return ppe_str_create(p, q < p ? 0 : q - p + 1);
+    } /* if */
+    return ppe_str_create(p, s->sz - (p - s->buf));
 } /* ppe_str_trim_ex */
 
 PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt)
