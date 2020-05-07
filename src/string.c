@@ -33,10 +33,10 @@ static const ppe_cs_snippet_st cspt_empty_s = {1, 1, {cs_empty_s, 0}};
 static const ppe_cstr ppe_cs_get_trim_position(const ppe_cstr restrict p, const ppe_cstr restrict q, const ppe_cstr restrict t, const ppe_size * restrict sz, const ppe_str_option opt)
 {
     assert(p <= q);
-    if (opt & PPE_STR_OPT_DIRECT_LEFT) {
+    if (opt & PPE_STR_OPT_LEFT_END) {
         while (*p && strchr(t, *p)) { ++p; }
     } /* if */
-    if (opt & PPE_STR_OPT_DIRECT_RIGHT) {
+    if (opt & PPE_STR_OPT_RIGHT_END) {
         while (p <= q && strchr(t, *q)) { --q; }
     } /* if */
     if (q < p) {
@@ -246,7 +246,7 @@ static ppe_bool ppe_cs_join_imp_copy(const ppe_cstr restrict s, const ppe_size s
 
 static ppe_cstr ppe_cs_join_imp(const ppe_cstr restrict d, const ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, const ppe_bool enable_delimiter, va_list * restrict args)
 {
-    ppe_str_join_action act = PPE_PTR_JOIN_END;
+    ppe_str_join_action act = PPE_STR_JOIN_END;
 
     ppe_string str = NULL;
     ppe_cstr nw = NULL;
@@ -268,18 +268,18 @@ static ppe_cstr ppe_cs_join_imp(const ppe_cstr restrict d, const ppe_size dsz, p
         nwsz = *bsz;
     }
 
-PPE_PTR_JOIN_IMP_AGAIN:
+PPE_STR_JOIN_IMP_AGAIN:
 
     va_copy(cp, *args);
 
     act = va_arg(cp, ppe_str_join_action);
-    if (act == PPE_PTR_JOIN_END) {
+    if (act == PPE_STR_JOIN_END) {
         goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
     }
 
     do {
         switch (act) {
-            case PPE_PTR_JOIN_ADD_ITEM_CSTR:
+            case PPE_STR_JOIN_ADD_ITEM_CSTR:
                 s = va_arg(cp, ppe_cstr);
                 if (! s) {
                     goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
@@ -287,7 +287,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 sz = ppe_cs_size(s);
                 break;
 
-            case PPE_PTR_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
+            case PPE_STR_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
                 s = va_arg(cp, ppe_cstr);
                 if (! s) {
                     goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
@@ -295,7 +295,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 sz = va_arg(cp, ppe_size);
                 break;
 
-            case PPE_PTR_JOIN_ADD_ITEM_STRING:
+            case PPE_STR_JOIN_ADD_ITEM_STRING:
                 str = va_arg(cp, ppe_string);
                 if (! str) {
                     goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
@@ -304,7 +304,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 sz = ppe_str_size(str);
                 break;
 
-            case PPE_PTR_JOIN_ADD_ITEM_SNIPPET:
+            case PPE_STR_JOIN_ADD_ITEM_SNIPPET:
                 spt = va_arg(cp, ppe_cs_snippet);
                 if (! spt) {
                     goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
@@ -320,25 +320,25 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 }
                 break;
 
-            case PPE_PTR_JOIN_SET_DELIMITER_CSTR:
+            case PPE_STR_JOIN_SET_DELIMITER_CSTR:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 d = va_arg(cp, ppe_cstr);
                 if (! d) {
                     goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 dsz = ppe_cs_size(d);
-                goto PPE_PTR_JOIN_IMP_NONE_ITEM;
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
 
-            case PPE_PTR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE:
+            case PPE_STR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 d = va_arg(cp, ppe_cstr);
                 if (! d) {
                     goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
                 }
                 dsz = va_arg(cp, ppe_size);
-                goto PPE_PTR_JOIN_IMP_NONE_ITEM;
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
 
-            case PPE_PTR_JOIN_SET_DELIMITER_STRING:
+            case PPE_STR_JOIN_SET_DELIMITER_STRING:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 str = va_arg(cp, ppe_string);
                 if (! str) {
@@ -346,12 +346,12 @@ PPE_PTR_JOIN_IMP_AGAIN:
                 }
                 d = ppe_str_addr(str);
                 dsz = ppe_str_size(str);
-                goto PPE_PTR_JOIN_IMP_NONE_ITEM;
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
 
-            case PPE_PTR_JOIN_UNSET_DELIMITER:
+            case PPE_STR_JOIN_UNSET_DELIMITER:
                 d = cs_empty_s;
                 dsz = 0;
-                goto PPE_PTR_JOIN_IMP_NONE_ITEM;
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
 
             default:
                 goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
@@ -362,7 +362,7 @@ PPE_PTR_JOIN_IMP_AGAIN:
             if (enable_delimiter && ++cnt > 1) {
                 cpsz += dsz;
             }
-        } else if (act == PPE_PTR_JOIN_ADD_ITEM_SNIPPET) {
+        } else if (act == PPE_STR_JOIN_ADD_ITEM_SNIPPET) {
             for (i = 0; i < ppe_cspt_count(spt); i += 1) {
                 ppe_cspt_get(spt, i, &s, &sz);
                 if (! ppe_cs_join_imp_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
@@ -373,9 +373,9 @@ PPE_PTR_JOIN_IMP_AGAIN:
             goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
         } /* if */
 
-PPE_PTR_JOIN_IMP_NONE_ITEM:
+PPE_STR_JOIN_IMP_NONE_ITEM:
         act = va_arg(cp, ppe_str_join_action);
-    } while (act != PPE_PTR_JOIN_END);
+    } while (act != PPE_STR_JOIN_END);
 
     va_end(cp);
 
@@ -393,7 +393,7 @@ PPE_PTR_JOIN_IMP_NONE_ITEM:
             ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
             return NULL;
         }
-        goto PPE_PTR_JOIN_IMP_AGAIN;
+        goto PPE_STR_JOIN_IMP_AGAIN;
     } /* if */
 
     if (! bsz) {
@@ -1153,14 +1153,9 @@ static ppe_string_st str_empty_s = { 0, '\0' };
 
 /* -- Internals -- */
 
-static inline ppe_ssize ppe_cs_detect_size(const ppe_char * restrict s, const ppe_ssize sz)
-{
-    return (sz == PPE_STR_DETECT_SIZE) ? strlen(s) : sz;
-}
-
 static inline void ppe_str_get_var_args_with_size(const ppe_str_option opt, const void * restrict v, const ppe_size vsz, const ppe_cstr restrict * t, const ppe_size * tsz)
 {
-    if (opt & PPE_STR_OPT_VA_CSTR) {
+    if (opt & PPE_STR_OPT_CSTR_ARG) {
         *t = (const ppe_cstr) v;
         *tsz = vsz;
     } else {
@@ -1171,7 +1166,7 @@ static inline void ppe_str_get_var_args_with_size(const ppe_str_option opt, cons
 
 static inline void ppe_str_get_var_args(const ppe_str_option opt, const void * restrict v, const ppe_size vsz, const ppe_cstr restrict * t)
 {
-    if (opt & PPE_STR_OPT_VA_CSTR) {
+    if (opt & PPE_STR_OPT_CSTR_ARG) {
         *t = (const ppe_cstr) v;
     } else {
         *t = ((const ppe_string) v)->buf;

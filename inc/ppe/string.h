@@ -15,8 +15,6 @@ extern "C"
 
 /* ---- Types --------------------------------------------------------------- */
 
-struct ppe_str_bunch_st;
-
 typedef char * ppe_cstr;
 
 struct ppe_cs_snippet_st;
@@ -27,23 +25,23 @@ typedef struct ppe_string_st * ppe_string;
 
 typedef enum
 {
-    PPE_PTR_JOIN_END = 0,
-    PPE_PTR_JOIN_UNSET_DELIMITER = 1,
-    PPE_PTR_JOIN_SET_DELIMITER_CSTR = 2,
-    PPE_PTR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE = 3,
-    PPE_PTR_JOIN_SET_DELIMITER_STRING = 4,
-    PPE_PTR_JOIN_ADD_ITEM_CSTR = 5,
-    PPE_PTR_JOIN_ADD_ITEM_CSTR_WITH_SIZE = 6,
-    PPE_PTR_JOIN_ADD_ITEM_STRING = 7,
-    PPE_PTR_JOIN_ADD_ITEM_SNIPPET = 8
+    PPE_STR_JOIN_END = 0,
+    PPE_STR_JOIN_UNSET_DELIMITER = 1,
+    PPE_STR_JOIN_SET_DELIMITER_CSTR = 2,
+    PPE_STR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE = 3,
+    PPE_STR_JOIN_SET_DELIMITER_STRING = 4,
+    PPE_STR_JOIN_ADD_ITEM_CSTR = 5,
+    PPE_STR_JOIN_ADD_ITEM_CSTR_WITH_SIZE = 6,
+    PPE_STR_JOIN_ADD_ITEM_STRING = 7,
+    PPE_STR_JOIN_ADD_ITEM_SNIPPET = 8
 } ppe_str_join_action;
 
 typedef enum
 {
-    PPE_STR_OPT_DIRECT_LEFT = 0x00000001,
-    PPE_STR_OPT_DIRECT_RIGHT = 0x00000002,
-    PPE_STR_OPT_DIRECT_BOTH = 0x00000003,
-    PPE_STR_OPT_VA_CSTR = 0x01000000,
+    PPE_STR_OPT_LEFT_END = 0x00000001,
+    PPE_STR_OPT_RIGHT_END = 0x00000002,
+    PPE_STR_OPT_BOTH_ENDS = 0x00000003,
+    PPE_STR_OPT_CSTR_ARG = 0x01000000,
     PPE_STR_OPT_MEASURE_SIZE = 0x20000000,
     PPE_STR_OPT_DONT_TRUNCATE = 0x40000000,
     PPE_STR_OPT_NEW_STRING = 0x80000000
@@ -51,7 +49,6 @@ typedef enum
 
 /* ---- Macros -------------------------------------------------------------- */
 
-#define PPE_STR_DETECT_SIZE ((ppe_ssize)-1L)
 #define PPE_STR_MAX_SIZE (1L << (sizeof(ppe_size) * 8 - 1))
 
 #define PPE_STR_SPACES " \t"
@@ -190,17 +187,17 @@ static inline ppe_cstr ppe_cs_clone(const ppe_cstr restrict s)
 
 static inline ppe_cstr ppe_cs_trim_left(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz)
 {
-    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_DIRECT_LEFT);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_LEFT_END);
 }
 
 static inline ppe_cstr ppe_cs_trim_right(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz)
 {
-    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_DIRECT_RIGHT);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_RIGHT_END);
 }
 
 static inline ppe_cstr ppe_cs_trim(const ppe_cstr restrict s, ppe_cstr * restring b, ppe_size * bsz)
 {
-    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_DIRECT_BOTH);
+    return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_BOTH_ENDS);
 }
 
 /* ==== Declaration : String ================================================ */
@@ -248,32 +245,32 @@ PPE_API extern ppe_string ppe_str_trim_ex(const ppe_string restrict s, const ppe
 
 static inline ppe_string ppe_str_trim_left(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
 {
-    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_LEFT, (void *) t, 0);
+    return ppe_str_trim_ex(s, PPE_STR_OPT_LEFT_END, (void *) t, 0);
 } /* ppe_str_trim_left */
 
 static inline ppe_string ppe_str_trim_right(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
 {
-    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_RIGHT, (void *) t, 0);
+    return ppe_str_trim_ex(s, PPE_STR_OPT_RIGHT_END, (void *) t, 0);
 } /* ppe_str_trim_right */
 
 static inline ppe_string ppe_str_trim(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
 {
-    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_BOTH, (void *) t, 0);
+    return ppe_str_trim_ex(s, PPE_STR_OPT_BOTH_ENDS, (void *) t, 0);
 } /* ppe_str_trim */
 
 static inline ppe_string ppe_str_trim_left_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
 {
-    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_LEFT | PPE_STR_OPT_VA_CSTR, (void *) t, 0);
+    return ppe_str_trim_ex(s, PPE_STR_OPT_LEFT_END | PPE_STR_OPT_CSTR_ARG, (void *) t, 0);
 } /* ppe_str_trim_left_cs */
 
 static inline ppe_string ppe_str_trim_right_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
 {
-    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_RIGHT | PPE_STR_OPT_VA_CSTR, (void *) t, 0);
+    return ppe_str_trim_ex(s, PPE_STR_OPT_RIGHT_END | PPE_STR_OPT_CSTR_ARG, (void *) t, 0);
 } /* ppe_str_trim_right_cs */
 
 static inline ppe_string ppe_str_trim_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
 {
-    return ppe_str_trim_ex(s, PPE_STR_OPT_DIRECT_BOTH | PPE_STR_OPT_VA_CSTR, (void *) t, 0);
+    return ppe_str_trim_ex(s, PPE_STR_OPT_BOTH_ENDS | PPE_STR_OPT_CSTR_ARG, (void *) t, 0);
 } /* ppe_str_trim_cs */
 
 /* ---- */
@@ -283,17 +280,17 @@ PPE_API extern ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const pp
 
 static inline ppe_string ppe_str_chomp_newline(const ppe_string restrict s, const ppe_str_option opt)
 {
-    return ppe_str_chomp_ex(s, (opt | PPE_STR_OPT_VA_CSTR), NULL, 0);
+    return ppe_str_chomp_ex(s, (opt | PPE_STR_OPT_CSTR_ARG), NULL, 0);
 } /* ppe_str_chomp_newline */
 
 static inline ppe_string ppe_str_chomp(const ppe_string restrict s, const ppe_string restrict t, const ppe_str_option opt)
 {
-    return ppe_str_chomp_ex(s, (opt & (~PPE_STR_OPT_VA_CSTR)), (void *) t, 0);
+    return ppe_str_chomp_ex(s, (opt & (~PPE_STR_OPT_CSTR_ARG)), (void *) t, 0);
 } /* ppe_str_chomp */
 
 static inline ppe_string ppe_str_chomp_cs(const ppe_string restrict s, const ppe_cstr restrict t, const ppe_str_option opt)
 {
-    return ppe_str_chomp_ex(s, (opt | PPE_STR_OPT_VA_CSTR), (void *) t, ppe_cs_size(t));
+    return ppe_str_chomp_ex(s, (opt | PPE_STR_OPT_CSTR_ARG), (void *) t, ppe_cs_size(t));
 } /* ppe_str_chomp_cs */
 
 /* -- Join & Concat -- */
@@ -325,12 +322,12 @@ static inline ppe_string ppe_str_clone_cs(const ppe_cstr restrict s)
 
 static inline ppe_string ppe_str_join_two(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(d, PPE_PTR_JOIN_ADD_ITEM_STRING, s1, PPE_PTR_JOIN_ADD_ITEM_STRING, s2, PPE_PTR_JOIN_END);
+    return ppe_str_join(d, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
 }
 
 static inline ppe_string ppe_str_concat_two(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(ppe_str_empty(), PPE_PTR_JOIN_ADD_ITEM_STRING, s1, PPE_PTR_JOIN_ADD_ITEM_STRING, s2, PPE_PTR_JOIN_END);
+    return ppe_str_join(ppe_str_empty(), PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
 }
 
 #ifdef __cplusplus
