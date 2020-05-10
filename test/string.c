@@ -46,6 +46,30 @@ static void test_cs_compare(void)
     CU_ASSERT_EQUAL(ppe_cs_compare("B", "AAAA"), 1);
 }
 
+static void test_cs_find(void)
+{
+    ppe_cstr_c s = "This is a test line.";
+    ppe_cstr_c r = NULL;
+
+    r = ppe_cs_find(s, "This");
+    CU_ASSERT_PTR_NOT_NULL(r);
+    CU_ASSERT_EQUAL(r - s, 0);
+
+    r = ppe_cs_find(s, "is is");
+    CU_ASSERT_PTR_NOT_NULL(r);
+    CU_ASSERT_EQUAL(r - s, 2);
+
+    r = ppe_cs_find(s, "line.");
+    CU_ASSERT_PTR_NOT_NULL(r);
+    CU_ASSERT_EQUAL(r - s, 15);
+
+    r = ppe_cs_find(s, ". It");
+    CU_ASSERT_PTR_NULL(r);
+
+    r = ppe_cs_find(s, "What");
+    CU_ASSERT_PTR_NULL(r);
+}
+
 /*
 static void test_str_get_empty(void)
 {
@@ -226,6 +250,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_size()", test_cs_size},
     {"test_cs_is_empty()", test_cs_is_empty},
     {"test_cs_compare()", test_cs_compare},
+    {"test_cs_find()", test_cs_find},
     CU_TEST_INFO_NULL
 };
 
