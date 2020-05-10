@@ -5,6 +5,48 @@
 
 #include "ppe/string.h"
 
+static void test_cs_get_empty(void)
+{
+    ppe_cstr s = ppe_cs_get_empty();
+
+    CU_ASSERT_PTR_NOT_NULL(s);
+    CU_ASSERT_EQUAL(strlen(s), 0);
+}
+
+static void test_cs_size(void)
+{
+    ppe_cstr s = "TEST";
+    ppe_size sz = ppe_cs_size(s);
+
+    CU_ASSERT_EQUAL(strlen(s), sz);
+}
+
+static void test_cs_is_empyt(void)
+{
+    ppe_cstr s = "";
+    CU_ASSERT_TRUE(ppe_cs_is_empty(s));
+
+    s = ppe_cs_get_empty();
+    CU_ASSERT_TRUE(ppe_cs_is_empty(s));
+}
+
+static void test_cs_compare(void)
+{
+    CU_ASSERT_EQUAL(ppe_cs_compare("aa", "aaa"), -1);
+    CU_ASSERT_EQUAL(ppe_cs_compare("aa", "aa"), 0);
+    CU_ASSERT_EQUAL(ppe_cs_compare("aaa", "aa"), 1);
+
+    CU_ASSERT_EQUAL(ppe_cs_compare("AAA", "aa"), -1);
+    CU_ASSERT_EQUAL(ppe_cs_compare("aa", "AAA"), 1);
+
+    CU_ASSERT_EQUAL(ppe_cs_compare("A", "BBB"), -1);
+    CU_ASSERT_EQUAL(ppe_cs_compare("BBB", "A"), 1);
+
+    CU_ASSERT_EQUAL(ppe_cs_compare("AAAA", "B"), -1);
+    CU_ASSERT_EQUAL(ppe_cs_compare("B", "AAAA"), 1);
+}
+
+/*
 static void test_str_get_empty(void)
 {
     ppe_string str = ppe_str_get_empty();
@@ -177,200 +219,13 @@ static void test_cs_join(void)
 
     ppe_str_destroy(str);
 }
-
-static void test_cs_join_big(void)
-{
-    ppe_size buf_cap = 4096 - sizeof(void*) - sizeof(ppe_size) - sizeof(ppe_size);
-    ppe_size src1_len = buf_cap - 1;
-    ppe_size src2_len = buf_cap;
-    ppe_size src3_len = buf_cap + 1;
-    ppe_size src4_len = 4096;
-    const char * src1 = NULL;
-    const char * src2 = NULL;
-    const char * src3 = NULL;
-    const char * src4 = NULL;
-    ppe_string str = NULL;
-
-    src1 = malloc(src1_len);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(src1);
-    memset(src1, 'A', src1_len);
-
-    src2 = malloc(src2_len);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(src2);
-    memset(src2, 'B', src2_len);
-
-    src3 = malloc(src3_len);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(src3);
-    memset(src3, 'C', src3_len);
-
-    src4 = malloc(src4_len);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(src4);
-    memset(src4, 'D', src4_len);
-
-    /* Data do not go across the end of the first buffer. */
-
-    str = ppe_cs_join("", src1, src1_len, "", 0, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src1_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src1, src1_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* Data reach out to the end of the first buffer. */
-
-    str = ppe_cs_join("", src2, src2_len, "", 0, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src2_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src2, src2_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* Data go across the end of the first buffer. */
-
-    str = ppe_cs_join("", src3, src3_len, "", 0, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src3_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src3, src3_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* Delimiter does not go across the end of the first buffer. */
-
-    /* src1 \t | src1 */
-
-    str = ppe_cs_join("\t", src1, src1_len, src1, src1_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src1_len + 1 + src1_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src1, src1_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len, "\t", 1), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1, src1, src1_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* src1 \t | src2 */
-
-    str = ppe_cs_join("\t", src1, src1_len, src2, src2_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src1_len + 1 + src2_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src1, src1_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len, "\t", 1), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1, src2, src2_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* src1 \t | src2 \t <src3 | src3> */
-
-    str = ppe_cs_join("\t", src1, src1_len, src2, src2_len, src3, src3_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src1_len + 1 + src2_len + 1 + src3_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src1, src1_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len, "\t", 1), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1, src2, src2_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1 + src2_len, "\t", 1), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1 + src2_len + 1, src3, src3_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* src1 \t | src4 | \t src2 */
-
-    str = ppe_cs_join("\t", src1, src1_len, src4, src4_len, src2, src2_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src1_len + 1 + src4_len + 1 + src2_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src1, src1_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len, "\t", 1), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1, src4, src4_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1 + src4_len, "\t", 1), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 1 + src4_len + 1, src2, src2_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* Delimiter goes across the end of the first buffer. */
-
-    /* src1 = | = src1 */
-
-    str = ppe_cs_join("==", src1, src1_len, src1, src1_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src1_len + 2 + src1_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src1, src1_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len, "==", 2), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 2, src1, src1_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* src1 = | = <src4 | src4> */
-
-    str = ppe_cs_join("==", src1, src1_len, src4, src4_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src1_len + 2 + src1_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src1, src1_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len, "==", 2), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src1_len + 2, src4, src4_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* Delimiter begins at the start of the second buffer. */
-
-    /* src2 | */
-
-    str = ppe_cs_join("::", src2, src2_len, "", 0, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src2_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src2, src2_len), 0);
-
-    ppe_str_destroy(str);
-
-    /* src2 | :: <src4 | src4> */
-
-    str = ppe_cs_join("::", src2, src2_len, src4, src4_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src2_len + 2 + src4_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src2, src2_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src2_len, "::", 2), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src2_len + 2, src4, src4_len), 0);
-
-    /* src2 | @@ @@ src3 */
-
-    str = ppe_cs_join("@@", src2, src2_len, "", 0, src3, src3_len, PPE_STR_ARG_END);
-    CU_ASSERT_PTR_NOT_NULL(str);
-    CU_ASSERT_NOT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(ppe_str_size(str), src2_len + 4 + src4_len);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str), src2, src2_len), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src2_len, "@@@@", 4), 0);
-    CU_ASSERT_EQUAL(memcmp(ppe_str_cstr(str) + src2_len + 4, src3, src3_len), 0);
-
-    ppe_str_destroy(str);
-}
-
-static void test_str_clone(void)
-{
-    ppe_string str = NULL;
-
-    str = ppe_str_clone(ppe_str_get_empty());
-    CU_ASSERT_EQUAL(str, ppe_str_get_empty());
-    CU_ASSERT_EQUAL(strlen(ppe_str_cstr(str)), 0);
-    CU_ASSERT_EQUAL(ppe_str_size(str), 0);
-
-    ppe_str_destroy(str);
-}
+*/
 
 CU_TestInfo test_normal_cases[] = {
-    {"test_str_get_empty()", test_str_get_empty},
-    {"test_cs_clone()", test_cs_clone},
-    {"test_str_destroy()", test_str_destroy},
-    {"test_cs_join_2()", test_cs_join_2},
-    {"test_cs_concat_2()", test_cs_concat_2},
-    {"test_cs_join()", test_cs_join},
+    {"test_cs_get_empty()", test_str_get_empty},
+    {"test_cs_size()", test_str_get_size},
+    {"test_cs_is_empty()", test_str_is_empty},
+    {"test_cs_compare()", test_str_compare},
     CU_TEST_INFO_NULL
 };
 
@@ -385,19 +240,19 @@ int main(void)
 
     if (CU_initialize_registry() != CUE_SUCCESS) {
         return CU_get_error();
-    } // if
+    } /* if */
 
     pSuite = CU_add_suite("Suite_Test_Log", NULL, NULL);
     if (pSuite == NULL) {
         CU_cleanup_registry();
         return CU_get_error();
-    } // if
+    } /* if */
 
     if (CU_register_suites(suites) != CUE_SUCCESS) {
         printf("Cannot register test suites.\n");
         CU_cleanup_registry();
         return CU_get_error();
-    }
+    } /* if */
     
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();

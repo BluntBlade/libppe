@@ -15,13 +15,14 @@ extern "C"
 
 /* ---- Types --------------------------------------------------------------- */
 
-typedef char * ppe_cstr;
+typedef ppe_char * ppe_cstr;
+typedef const ppe_char * ppe_cstr_c;
 
-struct ppe_cs_snippet_st;
-typedef struct ppe_cs_snippet_st * ppe_cs_snippet;
+struct PPE_CS_SNIPPET;
+typedef struct PPE_CS_SNIPPET * ppe_cs_snippet;
 
-struct ppe_string_st; 
-typedef struct ppe_string_st * ppe_string;
+struct PPE_STRING; 
+typedef struct PPE_STRING * ppe_string;
 
 typedef enum
 {
@@ -36,8 +37,9 @@ typedef enum
     PPE_STR_JOIN_ADD_ITEM_SNIPPET = 8
 } ppe_str_join_action;
 
-typedef enum
+enum
 {
+    PPE_STR_OPT_NONE = 0x00000000,
     PPE_STR_OPT_LEFT_END = 0x00000001,
     PPE_STR_OPT_RIGHT_END = 0x00000002,
     PPE_STR_OPT_BOTH_ENDS = 0x00000003,
@@ -45,7 +47,9 @@ typedef enum
     PPE_STR_OPT_MEASURE_SIZE = 0x20000000,
     PPE_STR_OPT_DONT_TRUNCATE = 0x40000000,
     PPE_STR_OPT_NEW_STRING = 0x80000000
-} ppe_str_option;
+};
+
+typedef ppe_uint ppe_str_option;
 
 /* ---- Macros -------------------------------------------------------------- */
 
@@ -79,13 +83,13 @@ PPE_API extern void ppe_cspt_reset(ppe_cs_snippet restrict spt);
 
 /* -- Manipulators -- */
 
-PPE_API extern ppe_bool ppe_cspt_get(ppe_cs_snippet restrict spt, const ppe_uint idx, const ppe_cstr * restrict s, ppe_size * restrict sz);
-PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, const ppe_cstr restrict s, const ppe_size sz);
+PPE_API extern ppe_bool ppe_cspt_get(ppe_cs_snippet const restrict spt, const ppe_uint idx, ppe_cstr_c * const restrict s, ppe_size * restrict sz);
+PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, ppe_cstr_c const restrict s, const ppe_size sz);
 
 /* -- Producer -- */
 
-PPE_API extern ppe_cstr ppe_cspt_clone(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr restrict b, ppe_size * bsz);
-PPE_API extern ppe_cstr * ppe_cspt_clone_some(const ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_uint * restrict n);
+PPE_API extern ppe_cstr_c ppe_cspt_copy(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr restrict b, ppe_size * restrict bsz);
+PPE_API extern ppe_cstr_c * ppe_cspt_copy_some(const ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_uint * restrict n);
 
 /* -- Wrappers -- */
 
@@ -105,49 +109,49 @@ static inline ppe_bool ppe_cspt_is_full(const ppe_cs_snippet restrict spt)
 
 /* -- Preset values -- */
 
-PPE_API extern const ppe_cstr ppe_cs_empty(void);
+PPE_API extern ppe_cstr_c ppe_cs_empty(void);
 
 /* -- Property -- */
 
-PPE_API extern ppe_cs_size(const ppe_cstr restrict s);
+PPE_API extern ppe_size ppe_cs_size(ppe_cstr_c const restrict s);
 
 /* -- Test -- */
 
-PPE_API extern ppe_bool ppe_cs_is_empty(const ppe_cstr restrict s);
-PPE_API extern ppe_int ppe_cs_compare(const ppe_cstr restrict s1, const ppe_cstr restrict s2);
+PPE_API extern ppe_bool ppe_cs_is_empty(ppe_cstr_c const restrict s);
+PPE_API extern ppe_int ppe_cs_compare(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2);
 
 /* -- Find -- */
 
-PPE_API extern const ppe_cstr ppe_cs_find(const ppe_cstr restrict s, const ppe_cstr restrict t);
+PPE_API extern ppe_cstr_c const ppe_cs_find(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t);
 
 /* -- Create & Destroy -- */
 
-PPE_API extern void ppe_cs_destroy(ppe_cstr restrict s);
-PPE_API extern ppe_cstr ppe_cs_create(const ppe_cstr restrict s, const ppe_size sz);
+PPE_API extern void ppe_cs_destroy(ppe_cstr_c restrict s);
+PPE_API extern ppe_cstr_c ppe_cs_create(ppe_cstr_c const restrict s, const ppe_size sz);
 
 /* -- Substring -- */
 
-PPE_API extern ppe_cstr ppe_cs_substr(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off, const ppe_size ssz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt);
 
 /* -- Trim & Chomp -- */
 
-PPE_API extern ppe_cstr ppe_cs_trim_bytes(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
-PPE_API extern ppe_cstr ppe_cs_chop(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
-PPE_API extern ppe_cstr ppe_cs_chomp(const ppe_cstr restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_trim_bytes(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
 
 /* -- Join & Concat -- */
 
-PPE_API extern ppe_cstr ppe_cs_join(const ppe_cstr restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...);
-PPE_API extern ppe_cstr ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...);
+PPE_API extern ppe_cstr_c ppe_cs_join(ppe_cstr_c const restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...);
+PPE_API extern ppe_cstr_c ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...);
 
 /* -- Split -- */
 
-PPE_API extern ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_cstr * restrict ss, const ppe_str_option opt);
+PPE_API extern ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, ppe_cstr_c * restrict ss, const ppe_str_option opt);
 
 /* -- Replace & Substitute -- */
 
-PPE_API extern ppe_cs_cstr ppe_cs_replace(const ppe_cstr restrict s, const ppe_size off, const ppe_size ssz, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
-PPE_API extern ppe_cs_cstr ppe_cs_substitute(const ppe_cstr restrict s, const ppe_cstr restrict from, const ppe_cstr restrict to, ppe_cs_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_replace(ppe_cstr_c const restrict s, const ppe_size off, const ppe_size ssz, ppe_cstr_c const restrict to, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_substitute(ppe_cstr_c const restrict s, ppe_cstr_c const restrict from, ppe_cstr_c const restrict to, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_str_option opt);
 
 /* -- Format -- */
 
@@ -155,47 +159,47 @@ PPE_API extern ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict 
 
 /* -- Wrapper -- */
 
-static inline ppe_bool ppe_cs_equal_to(const ppe_cstr restrict s1, const ppe_cstr restrict s2)
+static inline ppe_bool ppe_cs_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
 {
     return ppe_cs_compare(s1, s2) == 0;
 }
 
-static inline ppe_bool ppe_cs_is_less_than(const ppe_cstr restrict s1, const ppe_cstr restrict s2)
+static inline ppe_bool ppe_cs_is_less_than(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
 {
     return ppe_cs_compare(s1, s2) < 0;
 }
 
-static inline ppe_bool ppe_cs_is_less_than_or_equal_to(const ppe_cstr restrict s1, const ppe_cstr restrict s2)
+static inline ppe_bool ppe_cs_is_less_than_or_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
 {
     return ppe_cs_compare(s1, s2) <= 0;
 }
 
-static inline ppe_bool ppe_cs_is_greater_than(const ppe_cstr restrict s1, const ppe_cstr restrict s2)
+static inline ppe_bool ppe_cs_is_greater_than(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
 {
     return ppe_cs_compare(s1, s2) > 0;
 }
 
-static inline ppe_bool ppe_cs_is_greater_than_or_equal_to(const ppe_cstr restrict s1, const ppe_cstr restrict s2)
+static inline ppe_bool ppe_cs_is_greater_than_or_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
 {
     return ppe_cs_compare(s1, s2) >= 0;
 }
 
-static inline ppe_cstr ppe_cs_clone(const ppe_cstr restrict s)
+static inline ppe_cstr_c ppe_cs_clone(ppe_cstr_c const restrict s)
 {
     return ppe_cs_create(s, ppe_cs_size(s));
 }
 
-static inline ppe_cstr ppe_cs_trim_left(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz)
+static inline ppe_cstr_c ppe_cs_trim_left(ppe_cstr_c const restrict s, const ppe_cstr restrict t, ppe_cstr restrict b, ppe_size * bsz)
 {
     return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_LEFT_END);
 }
 
-static inline ppe_cstr ppe_cs_trim_right(const ppe_cstr restrict s, const ppe_cstr restrict t, ppe_cstr * restring b, ppe_size * bsz)
+static inline ppe_cstr_c ppe_cs_trim_right(ppe_cstr_c const restrict s, const ppe_cstr restrict t, ppe_cstr restrict b, ppe_size * bsz)
 {
     return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_RIGHT_END);
 }
 
-static inline ppe_cstr ppe_cs_trim(const ppe_cstr restrict s, ppe_cstr * restring b, ppe_size * bsz)
+static inline ppe_cstr_c ppe_cs_trim(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * bsz)
 {
     return ppe_cs_trim_bytes(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_BOTH_ENDS);
 }
@@ -210,10 +214,12 @@ PPE_API extern const ppe_string ppe_str_empty(void);
 
 /* -- Property -- */
 
-PPE_API extern const ppe_char * pp_str_addr(ppe_string restrict s);
+PPE_API extern ppe_cstr_c ppe_str_addr(ppe_string restrict s);
 PPE_API extern ppe_ssize ppe_str_size(ppe_string restrict s);
 
-/* -- Comparison -- */
+/* -- Test -- */
+
+PPE_API extern ppe_bool ppe_str_is_empty(ppe_string restrict s);
 
 PPE_API extern ppe_bool ppe_str_equals_to(const ppe_string restrict s1, const ppe_string restrict s2);
 PPE_API extern ppe_bool ppe_str_less_than(const ppe_string restrict s1, const ppe_string restrict s2);
@@ -231,8 +237,8 @@ static inline ppe_bool ppe_str_greater_than_or_equals_to(const ppe_string restri
 
 /* -- Create & Destroy -- */
 
-PPE_API extern ppe_string ppe_str_create(const ppe_cstr restrict s, const ppe_size sz);
-PPE_API extern ppe_string ppe_str_clone(const ppe_string restrict s);
+PPE_API extern ppe_string ppe_str_create(ppe_cstr_c const restrict s, const ppe_size sz);
+PPE_API extern ppe_string ppe_str_clone(ppe_string const restrict s);
 PPE_API extern void ppe_str_destroy(ppe_string restrict s);
 
 /* -- Manipulate -- */
@@ -275,7 +281,7 @@ static inline ppe_string ppe_str_trim_cs(const ppe_string restrict s, const ppe_
 
 /* ---- */
 
-PPE_API extern ppe_string ppe_str_chop(const ppe_string restrict s, cnst ppe_str_option opt);
+PPE_API extern ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt);
 PPE_API extern ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz);
 
 static inline ppe_string ppe_str_chomp_newline(const ppe_string restrict s, const ppe_str_option opt)
@@ -300,8 +306,8 @@ PPE_API extern ppe_string ppe_str_concat(const ppe_str_option opt, ...);
 
 /* -- Split -- */
 
-PPE_API extern ppe_cs_snippet ppe_str_split(const ppe_string restrict s, const ppe_string restrict d, ppe_cs_snippet restrict spt, const const ppe_uint * restrict n, const ppe_str_option opt);
-PPE_API extern ppe_cs_snippet ppe_str_split_cs(const ppe_string restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, const const ppe_uint * restrict n, const ppe_str_option opt);
+PPE_API extern ppe_cs_snippet ppe_str_split(const ppe_string restrict s, const ppe_string restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_str_option opt);
+PPE_API extern ppe_cs_snippet ppe_str_split_cs(const ppe_string restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_str_option opt);
 
 /* -- Replace & Substitute -- */
 
@@ -315,19 +321,19 @@ PPE_API extern ppe_string ppe_str_substitute_cs(const ppe_string restrict s, con
 
 /* -- Wrapper -- */
 
-static inline ppe_string ppe_str_clone_cs(const ppe_cstr restrict s)
+static inline ppe_string ppe_str_clone_cs(ppe_cstr_c const restrict s)
 {
     return ppe_str_create(s, ppe_cs_size(s));
 } /* ppe_str_clone_cs */
 
 static inline ppe_string ppe_str_join_two(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(d, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
+    return ppe_str_join(d, PPE_STR_OPT_NONE, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
 }
 
 static inline ppe_string ppe_str_concat_two(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(ppe_str_empty(), PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
+    return ppe_str_join(ppe_str_empty(), PPE_STR_OPT_NONE, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
 }
 
 #ifdef __cplusplus
