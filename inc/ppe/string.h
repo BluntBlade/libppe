@@ -109,7 +109,7 @@ static inline ppe_bool ppe_cspt_is_full(const ppe_cs_snippet restrict spt)
 
 /* -- Preset values -- */
 
-PPE_API extern ppe_cstr_c ppe_cs_empty(void);
+PPE_API extern ppe_cstr_c ppe_cs_get_empty(void);
 
 /* -- Property -- */
 
@@ -210,7 +210,7 @@ static inline ppe_cstr_c ppe_cs_trim(ppe_cstr_c const restrict s, ppe_cstr restr
 
 /* -- Preset values -- */
 
-PPE_API extern const ppe_string ppe_str_empty(void);
+PPE_API extern const ppe_string ppe_str_get_empty(void);
 
 /* -- Property -- */
 
@@ -333,7 +333,7 @@ static inline ppe_string ppe_str_join_two(const ppe_string restrict d, const ppe
 
 static inline ppe_string ppe_str_concat_two(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(ppe_str_empty(), PPE_STR_OPT_NONE, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
+    return ppe_str_join(ppe_str_get_empty(), PPE_STR_OPT_NONE, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
 }
 
 #ifdef __cplusplus

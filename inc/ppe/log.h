@@ -37,7 +37,8 @@ enum
 
 /* ---- Macros ---- */
 
-#define PPE_LOG_FILE_LOCATION (__FILE__ ## ":" ## #__LINE__)
+#define _PPE_LOG_LOCATION(fl, ln) (fl ":" #ln)
+#define PPE_LOG_LOCATION _PPE_LOG_LOCATION(__FILE__, __LINE__)
 
 #define PPE_LOG_DEFAULT_FORMAT (PPE_LOG_SHORT_FILENAME | PPE_LOG_MILLISECOND)
 

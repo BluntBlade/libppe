@@ -7,7 +7,7 @@
 
 static void test_cs_get_empty(void)
 {
-    ppe_cstr s = ppe_cs_get_empty();
+    ppe_cstr_c s = ppe_cs_get_empty();
 
     CU_ASSERT_PTR_NOT_NULL(s);
     CU_ASSERT_EQUAL(strlen(s), 0);
@@ -15,15 +15,15 @@ static void test_cs_get_empty(void)
 
 static void test_cs_size(void)
 {
-    ppe_cstr s = "TEST";
+    ppe_cstr_c s = "TEST";
     ppe_size sz = ppe_cs_size(s);
 
     CU_ASSERT_EQUAL(strlen(s), sz);
 }
 
-static void test_cs_is_empyt(void)
+static void test_cs_is_empty(void)
 {
-    ppe_cstr s = "";
+    ppe_cstr_c s = "";
     CU_ASSERT_TRUE(ppe_cs_is_empty(s));
 
     s = ppe_cs_get_empty();
@@ -222,15 +222,15 @@ static void test_cs_join(void)
 */
 
 CU_TestInfo test_normal_cases[] = {
-    {"test_cs_get_empty()", test_str_get_empty},
-    {"test_cs_size()", test_str_get_size},
-    {"test_cs_is_empty()", test_str_is_empty},
-    {"test_cs_compare()", test_str_compare},
+    {"test_cs_get_empty()", test_cs_get_empty},
+    {"test_cs_size()", test_cs_size},
+    {"test_cs_is_empty()", test_cs_is_empty},
+    {"test_cs_compare()", test_cs_compare},
     CU_TEST_INFO_NULL
 };
 
 CU_SuiteInfo suites[] = {
-    {"test_normal_cases", NULL, NULL, test_normal_cases},
+    {"test_normal_cases", NULL, NULL, NULL, NULL, test_normal_cases},
     CU_SUITE_INFO_NULL
 };
 

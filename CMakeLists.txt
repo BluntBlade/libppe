@@ -30,7 +30,6 @@ endif (DEFINED HAVE_PREAD AND DEFINED PPE_SHARED_FD_FOR_SECTIONS_SUPPORT AND ${P
 add_compile_options (-D_GNU_SOURCE --std=c99 -Wall)
 
 file (GLOB_RECURSE SOURCE_FILES src/*.c)
-include_directories (src)
 add_library (ppe SHARED ${SOURCE_FILES})
 
 if (DEFINED HAVE_LSEEK64 AND DEFINED PPE_LARGE_FILE_SUPPORT_AWARE AND ${PPE_LARGE_FILE_SUPPORT_AWARE})
@@ -39,6 +38,6 @@ endif (DEFINED HAVE_LSEEK64 AND DEFINED PPE_LARGE_FILE_SUPPORT_AWARE AND ${PPE_L
 
 #target_link_libraries (ppe curl ssl crypto)
 
-#add_subdirectory (test)
+add_subdirectory (test)
 #add_subdirectory (demo)
 #add_test (NAME test_json COMMAND test/test_json)

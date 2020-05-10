@@ -656,7 +656,7 @@ static ppe_cstr_c ppe_cs_substitute_imp(ppe_cstr_c const restrict s, ppe_cstr_c 
 
 /* -- Preset values -- */
 
-PPE_API ppe_cstr_c ppe_cs_empty(void)
+PPE_API ppe_cstr_c ppe_cs_get_empty(void)
 {
     return cs_empty_s;
 }
@@ -1173,7 +1173,7 @@ static inline void ppe_str_get_var_args(const ppe_str_option opt, const void * r
 
 /* -- Preset values -- */
 
-PPE_API const ppe_string ppe_str_empty(void)
+PPE_API const ppe_string ppe_str_get_empty(void)
 {
     return &str_empty_s;
 }

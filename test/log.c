@@ -10,7 +10,8 @@ static char log_buf[8192];
 
 static ppe_bool test_general_write_cfn(ppe_log_itf restrict itf, const char * restrict msg, ppe_size size)
 {
-    return memcpy(log_buf, msg, size);
+    memcpy(log_buf, msg, size);
+    return ppe_true;
 }
 
 static ppe_bool test_general_flush_cfn(ppe_log_itf restrict itf)
@@ -86,7 +87,7 @@ static ppe_uint test_verify_timestamp(const char * restrict buf, ppe_size size)
     /* -- Verify the millisecond -- */
     if (buf[i - 1] != '.') return i;
 
-    if (! (isdigit(buf[i + 0]) && isdigit(buf[i + 1]) && isdigit(buf[i + 2])) return 0;
+    if (! (isdigit(buf[i + 0]) && isdigit(buf[i + 1]) && isdigit(buf[i + 2]))) return 0;
     if (buf[i + 3] != ' ') return 0;
 
     memcpy(tmp, &buf[i], 3);
@@ -133,11 +134,11 @@ static void test_get_threshold(void)
 
 static void test_set_threshold(void)
 {
-    ppe_log_level last = ppe_log_set_threshold(*ppe_log_get_stderr_logg(), PPE_LOG_FATAL); 
+    ppe_log_level last = ppe_log_set_threshold(*ppe_log_get_stderr_logger(), PPE_LOG_FATAL); 
     CU_ASSERT_EQUAL(last, PPE_LOG_WARN);
     CU_ASSERT_EQUAL(ppe_log_get_threshold(*ppe_log_get_stderr_logger()), PPE_LOG_FATAL);
 
-    ppe_log_set_threshold(*ppe_log_get_stderr_logg(), PPE_LOG_WARN); 
+    ppe_log_set_threshold(*ppe_log_get_stderr_logger(), PPE_LOG_WARN); 
 }
 
 static void test_get_flags(void)
@@ -147,11 +148,11 @@ static void test_get_flags(void)
 
 static void test_set_flags(void)
 {
-    ppe_uint last = ppe_log_set_flags(*ppe_log_get_stderr_logg(), 0x9999); 
+    ppe_uint last = ppe_log_set_flags(*ppe_log_get_stderr_logger(), 0x9999); 
     CU_ASSERT_EQUAL(last, PPE_LOG_DEFAULT_FORMAT);
     CU_ASSERT_EQUAL(ppe_log_get_flags(*ppe_log_get_stderr_logger()), 0x9999);
 
-    ppe_log_set_threshold(*ppe_log_get_stderr_logg(), PPE_LOG_DEFAULT_FORMAT); 
+    ppe_log_set_threshold(*ppe_log_get_stderr_logger(), PPE_LOG_DEFAULT_FORMAT); 
 }
 
 static void test_create(void)
@@ -169,7 +170,7 @@ static void test_create(void)
     log = NULL;
     
     /* -- Small buffer -- */
-    log = ppe_log_create(256, PPE_LOG_INFO, PPE_LOG_DEFAULT_FORMAT, test_create_write_cfn, test_create_flush_cfn);
+    log = ppe_log_create(256, PPE_LOG_INFO, PPE_LOG_DEFAULT_FORMAT, test_general_write_cfn, test_general_flush_cfn);
     CU_ASSERT_PTR_NOT_NULL(log);
     CU_ASSERT_EQUAL(ppe_log_get_threshold(log), PPE_LOG_INFO);
     CU_ASSERT_EQUAL(ppe_log_get_flags(log), PPE_LOG_DEFAULT_FORMAT);
@@ -178,7 +179,7 @@ static void test_create(void)
     log = NULL;
     
     /* -- Big buffer -- */
-    log = ppe_log_create(10240, PPE_LOG_WARN, PPE_LOG_DEFAULT_FORMAT, test_create_write_cfn, test_create_flush_cfn);
+    log = ppe_log_create(10240, PPE_LOG_WARN, PPE_LOG_DEFAULT_FORMAT, test_general_write_cfn, test_general_flush_cfn);
     CU_ASSERT_PTR_NOT_NULL(log);
     CU_ASSERT_EQUAL(ppe_log_get_threshold(log), PPE_LOG_WARN);
     CU_ASSERT_EQUAL(ppe_log_get_flags(log), PPE_LOG_DEFAULT_FORMAT);
@@ -195,7 +196,6 @@ static void test_destroy(void)
 
     /* -- Stderr logger -- */
     /* Noop */
-    ppe_log_destroy(ppe_log_get_stderr_logger());
 }
 
 static void test_write_to(void)
@@ -209,8 +209,8 @@ static void test_write_to(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_INFO, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
-    CU_ASSERT_PTR_NOT_NULL(strstr(log_buf,  where);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
+    CU_ASSERT_PTR_NOT_NULL(strstr(log_buf,  where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[INFO]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
@@ -228,7 +228,7 @@ static void test_vprintf_to(void)
     /* -- Integer -- */
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_printf_to(&log, where, PPE_LOG_DEBUG, "%d", 10240);
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "10240"));
@@ -236,7 +236,7 @@ static void test_vprintf_to(void)
     /* -- Double float -- */
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_printf_to(&log, where, PPE_LOG_INFO, "%Lf", 65432.123123L);
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[INFO]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "65432.123123"));
@@ -244,7 +244,7 @@ static void test_vprintf_to(void)
     /* -- String -- */
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_printf_to(&log, where, PPE_LOG_WARN, "%s", "TEST String");
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[WARN]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "TEST String"));
@@ -252,7 +252,7 @@ static void test_vprintf_to(void)
     /* -- Character -- */
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_printf_to(&log, where, PPE_LOG_ERROR, "%c", 'Z');
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[ERROR]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "Z"));
@@ -260,7 +260,7 @@ static void test_vprintf_to(void)
     /* -- Mixed -- */
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_printf_to(&log, where, PPE_LOG_FATAL, "%s %d\t%Lf %c", "LINE", 45678, 98765.432432L, 'A');
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "LINE 45678\t98765.432432 A"));
@@ -280,35 +280,35 @@ static void test_thresholds(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_DEBUG, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_INFO, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[INFO]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_WARN, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[WARN]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_ERROR, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[ERROR]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_FATAL, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
@@ -325,28 +325,28 @@ static void test_thresholds(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_INFO, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[INFO]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_WARN, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[WARN]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_ERROR, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[ERROR]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_FATAL, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
@@ -367,21 +367,21 @@ static void test_thresholds(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_WARN, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[WARN]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_ERROR, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[ERROR]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_FATAL, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
@@ -405,14 +405,14 @@ static void test_thresholds(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_ERROR, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[ERROR]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_FATAL, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
@@ -440,7 +440,7 @@ static void test_thresholds(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_FATAL, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
@@ -460,7 +460,7 @@ static void test_format_millisecond(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_DEBUG, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 23);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 23);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
@@ -468,10 +468,12 @@ static void test_format_millisecond(void)
     ppe_log_destroy(log);
 }
 
+#define TEST_MAKE_TAG(tag, ln) (tag ":" #ln)
+
 static void test_format_short_filename(void)
 {
     const char * msg = "FAKE TEST LINE";
-    const char * where = PPE_LOG_FILE_LOCATION, * where_tag = " log.c:" #__LINE__;
+    const char * where = PPE_LOG_LOCATION, * tag = TEST_MAKE_TAG("log.c:", __LINE__);
     ppe_log log = NULL;
 
     /* -- Logging short filename -- */
@@ -480,8 +482,8 @@ static void test_format_short_filename(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_DEBUG, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
-    CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where_tag));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
+    CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, tag));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
@@ -492,9 +494,9 @@ static void test_format_long_filename(void)
 {
     const char * msg = "FAKE TEST LINE";
 #if defined(PPE_CFG_OS_WINDOWS)
-    const char * where = PPE_LOG_FILE_LOCATION, * where_tag = "test\\log.c:" #__LINE__;
+    const char * where = PPE_LOG_LOCATION, * tag = TEST_MAKE_TAG("test\\log.c:", __LINE__);
 #else
-    const char * where = PPE_LOG_FILE_LOCATION, * where_tag = "test/log.c:" #__LINE__;
+    const char * where = PPE_LOG_LOCATION, * tag = TEST_MAKE_TAG("test/log.c:", __LINE__);
 #endif
     ppe_log log = NULL;
 
@@ -504,8 +506,8 @@ static void test_format_long_filename(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_DEBUG, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
-    CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where_tag));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
+    CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, tag));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
@@ -515,7 +517,7 @@ static void test_format_long_filename(void)
 static void test_format_newline(void)
 {
     const char * msg = "FAKE TEST LINE";
-    const char * where = PPE_LOG_FILE_LOCATION;
+    const char * where = PPE_LOG_LOCATION;
 #if defined(PPE_CFG_OS_WINDOWS)
     const char * newline = "\r\n";
 #else
@@ -529,8 +531,7 @@ static void test_format_newline(void)
 
     memset(log_buf, 0, sizeof(log_buf));
     ppe_log_write_to(&log, where, PPE_LOG_DEBUG, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
-    CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where_tag));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, newline));
@@ -549,72 +550,72 @@ static void test_wrappers(void)
 
     /* -- Logging messages -- */
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_debug(&log, where, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_debug(where, msg, strlen(msg));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_info(&log, where, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_info(where, msg, strlen(msg));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[INFO]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_warn(&log, where, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_warn(where, msg, strlen(msg));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[WARN]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_error(&log, where, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_error(where, msg, strlen(msg));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[ERROR]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_fatal(&log, where, msg, strlen(msg));
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_fatal(where, msg, strlen(msg));
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     /* -- Logging formatted messages -- */
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_debugf(&log, where, "%s", msg);
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_debugf(where, "%s", msg);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[DEBUG]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_infof(&log, where, "%s", msg);
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_infof(where, "%s", msg);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[INFO]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_warnf(&log, where, "%s", msg);
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_warnf(where, "%s", msg);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[WARN]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_errorf(&log, where, "%s", msg);
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_errorf(where, "%s", msg);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[ERROR]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
 
     memset(log_buf, 0, sizeof(log_buf));
-    ppe_log_fatalf(&log, where, "%s", msg);
-    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf), 19);
+    ppe_log_fatalf(where, "%s", msg);
+    CU_ASSERT_EQUAL(test_verify_timestamp(log_buf, sizeof(log_buf)), 19);
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, where));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, "[FATAL]"));
     CU_ASSERT_PTR_NOT_NULL(strstr(log_buf, msg));
@@ -644,7 +645,7 @@ CU_TestInfo test_normal_cases[] = {
 };
 
 CU_SuiteInfo suites[] = {
-    {"test_normal_cases", NULL, NULL, test_normal_cases},
+    {"test_normal_cases", NULL, NULL, NULL, NULL, test_normal_cases},
     CU_SUITE_INFO_NULL
 };
 
