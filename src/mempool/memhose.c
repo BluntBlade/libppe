@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "ppe/error.h"
-#include "ppe/memhose.h"
+#include "ppe/mempool/memhose.h"
 
 #ifdef __cplusplus
 extern "C"
