@@ -77,7 +77,7 @@ typedef ssize_t ppe_ssize;
 typedef size_t ppe_size;
 typedef off_t ppe_off;
 
-typedef unsigned char ppe_char;
+typedef char ppe_char;
 
 #if defined(PPE_DEF_C99)
 
