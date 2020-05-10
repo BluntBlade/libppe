@@ -70,6 +70,44 @@ static void test_cs_find(void)
     CU_ASSERT_PTR_NULL(r);
 }
 
+static void test_cs_create(void)
+{
+    ppe_char b[] = "This is a test line.";
+    ppe_cstr_c s = NULL;
+    ppe_cstr_c s2 = NULL;
+
+    s = ppe_cs_create("", 0);
+    CU_ASSERT_PTR_NOT_NULL(s);
+    CU_ASSERT_EQUAL(s, ppe_cs_get_empty());
+    CU_ASSERT_EQUAL(ppe_cs_size(s), 0);
+
+    ppe_cs_destroy(s);
+
+    s = ppe_cs_create("", 0);
+    CU_ASSERT_PTR_NOT_NULL(s);
+    CU_ASSERT_EQUAL(s, ppe_cs_get_empty());
+    CU_ASSERT_EQUAL(ppe_cs_size(s), 0);
+
+    ppe_cs_destroy(s);
+
+    s = ppe_cs_create(b, strlen(b));
+    CU_ASSERT_PTR_NOT_NULL(s);
+    CU_ASSERT_NOT_EQUAL(s, ppe_cs_get_empty());
+    CU_ASSERT_EQUAL(ppe_cs_size(s), strlen(b));
+    CU_ASSERT_EQUAL(strncmp(s, b, strlen(b)), 0);
+
+    s2 = ppe_cs_create(b, strlen(b));
+    CU_ASSERT_PTR_NOT_NULL(s2);
+    CU_ASSERT_NOT_EQUAL(s2, ppe_cs_get_empty());
+    CU_ASSERT_EQUAL(ppe_cs_size(s2), strlen(b));
+    CU_ASSERT_EQUAL(strncmp(s2, b, strlen(b)), 0);
+    CU_ASSERT_NOT_EQUAL(s2, s);
+    CU_ASSERT_EQUAL(strncmp(s2, s, ppe_cs_size(s)), 0);
+
+    ppe_cs_destroy(s);
+    ppe_cs_destroy(s2);
+}
+
 /*
 static void test_str_get_empty(void)
 {
@@ -251,6 +289,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_is_empty()", test_cs_is_empty},
     {"test_cs_compare()", test_cs_compare},
     {"test_cs_find()", test_cs_find},
+    {"test_cs_create()", test_cs_create},
     CU_TEST_INFO_NULL
 };
 
