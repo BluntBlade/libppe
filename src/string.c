@@ -758,27 +758,19 @@ PPE_API ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off
         return ppe_cs_create(s + off, cpsz);
     } /* if */
 
-    if (b == s) {
-        /* IN-PLACE MODE */
-        if (off > 0) {
-            memmove(b, s + off, cpsz);
-        }
-        b[cpsz] = '\0';
-        if (bsz) {
-            *bsz = cpsz;
-        }
-        return b;
-    } /* if */
-
     /* FILL-BUFFER MODE */
     if (! bsz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
     if (*bsz < cpsz + 1) {
-        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-        return NULL;
-    }
+        if (opt & PPE_STR_OPT_DONT_TRUNCATE) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return NULL;
+        }
+        cpsz = *bsz - 1;
+    } /* if */
+
     memcpy(b, s + off, cpsz);
     b[cpsz] = '\0';
     *bsz = cpsz;
