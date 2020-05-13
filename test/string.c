@@ -4,6 +4,7 @@
 #include <CUnit/Basic.h> 
 
 #include "ppe/string.h"
+#include "ppe/error.h"
 
 static void test_cs_get_empty(void)
 {
@@ -108,6 +109,28 @@ static void test_cs_create(void)
     ppe_cs_destroy(s2);
 } /* test_cs_create */
 
+static void test_cs_substr_for_using_measure_mode(void)
+{
+    ppe_cstr_c s = "This is a test line.";
+    ppe_cstr_c t = NULL;
+    ppe_size sz = 0;
+
+    t = ppe_cs_substr(s, 0, 5, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 6);
+
+    t = ppe_cs_substr(s, 10, 5, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 6);
+
+    t = ppe_cs_substr(s, 17, 5, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 4);
+} /* test_cs_substr_for_using_measure_mode */
+
 static void test_cs_substr_for_using_new_string_mode(void)
 {
     ppe_cstr_c s = "This is a test line.";
@@ -208,6 +231,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_compare()", test_cs_compare},
     {"test_cs_find()", test_cs_find},
     {"test_cs_create()", test_cs_create},
+    {"test_cs_substr_for_using_measure_mode()", test_cs_substr_for_using_measure_mode},
     {"test_cs_substr_for_using_new_string_mode()", test_cs_substr_for_using_new_string_mode},
     {"test_cs_substr_for_using_fill_buffer_mode()", test_cs_substr_for_using_fill_buffer_mode},
     CU_TEST_INFO_NULL
