@@ -224,6 +224,92 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     CU_ASSERT_EQUAL(strncmp(t, "is a test", 9), 0);
 } /* test_cs_substr_for_using_fill_buffer_mode */
 
+static void test_cs_trim_bytes_for_using_new_string_mode(void)
+{
+    ppe_cstr_c s = "   Text surrounded by spaces.   ";
+    ppe_cstr_c t = NULL;
+    ppe_cstr_c t2 = NULL;
+
+    /* -- Test for preceding and tailing spaces. -- */
+    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_BOTH_ENDS);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 26);
+    CU_ASSERT_EQUAL(strcmp(t, "Text surrounded by spaces."), 0);
+
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_LEFT_END);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
+    CU_ASSERT_EQUAL(strcmp(t2, "Text surrounded by spaces.   "), 0);
+
+    ppe_cs_destroy(t);
+    ppe_cs_destroy(t2);
+
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_RIGHT_END);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
+    CU_ASSERT_EQUAL(strcmp(t2, "   Text surrounded by spaces."), 0);
+
+    ppe_cs_destroy(t2);
+
+    /* -- Test for preceding and tailing tabs. -- */
+    s = "\t\t\tText surrounded by spaces.\t\t\t";
+
+    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_BOTH_ENDS);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 26);
+    CU_ASSERT_EQUAL(strcmp(t, "Text surrounded by spaces."), 0);
+
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_LEFT_END);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
+    CU_ASSERT_EQUAL(strcmp(t2, "Text surrounded by spaces.\t\t\t"), 0);
+
+    ppe_cs_destroy(t);
+    ppe_cs_destroy(t2);
+
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_RIGHT_END);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
+    CU_ASSERT_EQUAL(strcmp(t2, "\t\t\tText surrounded by spaces."), 0);
+
+    ppe_cs_destroy(t2);
+
+    /* -- Test for preceding and tailing tabs interleaving with spaces. -- */
+    s = " \t Text surrounded by spaces.\t \t";
+
+    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_BOTH_ENDS);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 26);
+    CU_ASSERT_EQUAL(strcmp(t, "Text surrounded by spaces."), 0);
+
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_LEFT_END);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
+    CU_ASSERT_EQUAL(strcmp(t2, "Text surrounded by spaces.\t \t"), 0);
+
+    ppe_cs_destroy(t);
+    ppe_cs_destroy(t2);
+
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_RIGHT_END);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
+    CU_ASSERT_EQUAL(strcmp(t2, " \t Text surrounded by spaces."), 0);
+
+    ppe_cs_destroy(t2);
+} /* test_cs_trim_bytes_for_using_new_string_mode */
+
 CU_TestInfo test_normal_cases[] = {
     {"test_cs_get_empty()", test_cs_get_empty},
     {"test_cs_size()", test_cs_size},
@@ -234,6 +320,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_substr_for_using_measure_mode()", test_cs_substr_for_using_measure_mode},
     {"test_cs_substr_for_using_new_string_mode()", test_cs_substr_for_using_new_string_mode},
     {"test_cs_substr_for_using_fill_buffer_mode()", test_cs_substr_for_using_fill_buffer_mode},
+    {"test_cs_trim_bytes_for_using_new_string_mode()", test_cs_trim_bytes_for_using_new_string_mode},
     CU_TEST_INFO_NULL
 };
 
