@@ -838,28 +838,19 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
         return NULL;
     }
 
-    cpsz = ppe_cs_size(s);
+    /* TBD: If the string is an empty one? */
+
+    cpsz = ppe_cs_size(s) - 1;
     if (! b) {
         if (bsz) {
             /* MEASURE-SIZE MODE */
-            *bsz = cpsz; /* Include the terminating NUL byte. */
+            *bsz = cpsz + 1; /* Include the terminating NUL byte. */
             ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
             return NULL;
         }
         /* NEW-STRING MODE */
-        return cpsz > 0 ? ppe_cs_create(s, cpsz - 1) : cs_empty_s;
+        return cpsz > 0 ? ppe_cs_create(s, cpsz) : cs_empty_s;
     } /* if */
-
-    if (b == s) {
-        /* IN-PLACE MODE */
-        if (cpsz > 0) {
-            b[cpsz - 1] = '\0';
-        }
-        if (bsz) {
-            *bsz = cpsz > 0 ? cpsz - 1 : 0;
-        }
-        return b;
-    }
 
     /* FILL-BUFFER MODE */
     if (! bsz) {
@@ -867,11 +858,11 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
         return NULL;
     }
     if (cpsz > 0) {
-        if (*bsz < cpsz) {
+        if (*bsz < cpsz + 1) {
             ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
             return NULL;
         }
-        memcpy(b, s, cpsz - 1);
+        memcpy(b, s, cpsz);
     } else if (*bsz == 0) {
         ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
         return NULL;
