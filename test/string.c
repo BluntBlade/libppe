@@ -299,13 +299,13 @@ static void test_cs_trim_bytes_for_using_new_string_mode(void)
     ppe_cstr_c t2 = NULL;
 
     /* -- Test for preceding and/or tailing spaces. -- */
-    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_BOTH_ENDS);
+    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_BOTH_ENDS);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), 26);
     CU_ASSERT_EQUAL(strcmp(t, "Text surrounded by spaces."), 0);
 
-    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_LEFT_END);
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_LEFT_END);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_PTR_NOT_EQUAL(t2, t);
@@ -315,7 +315,7 @@ static void test_cs_trim_bytes_for_using_new_string_mode(void)
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
 
-    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_RIGHT_END);
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_RIGHT_END);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
@@ -326,13 +326,13 @@ static void test_cs_trim_bytes_for_using_new_string_mode(void)
     /* -- Test for preceding and/or tailing tabs. -- */
     s = "\t\t\tText surrounded by spaces.\t\t\t";
 
-    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_BOTH_ENDS);
+    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_BOTH_ENDS);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), 26);
     CU_ASSERT_EQUAL(strcmp(t, "Text surrounded by spaces."), 0);
 
-    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_LEFT_END);
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_LEFT_END);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_PTR_NOT_EQUAL(t2, t);
@@ -342,7 +342,7 @@ static void test_cs_trim_bytes_for_using_new_string_mode(void)
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
 
-    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_RIGHT_END);
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_RIGHT_END);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
@@ -353,13 +353,13 @@ static void test_cs_trim_bytes_for_using_new_string_mode(void)
     /* -- Test for preceding and/or tailing tabs interleaving with spaces. -- */
     s = " \t Text surrounded by spaces.\t \t";
 
-    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_BOTH_ENDS);
+    t = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_BOTH_ENDS);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), 26);
     CU_ASSERT_EQUAL(strcmp(t, "Text surrounded by spaces."), 0);
 
-    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_LEFT_END);
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_LEFT_END);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_PTR_NOT_EQUAL(t2, t);
@@ -369,7 +369,7 @@ static void test_cs_trim_bytes_for_using_new_string_mode(void)
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
 
-    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, 0, PPE_STR_OPT_RIGHT_END);
+    t2 = ppe_cs_trim_bytes(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_RIGHT_END);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t2), 29);
@@ -474,6 +474,63 @@ static void test_cs_trim_bytes_for_using_fill_buffer_mode(void)
     CU_ASSERT_EQUAL(strcmp(b, " \t Text surrounded by spaces."), 0);
 } /* test_cs_trim_bytes_for_using_fill_buffer_mode */
 
+static void test_cs_chop_for_using_measure_mode(void)
+{
+    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE;
+    ppe_cstr_c t = NULL;
+    ppe_size sz = 0;
+
+    t = ppe_cs_chop(s, NULL, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, ppe_cs_size(s));
+} /* test_cs_chop_for_using_measure_mode */
+
+static void test_cs_chop_for_using_new_string_mode(void)
+{
+    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE;
+    ppe_cstr_c t = NULL;
+    ppe_cstr_c t2 = NULL;
+
+    t = ppe_cs_chop(s, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), ppe_cs_size(s) - 1);
+
+    t2 = ppe_cs_chop(t, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), ppe_cs_size(s) - 2);
+
+    ppe_cs_destroy(t);
+    ppe_cs_destroy(t2);
+} /* test_cs_chop_for_using_new_string_mode */
+
+static void test_cs_chop_for_using_fill_buffer_mode(void)
+{
+    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE;
+    ppe_cstr_c t = NULL;
+    ppe_cstr_c t2 = NULL;
+    ppe_char b[30];
+    ppe_size sz = sizeof(b);
+
+    t = ppe_cs_chop(s, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, ppe_cs_size(s) - 1);
+    CU_ASSERT_EQUAL(strncmp(t, s, sz), 0);
+
+    sz = sizeof(b);
+    t2 = ppe_cs_chop(t, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_PTR_EQUAL(t2, b);
+    CU_ASSERT_EQUAL(sz, ppe_cs_size(s) - 2);
+    CU_ASSERT_EQUAL(strncmp(t2, s, sz), 0);
+} /* test_cs_chop_for_using_fill_buffer_mode */
+
 CU_TestInfo test_normal_cases[] = {
     {"test_cs_get_empty()", test_cs_get_empty},
     {"test_cs_size()", test_cs_size},
@@ -482,11 +539,14 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_find()", test_cs_find},
     {"test_cs_create()", test_cs_create},
     {"test_cs_substr_for_using_measure_mode()", test_cs_substr_for_using_measure_mode},
-    {"test_cs_substr_for_using_new_string_mode()", test_cs_substr_for_using_new_string_mode},
     {"test_cs_substr_for_using_fill_buffer_mode()", test_cs_substr_for_using_fill_buffer_mode},
+    {"test_cs_substr_for_using_new_string_mode()", test_cs_substr_for_using_new_string_mode},
     {"test_cs_trim_bytes_for_using_measure_mode()", test_cs_trim_bytes_for_using_measure_mode},
-    {"test_cs_trim_bytes_for_using_new_string_mode()", test_cs_trim_bytes_for_using_new_string_mode},
     {"test_cs_trim_bytes_for_using_fill_buffer_mode()", test_cs_trim_bytes_for_using_fill_buffer_mode},
+    {"test_cs_trim_bytes_for_using_new_string_mode()", test_cs_trim_bytes_for_using_new_string_mode},
+    {"test_cs_chop_for_using_measure_mode()", test_cs_chop_for_using_measure_mode},
+    {"test_cs_chop_for_using_fill_buffer_mode()", test_cs_chop_for_using_fill_buffer_mode},
+    {"test_cs_chop_for_using_new_string_mode()", test_cs_chop_for_using_new_string_mode},
     CU_TEST_INFO_NULL
 };
 
