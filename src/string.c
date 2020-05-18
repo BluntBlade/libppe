@@ -838,7 +838,7 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
         return NULL;
     }
 
-    if (ppe_cs_chop(s)) {
+    if (ppe_cs_is_empty(s)) {
         return &cs_empty_s;
     }
 
@@ -879,6 +879,10 @@ static ppe_cstr_c ppe_cs_chomp_imp(ppe_cstr_c const restrict s, const ppe_size s
     ppe_cstr_c p = NULL;
     const ppe_size nlsz = strlen(PPE_STR_NEWLINE);
     ppe_size cpsz = 0;
+
+    if (ppe_cs_is_empty(s)) {
+        return &cs_empty_s;
+    }
 
     p = ppe_cs_find(s + sz - nlsz, PPE_STR_NEWLINE);
     if (p) {
