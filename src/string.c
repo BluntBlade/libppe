@@ -779,7 +779,7 @@ PPE_API ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off
 
 /* -- Trim & Chomp -- */
 
-PPE_API ppe_cstr_c ppe_cs_trim_bytes(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+PPE_API ppe_cstr_c ppe_cs_trim(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     ppe_cstr_c p = NULL;
     ppe_size cpsz = 0;
@@ -827,9 +827,9 @@ PPE_API ppe_cstr_c ppe_cs_trim_bytes(ppe_cstr_c const restrict s, ppe_cstr_c con
     b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
-} /* ppe_cs_trim_bytes */
+} /* ppe_cs_trim */
 
-PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+PPE_API ppe_cstr_c ppe_cs_chop_byte(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     ppe_size cpsz = 0;
 
@@ -839,7 +839,7 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
     }
 
     if (ppe_cs_is_empty(s)) {
-        return &cs_empty_s;
+        return cs_empty_s;
     }
 
     cpsz = ppe_cs_size(s) - 1;
@@ -872,7 +872,7 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
     b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
-} /* ppe_cs_chop */
+} /* ppe_cs_chop_byte */
 
 static ppe_cstr_c ppe_cs_chomp_imp(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
@@ -881,7 +881,7 @@ static ppe_cstr_c ppe_cs_chomp_imp(ppe_cstr_c const restrict s, const ppe_size s
     ppe_size cpsz = 0;
 
     if (ppe_cs_is_empty(s)) {
-        return &cs_empty_s;
+        return cs_empty_s;
     }
 
     p = ppe_cs_find(s + sz - nlsz, PPE_STR_NEWLINE);
