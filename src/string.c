@@ -838,7 +838,9 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
         return NULL;
     }
 
-    /* TBD: If the string is an empty one? */
+    if (ppe_cs_chop(s)) {
+        return &cs_empty_s;
+    }
 
     cpsz = ppe_cs_size(s) - 1;
     if (! b) {
