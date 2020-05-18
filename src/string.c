@@ -898,17 +898,6 @@ static ppe_cstr_c ppe_cs_chomp_imp(ppe_cstr_c const restrict s, const ppe_size s
         return ppe_cs_create(s, cpsz);
     } /* if */
 
-    if (b == s) {
-        /* IN-PLACE MODE */
-        if (b) {
-            b[0] = '\0';
-        }
-        if (bsz) {
-            *bsz = cpsz;
-        }
-        return b;
-    } /* if */
-
     /* FILL-BUFFER */
     if (! bsz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
