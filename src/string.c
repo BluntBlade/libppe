@@ -802,18 +802,6 @@ PPE_API ppe_cstr_c ppe_cs_trim(ppe_cstr_c const restrict s, ppe_cstr_c const res
         return cpsz > 0 ? ppe_cs_create(p, cpsz) : cs_empty_s;
     }
 
-    if (b == s) {
-        /* IN-PLACE MODE */
-        if (s < p) {
-            memmove(b, p, cpsz);
-        }
-        b[cpsz] = '\0';
-        if (bsz) {
-            *bsz = cpsz;
-        }
-        return b;
-    } /* if */
-
     /* FILL-BUFFER MODE */
     if (! bsz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -861,16 +849,11 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (cpsz > 0) {
-        if (*bsz < cpsz + 1) {
-            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-            return NULL;
-        }
-        memcpy(b, s, cpsz);
-    } else if (*bsz == 0) {
+    if (*bsz < cpsz + 1) {
         ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
         return NULL;
-    } /* if */
+    }
+    memcpy(b, s, cpsz);
     b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
