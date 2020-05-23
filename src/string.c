@@ -851,7 +851,7 @@ static ppe_cstr_c cs_chomp(ppe_cstr_c const restrict s, const ppe_size sz, ppe_c
             } else {
                 break;
             } /* if */
-        } while ((n < 0 || --i > 0) && cpsz > tsz);
+        } while ((n < 0 || --i > 0) && cpsz >= tsz);
     } /* if */
     return cs_dupstr(s, cpsz, b, bsz);
 } /* cs_chomp */
