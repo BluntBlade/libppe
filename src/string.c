@@ -204,7 +204,7 @@ PPE_API ppe_cstr_c * ppe_cspt_copy_some(const ppe_cs_snippet restrict spt, const
 
 /* -- Internals -- */
 
-static ppe_bool ppe_cs_join_imp_copy(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr_c const restrict d, const ppe_size dsz, ppe_cstr restrict b, ppe_size bsz, ppe_size * restrict cpsz, ppe_uint * restrict cnt)
+static ppe_bool cs_join_copy(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr_c const restrict d, const ppe_size dsz, ppe_cstr restrict b, ppe_size bsz, ppe_size * restrict cpsz, ppe_uint * restrict cnt)
 {
     if (cnt && ++*cnt > 1) {
         if (bsz - *cpsz < dsz) {
@@ -224,7 +224,7 @@ static ppe_bool ppe_cs_join_imp_copy(ppe_cstr_c const restrict s, const ppe_size
     return ppe_true;
 }
 
-static ppe_cstr_c ppe_cs_join_imp(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, const ppe_bool enable_delimiter, va_list * restrict args)
+static ppe_cstr_c cs_join(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, const ppe_bool enable_delimiter, va_list * restrict args)
 {
     ppe_str_join_action act = PPE_STR_JOIN_END;
 
@@ -347,11 +347,11 @@ PPE_STR_JOIN_IMP_AGAIN:
         } else if (act == PPE_STR_JOIN_ADD_ITEM_SNIPPET) {
             for (i = 0; i < ppe_cspt_count(spt); i += 1) {
                 ppe_cspt_get(spt, i, &s, &sz);
-                if (! ppe_cs_join_imp_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
+                if (! cs_join_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
                     goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
                 }
             } /* for */
-        } else if (! ppe_cs_join_imp_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
+        } else if (! cs_join_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
             goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
         } /* if */
 
@@ -404,7 +404,7 @@ PPE_CS_JOIN_IMP_ERROR_HANDLING:
 
 #define PPE_CONF_STR_SNIPPET_MAX 64
 
-static ppe_cs_snippet ppe_cs_split_imp(ppe_cstr_c const restrict s, ppe_cstr_c const restrict d, const ppe_size dsz, ppe_cs_snippet restrict spt, ppe_uint * restrict n, ppe_cstr_c * restrict ss, const ppe_str_option opt)
+static ppe_cs_snippet cs_split(ppe_cstr_c const restrict s, ppe_cstr_c const restrict d, const ppe_size dsz, ppe_cs_snippet restrict spt, ppe_uint * restrict n, ppe_cstr_c * restrict ss, const ppe_str_option opt)
 {
     ppe_cs_snippet nw = NULL;
     ppe_cstr_c p = 0;
@@ -482,9 +482,9 @@ static ppe_cs_snippet ppe_cs_split_imp(ppe_cstr_c const restrict s, ppe_cstr_c c
         *n = i + 1;
     }
     return nw;
-} /* ppe_cs_split_imp */
+} /* cs_split */
 
-static ppe_cstr_c ppe_cs_replace_imp(ppe_cstr_c const restrict s, const ppe_size sz, const ppe_size off, ppe_size ssz, ppe_cstr_c const restrict to, const ppe_size tosz, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
+static ppe_cstr_c cs_replace(ppe_cstr_c const restrict s, const ppe_size sz, const ppe_size off, ppe_size ssz, ppe_cstr_c const restrict to, const ppe_size tosz, ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt)
 {
     ppe_size cpsz = 0;
 
@@ -536,11 +536,11 @@ static ppe_cstr_c ppe_cs_replace_imp(ppe_cstr_c const restrict s, const ppe_size
 
     b[cpsz] = '\0';
     return b;
-} /* ppe_cs_replace_imp */
+} /* cs_replace */
 
 #define PPE_CONF_STR_SUBSTITUTE_MAX 256
 
-static ppe_cstr_c ppe_cs_substitute_imp(ppe_cstr_c const restrict s, ppe_cstr_c const restrict from, const ppe_size frsz, ppe_cstr_c const to, const ppe_size tosz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_str_option opt)
+static ppe_cstr_c cs_substitute(ppe_cstr_c const restrict s, ppe_cstr_c const restrict from, const ppe_size frsz, ppe_cstr_c const to, const ppe_size tosz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_str_option opt)
 {
     ppe_cstr_c p = NULL;
     ppe_cstr_c q = NULL;
@@ -633,7 +633,7 @@ static ppe_cstr_c ppe_cs_substitute_imp(ppe_cstr_c const restrict s, ppe_cstr_c 
     if (bsz) { *bsz = cpsz; }
     if (n) { *n = i; }
     return b;
-} /* ppe_cs_substitute_imp */
+} /* cs_substitute */
 
 /* -- Preset values -- */
 
@@ -876,7 +876,7 @@ PPE_API ppe_cstr_c ppe_cs_join(ppe_cstr_c const restrict d, ppe_cstr restrict b,
     assert(bsz);
 
     va_start(args, opt);
-    ret = ppe_cs_join_imp(d, ppe_cs_size(d), b, bsz, opt, ppe_true, &args);
+    ret = cs_join(d, ppe_cs_size(d), b, bsz, opt, ppe_true, &args);
     va_end(args);
     return ret;
 }
@@ -887,7 +887,7 @@ PPE_API ppe_cstr_c ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, p
     va_list args;
 
     va_start(args, opt);
-    ret = ppe_cs_join_imp(cs_empty_s, 0, b, bsz, opt, ppe_false, &args);
+    ret = cs_join(cs_empty_s, 0, b, bsz, opt, ppe_false, &args);
     va_end(args);
     return ret;
 }
@@ -905,7 +905,7 @@ PPE_API ppe_cs_snippet ppe_cs_split(const ppe_cstr restrict s, const ppe_cstr re
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_split_imp(s, d, ppe_cs_size(d), spt, n, ss, opt);
+    return cs_split(s, d, ppe_cs_size(d), spt, n, ss, opt);
 } /* ppe_cs_split */
 
 /* -- Replace & Substitute -- */
@@ -916,7 +916,7 @@ PPE_API ppe_cstr_c ppe_cs_replace(ppe_cstr_c const restrict s, const ppe_size of
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_replace_imp(s, ppe_cs_size(s), off, ssz, to, ppe_cs_size(to), b, bsz, opt);
+    return cs_replace(s, ppe_cs_size(s), off, ssz, to, ppe_cs_size(to), b, bsz, opt);
 } /* ppe_cs_replace */
 
 PPE_API ppe_cstr_c ppe_cs_substitute(ppe_cstr_c const restrict s, ppe_cstr_c const restrict from, ppe_cstr_c const restrict to, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_uint * restrict n, const ppe_str_option opt)
@@ -929,10 +929,10 @@ PPE_API ppe_cstr_c ppe_cs_substitute(ppe_cstr_c const restrict s, ppe_cstr_c con
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_substitute_imp(s, from, ppe_cs_size(from), to, ppe_cs_size(to), b, bsz, n, opt);
+    return cs_substitute(s, from, ppe_cs_size(from), to, ppe_cs_size(to), b, bsz, n, opt);
 } /* ppe_cs_substitute */
 
-static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
+static ppe_cstr cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_cstr restrict fmt, va_list * restrict ap)
 {
     int ret = 0;
 
@@ -943,7 +943,7 @@ static ppe_cstr ppe_cs_sprintf_imp(ppe_cstr restrict b, ppe_size * restrict bsz,
     }
     *bsz = ((ppe_size) ret); /* Excluding the terminating '\0' byte. */
     return b;
-}
+} /* cs_sprintf */
 
 PPE_API ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict fmt, ...)
 {
@@ -958,7 +958,7 @@ PPE_API ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, co
         fmsz = obsz;
 
         va_start(args, fmt);
-        ret = ppe_cs_sprintf_imp(b, &fmsz, fmt, &args);
+        ret = cs_sprintf(b, &fmsz, fmt, &args);
         va_end(args);
 
         if (! ret) {
@@ -987,7 +987,7 @@ PPE_API ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, co
     fmsz = nwsz;
 
     va_start(args, fmt);
-    ret = ppe_cs_sprintf_imp(nw, &fmsz, fmt, &args);
+    ret = cs_sprintf(nw, &fmsz, fmt, &args);
     va_end(args);
 
     if (! ret) {
@@ -1034,7 +1034,7 @@ PPE_API ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, co
 
         /* Try to reformat again. */
         va_start(args, fmt);
-        ret = ppe_cs_sprintf_imp(nw, &fmsz, fmt, &args); /* The terminating '\0' byte shall be written. */
+        ret = cs_sprintf(nw, &fmsz, fmt, &args); /* The terminating '\0' byte shall be written. */
         va_end(args);
 
         if (! ret) {
@@ -1277,7 +1277,7 @@ static ppe_string ppe_str_join_imp(const ppe_string restrict d, const ppe_str_op
     }
 
     va_copy(cp, *args);
-    ret = ppe_cs_join_imp(d->buf, d->sz, NULL, &nwsz, opt, ppe_true, &cp);
+    ret = cs_join(d->buf, d->sz, NULL, &nwsz, opt, ppe_true, &cp);
     va_end(cp);
     if (! ret) {
         return NULL;
@@ -1290,7 +1290,7 @@ static ppe_string ppe_str_join_imp(const ppe_string restrict d, const ppe_str_op
     }
 
     va_copy(cp, *args);
-    ret = ppe_cs_join_imp(d->buf, d->sz, nw->buf, &nwsz, opt, ppe_true, &cp); /* Include the terminating NUL character. */
+    ret = cs_join(d->buf, d->sz, nw->buf, &nwsz, opt, ppe_true, &cp); /* Include the terminating NUL character. */
     va_end(cp);
     if (! ret) {
         ppe_mp_free(nw);
@@ -1340,7 +1340,7 @@ PPE_API ppe_cs_snippet ppe_str_split(const ppe_string restrict s, const ppe_stri
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_split_imp(s->buf, d->buf, d->sz, spt, n, NULL, opt);
+    return cs_split(s->buf, d->buf, d->sz, spt, n, NULL, opt);
 }
 
 PPE_API ppe_cs_snippet ppe_str_split_cs(const ppe_string restrict s, const ppe_cstr restrict d, ppe_cs_snippet restrict spt, ppe_uint * restrict n, const ppe_str_option opt)
@@ -1354,7 +1354,7 @@ PPE_API ppe_cs_snippet ppe_str_split_cs(const ppe_string restrict s, const ppe_c
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return ppe_cs_split_imp(s->buf, d, ppe_cs_size(d), spt, n, NULL, opt);
+    return cs_split(s->buf, d, ppe_cs_size(d), spt, n, NULL, opt);
 }
 
 /* -- Replace & Substitute -- */
@@ -1370,7 +1370,7 @@ PPE_API ppe_string ppe_str_replace(const ppe_string restrict s, const ppe_size o
         return NULL;
     }
 
-    ret = ppe_cs_replace_imp(s->buf, s->sz, off, ssz, to->buf, to->sz, NULL, &nwsz, opt);
+    ret = cs_replace(s->buf, s->sz, off, ssz, to->buf, to->sz, NULL, &nwsz, opt);
     if (! ret && ppe_err_get_code() != PPE_ERR_TRY_AGAIN) {
         return NULL;
     }
@@ -1385,7 +1385,7 @@ PPE_API ppe_string ppe_str_replace(const ppe_string restrict s, const ppe_size o
         return NULL;
     }
 
-    ret = ppe_cs_replace_imp(s->buf, s->sz, off, ssz, to->buf, to->sz, nw->buf, &nwsz, opt);
+    ret = cs_replace(s->buf, s->sz, off, ssz, to->buf, to->sz, nw->buf, &nwsz, opt);
     if (! ret) {
         ppe_mp_free(nw);
         return NULL;
@@ -1408,7 +1408,7 @@ PPE_API ppe_string ppe_str_replace_cs(const ppe_string restrict s, const ppe_siz
 
     tosz = ppe_cs_size(to);
 
-    ret = ppe_cs_replace_imp(s->buf, s->sz, off, ssz, to, tosz, NULL, &nwsz, opt);
+    ret = cs_replace(s->buf, s->sz, off, ssz, to, tosz, NULL, &nwsz, opt);
     if (! ret && ppe_err_get_code() != PPE_ERR_TRY_AGAIN) {
         return NULL;
     }
@@ -1423,7 +1423,7 @@ PPE_API ppe_string ppe_str_replace_cs(const ppe_string restrict s, const ppe_siz
         return NULL;
     }
 
-    ret = ppe_cs_replace_imp(s->buf, s->sz, off, ssz, to, tosz, nw->buf, &nwsz, opt);
+    ret = cs_replace(s->buf, s->sz, off, ssz, to, tosz, nw->buf, &nwsz, opt);
     if (! ret) {
         ppe_mp_free(nw);
         return NULL;
@@ -1447,7 +1447,7 @@ PPE_API ppe_string ppe_str_substitute(const ppe_string restrict s, const ppe_str
         return NULL;
     }
 
-    ret = ppe_cs_substitute_imp(s->buf, from->buf, from->sz, to->buf, to->sz, NULL, &nwsz, n, opt);
+    ret = cs_substitute(s->buf, from->buf, from->sz, to->buf, to->sz, NULL, &nwsz, n, opt);
     if (! ret && ppe_err_get_code() != PPE_ERR_TRY_AGAIN) {
         return NULL;
     }
@@ -1462,7 +1462,7 @@ PPE_API ppe_string ppe_str_substitute(const ppe_string restrict s, const ppe_str
         return NULL;
     }
 
-    ret = ppe_cs_substitute_imp(s->buf, from->buf, from->sz, to->buf, to->sz, nw->buf, &nwsz, n, opt);
+    ret = cs_substitute(s->buf, from->buf, from->sz, to->buf, to->sz, nw->buf, &nwsz, n, opt);
     if (! ret) {
         ppe_mp_free(nw);
         return NULL;
@@ -1491,7 +1491,7 @@ PPE_API ppe_string ppe_str_substitute_cs(const ppe_string restrict s, const ppe_
     frsz = ppe_cs_size(from);
     tosz = ppe_cs_size(to);
 
-    ret = ppe_cs_substitute_imp(s->buf, from, frsz, to, tosz, NULL, &nwsz, n, opt);
+    ret = cs_substitute(s->buf, from, frsz, to, tosz, NULL, &nwsz, n, opt);
     if (! ret && ppe_err_get_code() != PPE_ERR_TRY_AGAIN) {
         return NULL;
     }
@@ -1506,7 +1506,7 @@ PPE_API ppe_string ppe_str_substitute_cs(const ppe_string restrict s, const ppe_
         return NULL;
     }
 
-    ret = ppe_cs_substitute_imp(s->buf, from, frsz, to, tosz, nw->buf, &nwsz, n, opt);
+    ret = cs_substitute(s->buf, from, frsz, to, tosz, nw->buf, &nwsz, n, opt);
     if (! ret) {
         ppe_mp_free(nw);
         return NULL;
