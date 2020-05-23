@@ -676,6 +676,149 @@ static void test_cs_chomp_for_using_measure_mode(void)
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc") * 2 + 1);
 } /* test_cs_chomp_for_using_measure_mode */
 
+static void test_cs_chomp_for_using_new_string_mode(void)
+{
+    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE PPE_STR_NEWLINE;
+    ppe_cstr_c t = NULL;
+    ppe_cstr_c t2 = NULL;
+
+    /* -- Test for non-empty string input. -- */
+    /*  Test for stripping out one newline.  */
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
+    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+
+    ppe_cs_destroy(t);
+
+    /*  Test for stripping out two newlines.  */
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+
+    ppe_cs_destroy(t);
+
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+
+    t2 = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(strncmp(t2, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t2)), 0);
+
+    ppe_cs_destroy(t);
+    ppe_cs_destroy(t2);
+
+    /* -- Test for empty string input. -- */
+    s = "";
+
+    /*  Test for stripping out one newline.  */
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+
+    ppe_cs_destroy(t);
+
+    /*  Test for stripping out two newlines.  */
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+
+    ppe_cs_destroy(t);
+
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+
+    t2 = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_PTR_EQUAL(t2, ppe_cs_get_empty());
+
+    ppe_cs_destroy(t);
+    ppe_cs_destroy(t2);
+
+    /* -- Test for blank string input. -- */
+    s = PPE_STR_NEWLINE PPE_STR_NEWLINE;
+
+    /*  Test for stripping out one newline.  */
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
+    CU_ASSERT_EQUAL(strncmp(t, PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+
+    ppe_cs_destroy(t);
+
+    /*  Test for stripping out two newlines.  */
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+
+    ppe_cs_destroy(t);
+
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+
+    ppe_cs_destroy(t);
+
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+
+    ppe_cs_destroy(t);
+
+    /* -- Test for interleaving substrings input. -- */
+    s = "abcnabcabc";
+
+    t = ppe_cs_chomp(s, "abc", 1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc"));
+    CU_ASSERT_EQUAL(strncmp(t, "abcnabc", ppe_cs_size(t)), 0);
+
+    ppe_cs_destroy(t);
+
+    t = ppe_cs_chomp(s, "abc", 2, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+
+    ppe_cs_destroy(t);
+
+    t = ppe_cs_chomp(s, "abc", 3, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+
+    t2 = ppe_cs_chomp(s, "abc", -1, NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t2);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
+    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
+    CU_ASSERT_EQUAL(ppe_cs_size(t2), strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(strncmp(t2, "abcn", ppe_cs_size(t2)), 0);
+
+    ppe_cs_destroy(t);
+    ppe_cs_destroy(t2);
+} /* test_cs_chomp_for_using_new_string_mode */
+
 CU_TestInfo test_normal_cases[] = {
     {"test_cs_get_empty()", test_cs_get_empty},
     {"test_cs_size()", test_cs_size},
@@ -693,6 +836,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_chop_for_using_fill_buffer_mode()", test_cs_chop_for_using_fill_buffer_mode},
     {"test_cs_chop_for_using_new_string_mode()", test_cs_chop_for_using_new_string_mode},
     {"test_cs_chomp_for_using_measure_mode()", test_cs_chomp_for_using_measure_mode},
+    {"test_cs_chomp_for_using_new_string_mode()", test_cs_chomp_for_using_new_string_mode},
     CU_TEST_INFO_NULL
 };
 
