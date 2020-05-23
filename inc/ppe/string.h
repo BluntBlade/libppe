@@ -137,7 +137,7 @@ PPE_API extern ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_s
 
 PPE_API extern ppe_cstr_c ppe_cs_trim(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
 PPE_API extern ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
-PPE_API extern ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t, const ppe_int n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt);
 
 /* -- Join & Concat -- */
 

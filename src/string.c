@@ -837,32 +837,32 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
     return cs_dupstr(s, cpsz, b, bsz);
 } /* ppe_cs_chop */
 
-static ppe_cstr_c cs_chomp(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+static ppe_cstr_c cs_chomp(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr_c const restrict t, const ppe_size tsz, const ppe_int n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
-    ppe_cstr_c p = NULL;
-    const ppe_size nlsz = strlen(PPE_STR_NEWLINE);
-    ppe_size cpsz = 0;
+    ppe_size cpsz = sz;
+    ppe_int i = n;
 
     if (ppe_cs_is_empty(s)) {
         cpsz = 0;
     } else {
-        p = ppe_cs_find(s + sz - nlsz, PPE_STR_NEWLINE);
-        if (p) {
-            cpsz = p - s; /* Exclude the terminating NUL byte. */
-        } else {
-            cpsz = sz;
-        }
+        do {
+            if (strncmp(s + cpsz - tsz, t, tsz) == 0) {
+                cpsz -= tsz;
+            } else {
+                break;
+            } /* if */
+        } while ((n < 0 || --i > 0) && cpsz > tsz);
     } /* if */
-    return cs_dupstr(p, cpsz, b, bsz);
+    return cs_dupstr(s, cpsz, b, bsz);
 } /* cs_chomp */
 
-PPE_API ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+PPE_API ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t, const ppe_int n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
-    if (! s) {
+    if (! s || n == 0) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    return cs_chomp(s, ppe_cs_size(s), b, bsz, opt);
+    return cs_chomp(s, ppe_cs_size(s), t, ppe_cs_size(t), n, b, bsz, opt);
 } /* ppe_cs_chomp */
 
 /* -- Join & Concat -- */
@@ -1250,14 +1250,14 @@ PPE_API ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const ppe_str_o
         return NULL;
     } /* if */
 
-    cs_chomp(s->buf, s->sz, NULL, &nwsz, opt);
+    cs_chomp(s->buf, s->sz, PPE_STR_NEWLINE, strlen(PPE_STR_NEWLINE), PPE_STR_UNLIMITED, NULL, &nwsz, opt);
     nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + nwsz - 1); /* The terminating NUL byte have been counted twice. */
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
         return NULL;
     }
 
-    cs_chomp(s->buf, s->sz, nw->buf, &nwsz, opt);
+    cs_chomp(s->buf, s->sz, PPE_STR_NEWLINE, strlen(PPE_STR_NEWLINE), PPE_STR_UNLIMITED, nw->buf, &nwsz, opt);
     nw->sz = nwsz;
     return nw;
 } /* ppe_str_chomp */
