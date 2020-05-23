@@ -480,10 +480,17 @@ static void test_cs_chop_for_using_measure_mode(void)
     ppe_cstr_c t = NULL;
     ppe_size sz = 0;
 
+    /* -- Test non-empty string input. -- */
     t = ppe_cs_chop(s, NULL, &sz, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(sz, ppe_cs_size(s));
+
+    /* -- Test empty string input. -- */
+    t = ppe_cs_chop("", NULL, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 1);
 } /* test_cs_chop_for_using_measure_mode */
 
 static void test_cs_chop_for_using_new_string_mode(void)
@@ -492,6 +499,7 @@ static void test_cs_chop_for_using_new_string_mode(void)
     ppe_cstr_c t = NULL;
     ppe_cstr_c t2 = NULL;
 
+    /* -- Test non-empty string input. -- */
     t = ppe_cs_chop(s, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
@@ -505,6 +513,13 @@ static void test_cs_chop_for_using_new_string_mode(void)
 
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
+
+    /* -- Test empty string input. -- */
+    t = ppe_cs_chop("", NULL, NULL, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
 } /* test_cs_chop_for_using_new_string_mode */
 
 static void test_cs_chop_for_using_fill_buffer_mode(void)
@@ -515,6 +530,8 @@ static void test_cs_chop_for_using_fill_buffer_mode(void)
     ppe_char b[30];
     ppe_size sz = sizeof(b);
 
+    /* -- Test non-empty string input. -- */
+    t = ppe_cs_chop(s, NULL, NULL, PPE_STR_OPT_NONE);
     t = ppe_cs_chop(s, b, &sz, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
@@ -529,6 +546,15 @@ static void test_cs_chop_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t2, b);
     CU_ASSERT_EQUAL(sz, ppe_cs_size(s) - 2);
     CU_ASSERT_EQUAL(strncmp(t2, s, sz), 0);
+
+    /* -- Test empty string input. -- */
+    t = ppe_cs_chop("", NULL, NULL, PPE_STR_OPT_NONE);
+    t = ppe_cs_chop("", b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(b[0], '\0');
 } /* test_cs_chop_for_using_fill_buffer_mode */
 
 CU_TestInfo test_normal_cases[] = {

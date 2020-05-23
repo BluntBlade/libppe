@@ -829,7 +829,7 @@ PPE_API ppe_cstr_c ppe_cs_trim(ppe_cstr_c const restrict s, ppe_cstr_c const res
     return b;
 } /* ppe_cs_trim */
 
-PPE_API ppe_cstr_c ppe_cs_chop_byte(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
+PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     ppe_size cpsz = 0;
 
@@ -839,10 +839,12 @@ PPE_API ppe_cstr_c ppe_cs_chop_byte(ppe_cstr_c const restrict s, ppe_cstr restri
     }
 
     if (ppe_cs_is_empty(s)) {
-        return cs_empty_s;
-    }
+        cpsz = 0;
+    } else {
+        /* TODO: What if chopping a UTF-8 character? */
+        cpsz = ppe_cs_size(s) - 1;
+    } /* if */
 
-    cpsz = ppe_cs_size(s) - 1;
     if (! b) {
         if (bsz) {
             /* MEASURE-SIZE MODE */
@@ -872,7 +874,7 @@ PPE_API ppe_cstr_c ppe_cs_chop_byte(ppe_cstr_c const restrict s, ppe_cstr restri
     b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
-} /* ppe_cs_chop_byte */
+} /* ppe_cs_chop */
 
 static ppe_cstr_c ppe_cs_chomp_imp(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
