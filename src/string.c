@@ -224,184 +224,6 @@ static ppe_bool cs_join_copy(ppe_cstr_c const restrict s, const ppe_size sz, ppe
     return ppe_true;
 }
 
-static ppe_cstr_c cs_join(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, const ppe_bool enable_delimiter, va_list * restrict args)
-{
-    ppe_str_join_action act = PPE_STR_JOIN_END;
-
-    ppe_cs_snippet spt = NULL;
-    ppe_string str = NULL;
-    ppe_cstr_c s = NULL;
-    ppe_cstr nw = NULL;
-    ppe_size sz = 0;
-    ppe_size sz_r = 0;
-    ppe_size nwsz = 0;
-    ppe_size cpsz = 0;
-    ppe_uint i = 0;
-    ppe_uint cnt = 0;
-    va_list cp;
-
-    if (b) {
-        if (! bsz || *bsz == 0) {
-            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-            return NULL;
-        }
-
-        nw = b;
-        nwsz = *bsz;
-    }
-
-PPE_STR_JOIN_IMP_AGAIN:
-
-    va_copy(cp, *args);
-
-    act = va_arg(cp, ppe_str_join_action);
-    if (act == PPE_STR_JOIN_END) {
-        goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-    }
-
-    do {
-        switch (act) {
-            case PPE_STR_JOIN_ADD_ITEM_CSTR:
-                s = va_arg(cp, ppe_cstr_c);
-                if (! s) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-                }
-                sz = ppe_cs_size(s);
-                break;
-
-            case PPE_STR_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
-                s = va_arg(cp, ppe_cstr_c);
-                if (! s) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-                }
-                sz = va_arg(cp, ppe_size);
-                break;
-
-            case PPE_STR_JOIN_ADD_ITEM_STRING:
-                str = va_arg(cp, ppe_string);
-                if (! str) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-                }
-                s = ppe_str_addr(str);
-                sz = ppe_str_size(str);
-                break;
-
-            case PPE_STR_JOIN_ADD_ITEM_SNIPPET:
-                spt = va_arg(cp, ppe_cs_snippet);
-                if (! spt) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-                }
-                sz = 0;
-                for (i = 0; i < ppe_cspt_count(spt); i += 1) {
-                    ppe_cspt_get(spt, i, &s, &sz_r);
-                    sz += sz_r;
-                } /* for */
-                if (enable_delimiter && i > 1) {
-                    cnt += (i - 1);
-                    sz += dsz * (i - 1);
-                }
-                break;
-
-            case PPE_STR_JOIN_SET_DELIMITER_CSTR:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                d = va_arg(cp, ppe_cstr_c);
-                if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-                }
-                dsz = ppe_cs_size(d);
-                goto PPE_STR_JOIN_IMP_NONE_ITEM;
-
-            case PPE_STR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                d = va_arg(cp, ppe_cstr_c);
-                if (! d) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-                }
-                dsz = va_arg(cp, ppe_size);
-                goto PPE_STR_JOIN_IMP_NONE_ITEM;
-
-            case PPE_STR_JOIN_SET_DELIMITER_STRING:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                str = va_arg(cp, ppe_string);
-                if (! str) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-                }
-                d = ppe_str_addr(str);
-                dsz = ppe_str_size(str);
-                goto PPE_STR_JOIN_IMP_NONE_ITEM;
-
-            case PPE_STR_JOIN_UNSET_DELIMITER:
-                d = cs_empty_s;
-                dsz = 0;
-                goto PPE_STR_JOIN_IMP_NONE_ITEM;
-
-            default:
-                goto PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT;
-        } /* switch */
-
-        if (! nw) {
-            nwsz += sz;
-            if (enable_delimiter && ++cnt > 1) {
-                cpsz += dsz;
-            }
-        } else if (act == PPE_STR_JOIN_ADD_ITEM_SNIPPET) {
-            for (i = 0; i < ppe_cspt_count(spt); i += 1) {
-                ppe_cspt_get(spt, i, &s, &sz);
-                if (! cs_join_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
-                    goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
-                }
-            } /* for */
-        } else if (! cs_join_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
-            goto PPE_CS_JOIN_IMP_ERROR_HANDLING;
-        } /* if */
-
-PPE_STR_JOIN_IMP_NONE_ITEM:
-        act = va_arg(cp, ppe_str_join_action);
-    } while (act != PPE_STR_JOIN_END);
-
-    va_end(cp);
-
-    if (! nw) {
-        if (bsz) {
-            /* MEASURE-SIZE MODE */
-            *bsz = nwsz + 1; /* Include the terminating NUL character. */
-            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
-            return NULL;
-        }
-
-        /* NEW-STRING MODE */
-        nw = (ppe_cstr) ppe_mp_malloc(nwsz + 1); /* Include the terminating NUL character. */
-        if (! nw) {
-            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-            return NULL;
-        }
-        goto PPE_STR_JOIN_IMP_AGAIN;
-    } /* if */
-
-    if (! bsz) {
-        /* NEW-STRING MODE */
-        nw[cpsz] = '\0';
-    } else {
-        /* FILL-BUFFER MODE */
-        if (cpsz + 1 < *bsz) {
-            nw[cpsz] = '\0';
-        }
-        *bsz = cpsz;
-    } /* if */
-    return (ppe_cstr_c) nw;
-
-PPE_CS_JOIN_IMP_ERROR_HANDLING_ARGUMENT:
-    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-
-PPE_CS_JOIN_IMP_ERROR_HANDLING:
-    if (! b) {
-        ppe_mp_free(nw);
-        return NULL;
-    }
-    va_end(cp);
-    return NULL;
-}
-
 #define PPE_CONF_STR_SNIPPET_MAX 64
 
 static ppe_cs_snippet cs_split(ppe_cstr_c const restrict s, ppe_cstr_c const restrict d, const ppe_size dsz, ppe_cs_snippet restrict spt, ppe_uint * restrict n, ppe_cstr_c * restrict ss, const ppe_str_option opt)
@@ -866,20 +688,199 @@ PPE_API ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr_c const re
 } /* ppe_cs_chomp */
 
 /* -- Join & Concat -- */
+
+static ppe_cstr_c cs_join(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, const ppe_bool enable_delimiter, va_list * restrict args)
+{
+    ppe_str_join_action act = PPE_STR_JOIN_END;
+
+    ppe_cs_snippet spt = NULL;
+    ppe_string str = NULL;
+    ppe_cstr_c s = NULL;
+    ppe_cstr nw = NULL;
+    ppe_size sz = 0;
+    ppe_size sz_r = 0;
+    ppe_size nwsz = 0;
+    ppe_size cpsz = 0;
+    ppe_uint i = 0;
+    ppe_uint cnt = 0;
+    va_list cp;
+
+    if (b) {
+        if (! bsz) {
+            ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+            return NULL;
+        }
+        if (*bsz == 0) {
+            ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+            return NULL;
+        }
+
+        nw = b;
+        nwsz = *bsz;
+    } /* if */
+
+CS_JOIN_AGAIN:
+
+    va_copy(cp, *args);
+
+    act = va_arg(cp, ppe_str_join_action);
+    if (act == PPE_STR_JOIN_END) {
+        goto CS_JOIN_ARGUMENT_ERROR;
+    }
+
+    do {
+        switch (act) {
+            case PPE_STR_JOIN_ADD_ITEM_CSTR:
+                s = va_arg(cp, ppe_cstr_c);
+                if (! s) {
+                    goto CS_JOIN_ARGUMENT_ERROR;
+                }
+                sz = ppe_cs_size(s);
+                break;
+
+            case PPE_STR_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
+                s = va_arg(cp, ppe_cstr_c);
+                if (! s) {
+                    goto CS_JOIN_ARGUMENT_ERROR;
+                }
+                sz = va_arg(cp, ppe_size);
+                break;
+
+            case PPE_STR_JOIN_ADD_ITEM_STRING:
+                str = va_arg(cp, ppe_string);
+                if (! str) {
+                    goto CS_JOIN_ARGUMENT_ERROR;
+                }
+                s = ppe_str_addr(str);
+                sz = ppe_str_size(str);
+                break;
+
+            case PPE_STR_JOIN_ADD_ITEM_SNIPPET:
+                spt = va_arg(cp, ppe_cs_snippet);
+                if (! spt) {
+                    goto CS_JOIN_ARGUMENT_ERROR;
+                }
+                sz = 0;
+                for (i = 0; i < ppe_cspt_count(spt); i += 1) {
+                    ppe_cspt_get(spt, i, &s, &sz_r);
+                    sz += sz_r;
+                } /* for */
+                if (enable_delimiter && i > 1) {
+                    cnt += (i - 1);
+                    sz += dsz * (i - 1);
+                }
+                break;
+
+            case PPE_STR_JOIN_SET_DELIMITER_CSTR:
+                /* Switch to a new delimiter in which next strings are being joined. */
+                d = va_arg(cp, ppe_cstr_c);
+                if (! d) {
+                    goto CS_JOIN_ARGUMENT_ERROR;
+                }
+                dsz = ppe_cs_size(d);
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
+
+            case PPE_STR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE:
+                /* Switch to a new delimiter in which next strings are being joined. */
+                d = va_arg(cp, ppe_cstr_c);
+                if (! d) {
+                    goto CS_JOIN_ARGUMENT_ERROR;
+                }
+                dsz = va_arg(cp, ppe_size);
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
+
+            case PPE_STR_JOIN_SET_DELIMITER_STRING:
+                /* Switch to a new delimiter in which next strings are being joined. */
+                str = va_arg(cp, ppe_string);
+                if (! str) {
+                    goto CS_JOIN_ARGUMENT_ERROR;
+                }
+                d = ppe_str_addr(str);
+                dsz = ppe_str_size(str);
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
+
+            case PPE_STR_JOIN_UNSET_DELIMITER:
+                d = cs_empty_s;
+                dsz = 0;
+                goto PPE_STR_JOIN_IMP_NONE_ITEM;
+
+            default:
+                goto CS_JOIN_ARGUMENT_ERROR;
+        } /* switch */
+
+        if (! nw) {
+            nwsz += sz;
+            if (enable_delimiter && ++cnt > 1) {
+                cpsz += dsz;
+            }
+        } else if (act == PPE_STR_JOIN_ADD_ITEM_SNIPPET) {
+            for (i = 0; i < ppe_cspt_count(spt); i += 1) {
+                ppe_cspt_get(spt, i, &s, &sz);
+                if (! cs_join_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
+                    goto CS_JOIN_COPY_ERROR;
+                }
+            } /* for */
+        } else if (! cs_join_copy(s, sz, d, dsz, nw, nwsz, &cpsz, (enable_delimiter ? &cnt : NULL))) {
+            goto CS_JOIN_COPY_ERROR;
+        } /* if */
+
+PPE_STR_JOIN_IMP_NONE_ITEM:
+        act = va_arg(cp, ppe_str_join_action);
+    } while (act != PPE_STR_JOIN_END);
+
+    va_end(cp);
+
+    if (! nw) {
+        if (bsz) {
+            /* MEASURE-SIZE MODE */
+            *bsz = nwsz + 1; /* Include the terminating NUL character. */
+            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
+            return NULL;
+        }
+
+        /* NEW-STRING MODE */
+        nw = (ppe_cstr) ppe_mp_malloc(nwsz + 1); /* Include the terminating NUL character. */
+        if (! nw) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            return NULL;
+        }
+        goto CS_JOIN_AGAIN;
+    } /* if */
+
+    if (! bsz) {
+        /* NEW-STRING MODE */
+        nw[cpsz] = '\0';
+    } else {
+        /* FILL-BUFFER MODE */
+        if (cpsz + 1 < *bsz) {
+            nw[cpsz] = '\0';
+        }
+        *bsz = cpsz;
+    } /* if */
+    return (ppe_cstr_c) nw;
+
+CS_JOIN_ARGUMENT_ERROR:
+    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+
+CS_JOIN_COPY_ERROR:
+    if (! b) {
+        ppe_mp_free(nw);
+        return NULL;
+    }
+    va_end(cp);
+    return NULL;
+} /* cs_join */
  
 PPE_API ppe_cstr_c ppe_cs_join(ppe_cstr_c const restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...)
 {
     ppe_cstr_c ret = NULL;
     va_list args;
 
-    assert(d);
-    assert(bsz);
-
     va_start(args, opt);
     ret = cs_join(d, ppe_cs_size(d), b, bsz, opt, ppe_true, &args);
     va_end(args);
     return ret;
-}
+} /* ppe_cs_join */
  
 PPE_API ppe_cstr_c ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...)
 {
@@ -890,7 +891,7 @@ PPE_API ppe_cstr_c ppe_cs_concat(ppe_cstr restrict b, ppe_size * restrict bsz, p
     ret = cs_join(cs_empty_s, 0, b, bsz, opt, ppe_false, &args);
     va_end(args);
     return ret;
-}
+} /* ppe_cs_concat */
 
 /* -- Split & Slice -- */
 

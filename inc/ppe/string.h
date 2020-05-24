@@ -60,6 +60,8 @@ typedef ppe_uint ppe_str_option;
 #define PPE_STR_WINDOWS_NEWLINE "\r\n"
 #define PPE_STR_UNIX_NEWLINE "\n"
 
+#define PPE_STR_UNLIMITED (-1)
+
 #if defined(PPE_CFG_OS_WINDOWS)
 #define PPE_STR_NEWLINE PPE_STR_WINDOWS_NEWLINE
 #else
