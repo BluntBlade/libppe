@@ -819,6 +819,167 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     ppe_cs_destroy(t2);
 } /* test_cs_chomp_for_using_new_string_mode */
 
+static void test_cs_chomp_for_using_fill_buffer_mode(void)
+{
+    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE PPE_STR_NEWLINE;
+    ppe_cstr_c t = NULL;
+    ppe_char b[64];
+    ppe_size sz = sizeof(b);
+
+    /* -- Test for non-empty string input. -- */
+    /*  Test for stripping out one newline.  */
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE));
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
+    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+
+    /*  Test for stripping out two newlines.  */
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+
+    /* -- Test for empty string input. -- */
+    s = "";
+
+    /*  Test for stripping out one newline.  */
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
+
+    /*  Test for stripping out two newlines.  */
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
+
+    /* -- Test for blank string input. -- */
+    s = PPE_STR_NEWLINE PPE_STR_NEWLINE;
+
+    /*  Test for stripping out one newline.  */
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE));
+    CU_ASSERT_EQUAL(strncmp(t, PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+
+    /*  Test for stripping out two newlines.  */
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(sz, 0);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
+
+    /* -- Test for interleaving substrings input. -- */
+    s = "abcnabcabc";
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, "abc", 1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc"));
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc"));
+    CU_ASSERT_EQUAL(strncmp(t, "abcnabc", ppe_cs_size(t)), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, "abc", 2, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, "abc", 3, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+
+    sz = sizeof(b);
+    t = ppe_cs_chomp(s, "abc", -1, b, &sz, PPE_STR_OPT_NONE);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, b);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc") * 2);
+    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+} /* test_cs_chomp_for_using_fill_buffer_mode */
+
 CU_TestInfo test_normal_cases[] = {
     {"test_cs_get_empty()", test_cs_get_empty},
     {"test_cs_size()", test_cs_size},
@@ -837,6 +998,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_chop_for_using_new_string_mode()", test_cs_chop_for_using_new_string_mode},
     {"test_cs_chomp_for_using_measure_mode()", test_cs_chomp_for_using_measure_mode},
     {"test_cs_chomp_for_using_new_string_mode()", test_cs_chomp_for_using_new_string_mode},
+    {"test_cs_chomp_for_using_fill_buffer_mode()", test_cs_chomp_for_using_fill_buffer_mode},
     CU_TEST_INFO_NULL
 };
 
