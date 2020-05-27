@@ -728,28 +728,32 @@ CS_JOIN_AGAIN:
     va_copy(cp, *args);
 
     if ((act = va_arg(cp, ppe_str_join_action)) == PPE_STR_JOIN_END) {
-        goto CS_JOIN_ARGUMENT_ERROR;
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        goto CS_JOIN_ERROR;
     }
 
     do {
         switch (act) {
             case PPE_STR_JOIN_ADD_ITEM_CSTR:
                 if (! (s = va_arg(cp, ppe_cstr_c))) {
-                    goto CS_JOIN_ARGUMENT_ERROR;
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_ERROR;
                 }
                 sz = ppe_cs_size(s);
                 break;
 
             case PPE_STR_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
                 if (! (s = va_arg(cp, ppe_cstr_c))) {
-                    goto CS_JOIN_ARGUMENT_ERROR;
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_ERROR;
                 }
                 sz = va_arg(cp, ppe_size);
                 break;
 
             case PPE_STR_JOIN_ADD_ITEM_STRING:
                 if (! (str = va_arg(cp, ppe_string))) {
-                    goto CS_JOIN_ARGUMENT_ERROR;
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_ERROR;
                 }
                 s = ppe_str_addr(str);
                 sz = ppe_str_size(str);
@@ -757,7 +761,8 @@ CS_JOIN_AGAIN:
 
             case PPE_STR_JOIN_ADD_ITEM_SNIPPET:
                 if (! (spt = va_arg(cp, ppe_cs_snippet))) {
-                    goto CS_JOIN_ARGUMENT_ERROR;
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_ERROR;
                 }
                 if (! nw) {
                     for (i = 0; i < ppe_cspt_count(spt); i += 1) {
@@ -772,7 +777,7 @@ CS_JOIN_AGAIN:
                         sz = 0;
                         ppe_cspt_get(spt, i, &s, &sz);
                         if (! cs_join_copy(s, sz, cd, cdsz, nw, nwsz, &cpsz, &n)) {
-                            goto CS_JOIN_COPY_ERROR;
+                            goto CS_JOIN_ERROR;
                         }
                     } /* for */
                 } /* if */
@@ -782,7 +787,8 @@ CS_JOIN_AGAIN:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 pdsz = cdsz;
                 if (! (cd = va_arg(cp, ppe_cstr_c))) {
-                    goto CS_JOIN_ARGUMENT_ERROR;
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_ERROR;
                 }
                 cdsz = ppe_cs_size(cd);
                 goto CS_JOIN_NEXT_ITEM;
@@ -791,7 +797,8 @@ CS_JOIN_AGAIN:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 pdsz = cdsz;
                 if (! (cd = va_arg(cp, ppe_cstr_c))) {
-                    goto CS_JOIN_ARGUMENT_ERROR;
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_ERROR;
                 }
                 cdsz = va_arg(cp, ppe_size);
                 goto CS_JOIN_NEXT_ITEM;
@@ -800,7 +807,8 @@ CS_JOIN_AGAIN:
                 /* Switch to a new delimiter in which next strings are being joined. */
                 pdsz = cdsz;
                 if (! (str = va_arg(cp, ppe_string))) {
-                    goto CS_JOIN_ARGUMENT_ERROR;
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_ERROR;
                 }
                 cd = ppe_str_addr(str);
                 cdsz = ppe_str_size(str);
@@ -813,14 +821,15 @@ CS_JOIN_AGAIN:
                 goto CS_JOIN_NEXT_ITEM;
 
             default:
-                goto CS_JOIN_ARGUMENT_ERROR;
+                ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                goto CS_JOIN_ERROR;
         } /* switch */
 
         if (! nw) {
             cpsz += sz;
             cpsz += cdsz;
         } else if (! cs_join_copy(s, sz, cd, cdsz, nw, nwsz, &cpsz, &n)) {
-            goto CS_JOIN_COPY_ERROR;
+            goto CS_JOIN_ERROR;
         } /* if */
 
 CS_JOIN_NEXT_ITEM:
@@ -864,10 +873,7 @@ CS_JOIN_NEXT_ITEM:
     } /* if */
     return (ppe_cstr_c) nw;
 
-CS_JOIN_ARGUMENT_ERROR:
-    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-
-CS_JOIN_COPY_ERROR:
+CS_JOIN_ERROR:
     if (! b) {
         ppe_mp_free(nw);
         return NULL;
