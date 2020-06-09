@@ -669,9 +669,9 @@ PPE_API ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr_c const re
 
 /* -- Join & Concat -- */
 
-static ppe_bool cs_join_copy(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr_c const restrict d, const ppe_size dsz, ppe_cstr restrict b, ppe_size bsz, ppe_size * restrict cpsz, ppe_uint * restrict n)
+static ppe_bool cs_join_copy(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr_c const restrict d, const ppe_size dsz, ppe_cstr restrict b, ppe_size bsz, ppe_size * restrict cpsz, ppe_uint * restrict cnt)
 {
-    if (++*n > 1) {
+    if (++*cnt > 1) {
         if (bsz - *cpsz < dsz) {
             ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
             return ppe_false;
@@ -689,196 +689,317 @@ static ppe_bool cs_join_copy(ppe_cstr_c const restrict s, const ppe_size sz, ppe
     return ppe_true;
 } /* cs_join_copy */
 
-static ppe_cstr_c cs_join(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, va_list * restrict args)
+typedef struct CS_JOIN_ARGS
 {
-    ppe_str_join_action act = PPE_STR_JOIN_END;
+    va_list * cp;
+    ppe_cstr_c s;
+    ppe_size sz;
+    ppe_int i;
+    ppe_int cnt;
+    ppe_cstr_c d;
+    ppe_size dsz;
+} cs_join_args_st, *cs_join_args;
 
-    ppe_cs_snippet spt = NULL;
+typedef ppe_bool (*cs_join_action_fn)(cs_join_args restrict args);
+
+static ppe_bool cs_join_extract_cstr(cs_join_args restrict args)
+{
+    if (! (args->s = va_arg(*(args->cp), ppe_cstr_c))) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    args->sz = ppe_cs_size(s);
+    return ppe_true;
+} /* cs_join_extract_cstr */
+
+static ppe_bool cs_join_extract_cstr_with_size(cs_join_args restrict args)
+{
+    if (! (args->s = va_arg(*(args->cp), ppe_cstr_c))) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    args->sz = va_arg(*(args->cp), ppe_size);
+    return ppe_true;
+} /* cs_join_extract_cstr_with_size */
+
+static ppe_bool cs_join_extract_str(cs_join_args restrict args)
+{
     ppe_string str = NULL;
+    if (! (str = va_arg(*(args->cp), ppe_string))) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    args->s = ppe_str_addr(str);
+    args->sz = ppe_str_size(str);
+    return ppe_true;
+} /* cs_join_extract_str */
+
+static ppe_bool cs_join_extract_snippet(cs_join_args restrict args)
+{
+    if (! (args->spt = va_arg(*(args->cp), ppe_cs_snippet))) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
+    return ppe_true;
+} /* cs_join_extract_snippet */
+
+static ppe_bool cs_join_measure_first_cstr(cs_join_args restrict args)
+{
+    args->cpsz = args->sz;
+    args->cnt = 1;
+    return ppe_true;
+} /* cs_join_measure_first_cstr */
+
+static ppe_bool cs_join_measure_next_cstr(cs_join_args restrict args)
+{
+    args->cpsz += args->sz;
+    args->cpsz += args->cdsz;
+    args->cnt += 1;
+    return ppe_true;
+} /* cs_join_measure_next_cstr */
+
+static ppe_bool cs_join_measure_first_cstr_in_snippet(cs_join_args restrict args)
+{
     ppe_cstr_c s = NULL;
-    ppe_cstr_c cd = NULL;
-    ppe_cstr nw = NULL;
     ppe_size sz = 0;
-    ppe_size nwsz = 0;
-    ppe_size cpsz = 0;
-    ppe_uint i = 0;
-    ppe_uint n = 0;
-    ppe_size cdsz = 0;
-    ppe_size pdsz = 0;
+
+    if (! ppe_cspt_get(args->spt, 0, &s, &sz)) {
+        return ppe_false;
+    }
+    args->cpsz += sz;
+    args->cnt = 1;
+    args->i = 1;
+    return ppe_true;
+} /* cs_join_measure_first_cstr_in_snippet */
+
+static ppe_bool cs_join_measure_next_cstr_in_snippet(cs_join_args restrict args)
+{
+    ppe_cstr_c s = NULL;
+    ppe_size sz = 0;
+    ppe_int i = 0;
+
+    for (i = args->i; i < ppe_cspt_count(args->spt); i += 1) {
+        ppe_cspt_get(args->spt, 0, &s, &sz);
+        args->cpsz += sz;
+    } /* for */
+    args->cpsz += args->dsz * (i - args->i);
+    args->cnt += (i - args->i);
+    args->i = 0;
+    args->spt = NULL;
+    return ppe_true;
+} /* cs_join_measure_next_cstr_in_snippet */
+
+static ppe_bool cs_join_copy_first_cstr(cs_join_args restrict args)
+{
+    if (args->bsz < args->sz) {
+        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+        return ppe_false;
+    }
+    memcpy(args->b + args->cpsz, args->s, args->sz);
+    args->cpsz = args->sz;
+    args->cnt = 1;
+    return ppe_true;
+} /* cs_join_copy_first_cstr */
+
+static ppe_bool cs_join_copy_next_cstr(cs_join_args restrict args)
+{
+    if (args->bsz < args->cpsz + args->dsz + args->sz) {
+        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
+        return ppe_false;
+    }
+    memcpy(args->b + args->cpsz, args->d, args->dsz);
+    args->cpsz += args->dsz;
+    memcpy(args->b + args->cpsz, args->s, args->sz);
+    args->cpsz += args->sz;
+    args->cnt += 1;
+    return ppe_true;
+} /* cs_join_copy_next_cstr */
+
+static ppe_bool cs_join_copy_first_cstr_in_snippet(cs_join_args restrict args)
+{
+    if (! ppe_cspt_get(args->spt, 0, &args->s, &args->sz)) {
+        return ppe_false;
+    }
+    return cs_join_copy_first_cstr(args);
+} /* cs_join_copy_first_cstr_in_snippet */
+
+static ppe_bool cs_join_copy_next_cstr_in_snippet(cs_join_args restrict args)
+{
+    ppe_int i = 0;
+
+    for (i = args->i; i < ppe_cspt_count(args->spt); i += 1) {
+        ppe_cspt_get(args->spt, 0, &args->s, &args->sz);
+        if (! cs_join_copy_next_cstr(args)) {
+            return ppe_false;
+        }
+    } /* for */
+    args->i = 0;
+    args->spt = NULL;
+    return ppe_true;
+} /* cs_join_copy_next_cstr_in_snippet */
+
+static ppe_cstr_c cs_join(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, va_list * restrict ap)
+{
+    static cs_join_action_fn extract_s[] = {
+        &cs_join_extract_cstr,
+        &cs_join_extract_cstr_with_size,
+        &cs_join_extract_str,
+        &cs_join_extract_snippet
+    };
+    static cs_join_action_fn measure_s[2][] = {
+        {
+            &cs_join_measure_first_cstr,
+            &cs_join_measure_first_cstr,
+            &cs_join_measure_first_cstr,
+            &cs_join_measure_first_cstr_in_snippet
+        },
+        {
+            &cs_join_measure_next_cstr,
+            &cs_join_measure_next_cstr,
+            &cs_join_measure_next_cstr,
+            &cs_join_measure_next_cstr_in_snippet
+        }
+    };
+    static cs_join_action_fn copy_s[2][] = {
+        {
+            &cs_join_copy_first_cstr,
+            &cs_join_copy_first_cstr,
+            &cs_join_copy_first_cstr,
+            &cs_join_copy_first_cstr_in_snippet
+        },
+        {
+            &cs_join_copy_next_cstr,
+            &cs_join_copy_next_cstr,
+            &cs_join_copy_next_cstr,
+            &cs_join_copy_next_cstr_in_snippet
+        }
+    };
+
+    cs_join_args_st args;
     va_list cp;
+    ppe_str_join_action act = PPE_STR_JOIN_END;
+    ppe_cstr nw = NULL;
+
+    memset(&args, 0, sizeof(args));
+    args.d = d;
+    args.dsz = dsz;
 
     if (b) {
         if (! bsz) {
             ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-            return NULL;
+            goto CS_JOIN_ERROR;
         }
         if (*bsz == 0) {
             ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-            return NULL;
+            goto CS_JOIN_ERROR;
         }
 
-        nw = b;
-        nwsz = *bsz;
-    } /* if */
+        args.b = b;
+        args.bsz = *bsz;
+    } else {
+        /* -- Measure the total bytes needed to hold the result. -- */
+        va_copy(cp, *ap);
+        args.cp = &cp;
 
-CS_JOIN_AGAIN:
-    cd = d;
-    pdsz = cdsz = dsz;
-
-    va_copy(cp, *args);
-
-    if ((act = va_arg(cp, ppe_str_join_action)) == PPE_STR_JOIN_END) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        goto CS_JOIN_ERROR;
-    }
-
-    do {
-        switch (act) {
-            case PPE_STR_JOIN_ADD_ITEM_CSTR:
-                if (! (s = va_arg(cp, ppe_cstr_c))) {
-                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-                    goto CS_JOIN_ERROR;
-                }
-                sz = ppe_cs_size(s);
-                break;
-
-            case PPE_STR_JOIN_ADD_ITEM_CSTR_WITH_SIZE:
-                if (! (s = va_arg(cp, ppe_cstr_c))) {
-                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-                    goto CS_JOIN_ERROR;
-                }
-                sz = va_arg(cp, ppe_size);
-                break;
-
-            case PPE_STR_JOIN_ADD_ITEM_STRING:
-                if (! (str = va_arg(cp, ppe_string))) {
-                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-                    goto CS_JOIN_ERROR;
-                }
-                s = ppe_str_addr(str);
-                sz = ppe_str_size(str);
-                break;
-
-            case PPE_STR_JOIN_ADD_ITEM_SNIPPET:
-                if (! (spt = va_arg(cp, ppe_cs_snippet))) {
-                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-                    goto CS_JOIN_ERROR;
-                }
-                if (! nw) {
-                    for (i = 0; i < ppe_cspt_count(spt); i += 1) {
-                        sz = 0;
-                        ppe_cspt_get(spt, i, &s, &sz);
-                        cpsz += sz;
-                    } /* for */
-                    cpsz += cdsz * i;
-                    n += i;
-                } else {
-                    for (i = 0; i < ppe_cspt_count(spt); i += 1) {
-                        sz = 0;
-                        ppe_cspt_get(spt, i, &s, &sz);
-                        if (! cs_join_copy(s, sz, cd, cdsz, nw, nwsz, &cpsz, &n)) {
-                            goto CS_JOIN_ERROR;
-                        }
-                    } /* for */
-                } /* if */
-                goto CS_JOIN_NEXT_ITEM;
-
-            case PPE_STR_JOIN_SET_DELIMITER_CSTR:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                pdsz = cdsz;
-                if (! (cd = va_arg(cp, ppe_cstr_c))) {
-                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-                    goto CS_JOIN_ERROR;
-                }
-                cdsz = ppe_cs_size(cd);
-                goto CS_JOIN_NEXT_ITEM;
-
-            case PPE_STR_JOIN_SET_DELIMITER_CSTR_WITH_SIZE:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                pdsz = cdsz;
-                if (! (cd = va_arg(cp, ppe_cstr_c))) {
-                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-                    goto CS_JOIN_ERROR;
-                }
-                cdsz = va_arg(cp, ppe_size);
-                goto CS_JOIN_NEXT_ITEM;
-
-            case PPE_STR_JOIN_SET_DELIMITER_STRING:
-                /* Switch to a new delimiter in which next strings are being joined. */
-                pdsz = cdsz;
-                if (! (str = va_arg(cp, ppe_string))) {
-                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-                    goto CS_JOIN_ERROR;
-                }
-                cd = ppe_str_addr(str);
-                cdsz = ppe_str_size(str);
-                goto CS_JOIN_NEXT_ITEM;
-
-            case PPE_STR_JOIN_UNSET_DELIMITER:
-                pdsz = cdsz;
-                cd = cs_empty_s;
-                cdsz = 0;
-                goto CS_JOIN_NEXT_ITEM;
-
-            default:
-                ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        if ((act = va_arg(cp, ppe_str_join_action)) != PPE_CS_JOIN_END) {
+            if (! (extract_s[act & 0xFFFF])(&args)) {
+                va_end(cp);
                 goto CS_JOIN_ERROR;
-        } /* switch */
+            }
+            if (! (measure_s[0][act & 0xFFFF])(&args)) {
+                goto CS_JOIN_MEASURE_END;
+            }
 
-        if (! nw) {
-            cpsz += sz;
-            cpsz += cdsz;
-        } else if (! cs_join_copy(s, sz, cd, cdsz, nw, nwsz, &cpsz, &n)) {
-            goto CS_JOIN_ERROR;
+            /* Measure the rest of strings in the snippet. */
+            if (args->i > 0 && ! (measure_s[0][act & 0xFFFF])(&args)) {
+                goto CS_JOIN_MEASURE_END;
+            }
+            
+            while ((act = va_arg(cp, ppe_str_join_action)) != PPE_CS_JOIN_END) {
+                if (! (extract_s[act & 0xFFFF])(&args)) {
+                    va_end(cp);
+                    goto CS_JOIN_ERROR;
+                }
+                if (! (measure_s[1][act & 0xFFFF])(&args)) {
+                    break;
+                }
+            } /* while */
+
+CS_JOIN_MEASURE_END:
+            va_end(cp);
         } /* if */
 
-CS_JOIN_NEXT_ITEM:
-        act = va_arg(cp, ppe_str_join_action);
-    } while (act != PPE_STR_JOIN_END);
+        if (bsz) {
+            /* MEASURE-SIZE MODE */
+            *bsz = args.cpsz + 1; /* Include the terminating NUL character. */
+            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
+            goto CS_JOIN_ERROR;
+        }
+
+        /* NEW-STRING MODE */
+        if (args.cpsz == 0) {
+            return cs_empty_s;
+        }
+
+        nw = (ppe_cstr) ppe_mp_malloc(args.cpsz + 1); /* Include the terminating NUL character. */
+        if (! nw) {
+            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
+            goto CS_JOIN_ERROR;
+        }
+
+        args.b = nw;
+        args.bsz = args.cpsz;
+        args.cpsz = 0;
+        args.i = 0;
+        args.spt = NULL;
+    } /* if */
+
+    va_copy(cp, *ap);
+    args.cp = &cp;
+
+    if ((act = va_arg(cp, ppe_str_join_action)) != PPE_CS_JOIN_END) {
+        if (! (extract_s[act & 0xFFFF])(&args)) {
+            va_end(cp);
+            goto CS_JOIN_ERROR;
+        }
+        if (! (copy_s[0][act & 0xFFFF])(&args)) {
+            goto CS_JOIN_COPY_END;
+        }
+
+        /* Measure the rest of strings in the snippet. */
+        if (args->i > 0 && ! (copy_s[0][act & 0xFFFF])(&args)) {
+            goto CS_JOIN_COPY_END;
+        }
+        
+        while ((act = va_arg(cp, ppe_str_join_action)) != PPE_CS_JOIN_END) {
+            if (! (extract_s[act & 0xFFFF])(&args)) {
+                va_end(cp);
+                goto CS_JOIN_ERROR;
+            }
+            if (! (copy_s[1][act & 0xFFFF])(&args)) {
+                break;
+            }
+        } /* while */
+
+CS_JOIN_COPY_END:
+        va_end(cp);
+    } /* if */
 
     va_end(cp);
 
-    if (! nw) {
-        if (n == 1) {
-            cpsz -= pdsz; /* Exclude the last counted delimiter. */
-        }
-        if (bsz) {
-            /* MEASURE-SIZE MODE */
-            *bsz = cpsz + 1; /* Include the terminating NUL character. */
-            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
-            return NULL;
-        }
-
-        /* NEW-STRING MODE */
-        nw = (ppe_cstr) ppe_mp_malloc(cpsz + 1); /* Include the terminating NUL character. */
-        if (! nw) {
-            ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-            return NULL;
-        }
-        nwsz = cpsz;
-        cpsz = 0;
-        n = 0;
-        goto CS_JOIN_AGAIN;
-    } /* if */
-
     if (! bsz) {
         /* NEW-STRING MODE */
-        nw[cpsz] = '\0';
+        nw[args.cpsz] = '\0';
     } else {
         /* FILL-BUFFER MODE */
-        if (cpsz + 1 < *bsz) {
-            nw[cpsz] = '\0';
+        if (args.cpsz + 1 <= *bsz) {
+            nw[args.cpsz] = '\0';
         }
-        *bsz = cpsz;
+        *bsz = args.cpsz;
     } /* if */
     return (ppe_cstr_c) nw;
 
 CS_JOIN_ERROR:
-    if (! b) {
-        ppe_mp_free(nw);
-        return NULL;
-    }
-    va_end(cp);
     return NULL;
 } /* cs_join */
  
