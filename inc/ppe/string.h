@@ -24,15 +24,20 @@ typedef struct PPE_CS_SNIPPET * ppe_cs_snippet;
 struct PPE_STRING; 
 typedef struct PPE_STRING * ppe_string;
 
-typedef enum
+enum
 {
     PPE_CS_JOIN_END = 0,
     PPE_CS_JOIN_CSTR = 1,
     PPE_CS_JOIN_CSTR_WITH_SIZE = 2,
     PPE_CS_JOIN_STRING = 3,
     PPE_CS_JOIN_SNIPPET = 4,
-    PPE_CS_JOIN_SET_DELIMITER= 0x80000000
-} ppe_str_join_action;
+
+    PPE_STR_JOIN_END = 0,
+    PPE_STR_JOIN_STRTR = 1,
+    PPE_STR_JOIN_STRTR_WITH_SIZE = 2,
+    PPE_STR_JOIN_STRING = 3,
+    PPE_STR_JOIN_SNIPPET = 4
+};
 
 enum
 {
@@ -71,8 +76,9 @@ typedef ppe_uint ppe_str_option;
 
 /* -- Property -- */
 
-PPE_API extern ppe_uint ppe_cspt_count(const ppe_cs_snippet restrict spt);
-PPE_API extern ppe_uint ppe_cspt_capacity(const ppe_cs_snippet restrict spt);
+PPE_API extern ppe_int ppe_cspt_count(const ppe_cs_snippet restrict spt);
+PPE_API extern ppe_int ppe_cspt_capacity(const ppe_cs_snippet restrict spt);
+PPE_API extern ppe_size ppe_cspt_total_size(const ppe_cs_snippet restrict spt);
 
 /* -- Create & Destroy -- */
 
@@ -327,12 +333,12 @@ static inline ppe_string ppe_str_clone_cs(ppe_cstr_c const restrict s)
 
 static inline ppe_string ppe_str_join_two(const ppe_string restrict d, const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(d, PPE_STR_OPT_NONE, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
+    return ppe_str_join(d, PPE_STR_OPT_NONE, PPE_STR_JOIN_STRING, s1, PPE_STR_JOIN_STRING, s2, PPE_STR_JOIN_END);
 }
 
 static inline ppe_string ppe_str_concat_two(const ppe_string restrict s1, const ppe_string restrict s2)
 {
-    return ppe_str_join(ppe_str_get_empty(), PPE_STR_OPT_NONE, PPE_STR_JOIN_ADD_ITEM_STRING, s1, PPE_STR_JOIN_ADD_ITEM_STRING, s2, PPE_STR_JOIN_END);
+    return ppe_str_join(ppe_str_get_empty(), PPE_STR_OPT_NONE, PPE_STR_JOIN_STRING, s1, PPE_STR_JOIN_STRING, s2, PPE_STR_JOIN_END);
 }
 
 #ifdef __cplusplus
