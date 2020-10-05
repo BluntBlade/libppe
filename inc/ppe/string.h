@@ -23,6 +23,7 @@ typedef struct PPE_CS_SNIPPET * ppe_cs_snippet;
 
 struct PPE_STRING; 
 typedef struct PPE_STRING * ppe_string;
+typedef const ppe_string ppe_string_c;
 
 enum
 {
@@ -340,6 +341,39 @@ static inline ppe_string ppe_str_concat_two(const ppe_string restrict s1, const 
 {
     return ppe_str_join(ppe_str_get_empty(), PPE_STR_OPT_NONE, PPE_STR_JOIN_STRING, s1, PPE_STR_JOIN_STRING, s2, PPE_STR_JOIN_END);
 }
+
+/* ==== Declaration : String Joiner ========================================= */
+
+/* ---- Types --------------------------------------------------------------- */
+
+struct PPE_SJN_JOINER; 
+typedef struct PPE_SJN_JOINER * ppe_sjn_joiner; 
+typedef const ppe_sjn_joiner ppe_sjn_joiner_c; 
+
+typedef enum
+{
+    PPE_SJN_MEASURE = 0,
+    PPE_SJN_JOIN = 1
+} ppe_sjn_action;
+
+/* ---- Functions ----------------------------------------------------------- */
+
+/* -- Property -- */
+
+PPE_API extern ppe_uint ppe_sjn_count(ppe_sjn_joiner_c restrict jnr);
+PPE_API extern ppe_size ppe_sjn_size(ppe_sjn_joiner_c restrict jnr);
+
+/* -- Create & Destroy -- */
+
+PPE_API extern ppe_sjn_joiner ppe_sjn_create(ppe_cstr restrict d, const ppe_size sz);
+PPE_API extern void ppe_sjn_destroy(ppe_sjn_joiner restrict jnr);
+PPE_API extern void ppe_sjn_reset(ppe_sjn_joiner restrict jnr);
+
+/* -- Process -- */
+
+PPE_API extern ppe_int ppe_sjn_add_cstrs(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr b, ppe_size * restrict bsz);
+PPE_API extern ppe_int ppe_sjn_add_strings(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr b, ppe_size * restrict bsz);
+PPE_API extern ppe_int ppe_sjn_add_snippet(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cs_snippet restrict spt, ppe_cstr b, ppe_size * restrict bsz);
 
 #ifdef __cplusplus
 }
