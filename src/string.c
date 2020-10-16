@@ -678,265 +678,56 @@ PPE_API ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr_c const re
 
 /* -- Join & Concat -- */
 
-typedef struct CS_JOIN_ARGS
+static ppe_cstr_c cs_join_s(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, va_list * restrict ap)
 {
-    va_list * cp;
-    ppe_int cnt;
-    ppe_size cpsz;
-    ppe_size dsz;
-    ppe_cstr_c d;
-    ppe_cstr b;
-} cs_join_args_st, *cs_join_args;
-
-typedef ppe_bool (*cs_join_action_fn)(cs_join_args restrict args);
-
-static ppe_bool cs_join_measure_cstr(cs_join_args restrict args)
-{
-    ppe_cstr_c s = NULL;
-    if (! (s = va_arg(*(args->cp), ppe_cstr_c))) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    args->cpsz += strlen(s) + args->dsz;
-    args->cnt += 1;
-    return ppe_true;
-} /* cs_join_measure_cstr */
-
-static ppe_bool cs_join_copy_cstr(cs_join_args restrict args)
-{
-    ppe_cstr_c s = NULL;
-    ppe_size sz = 0;
-
-    s = va_arg(*(args->cp), ppe_cstr_c);
-    sz = strlen(s);
-
-    memcpy(args->b + args->cpsz, s, sz);
-    args->cpsz += sz;
-    memcpy(args->b + args->cpsz, args->d, args->dsz);
-    args->cpsz += args->dsz;
-    return ppe_true;
-} /* cs_join_copy_cstr */
-
-static ppe_bool cs_join_measure_cstr_with_size(cs_join_args restrict args)
-{
-    if (! va_arg(*(args->cp), ppe_cstr_c)) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    args->cpsz += va_arg(*(args->cp), ppe_size) + args->dsz;
-    args->cnt += 1;
-    return ppe_true;
-} /* cs_join_measure_cstr_with_size */
-
-static ppe_bool cs_join_copy_cstr_with_size(cs_join_args restrict args)
-{
-    ppe_cstr_c s = NULL;
-    ppe_size sz = 0;
-
-    s = va_arg(*(args->cp), ppe_cstr_c);
-    sz = va_arg(*(args->cp), ppe_size);
-
-    memcpy(args->b + args->cpsz, s, sz);
-    args->cpsz += sz;
-    memcpy(args->b + args->cpsz, args->d, args->dsz);
-    args->cpsz += args->dsz;
-    return ppe_true;
-} /* cs_join_copy_cstr_with_size */
-
-static ppe_bool cs_join_measure_str(cs_join_args restrict args)
-{
-    ppe_string str = NULL;
-    if (! (str = va_arg(*(args->cp), ppe_string))) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    args->cpsz += ppe_str_size(str) + args->dsz;
-    args->cnt += 1;
-    return ppe_true;
-} /* cs_join_measure_str */
-
-static ppe_bool cs_join_copy_str(cs_join_args restrict args)
-{
-    ppe_string str = NULL;
-
-    str = va_arg(*(args->cp), ppe_string);
-
-    memcpy(args->b + args->cpsz, ppe_str_addr(str), ppe_str_size(str));
-    args->cpsz += ppe_str_size(str);
-    memcpy(args->b + args->cpsz, args->d, args->dsz);
-    args->cpsz += args->dsz;
-    return ppe_true;
-} /* cs_join_copy_str */
-
-static ppe_bool cs_join_measure_snippet(cs_join_args restrict args)
-{
-    ppe_cs_snippet spt = NULL;
-    if (! (spt = va_arg(*(args->cp), ppe_cs_snippet))) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return ppe_false;
-    }
-    args->cpsz += ppe_cspt_total_size(spt) + args->dsz * ppe_cspt_count(spt);
-    args->cnt += 1;
-    return ppe_true;
-} /* cs_join_measure_snippet */
-
-static ppe_bool cs_join_copy_snippet(cs_join_args restrict args)
-{
-    ppe_cs_snippet spt = NULL;
-    ppe_cstr p = 0;
-    ppe_cstr_c d = 0;
-    ppe_cstr_c s = 0;
-    ppe_size sz = 0;
-    ppe_size cpsz = 0;
-    ppe_size dsz = 0;
-    ppe_int i = 0;
-    ppe_int n = 0;
-
-    d = args->d;
-    dsz = args->dsz;
-    p = args->b + args->cpsz;
-    spt = va_arg(*(args->cp), ppe_cs_snippet);
-    n = ppe_cspt_count(spt);
-
-    if (n & 1) {
-        ppe_cspt_get(spt, i++, &s, &sz);
-        memcpy(p, s, sz);
-        p += sz;
-        cpsz += sz;
-        memcpy(p, d, dsz);
-        p += dsz;
-        cpsz += dsz;
-    }
-    n >>= 1;
-
-    if (n & 1) {
-        ppe_cspt_get(spt, i++, &s, &sz);
-        memcpy(p, s, sz);
-        p += sz;
-        cpsz += sz;
-        memcpy(p, d, dsz);
-        p += dsz;
-        cpsz += dsz;
-
-        ppe_cspt_get(spt, i++, &s, &sz);
-        memcpy(p, s, sz);
-        p += sz;
-        cpsz += sz;
-        memcpy(p, d, dsz);
-        p += dsz;
-        cpsz += dsz;
-    }
-    n >>= 1;
-
-    while (n-- > 0) {
-        ppe_cspt_get(spt, i++, &s, &sz);
-        memcpy(p, s, sz);
-        p += sz;
-        cpsz += sz;
-        memcpy(p, d, dsz);
-        p += dsz;
-        cpsz += dsz;
-
-        ppe_cspt_get(spt, i++, &s, &sz);
-        memcpy(p, s, sz);
-        p += sz;
-        cpsz += sz;
-        memcpy(p, d, dsz);
-        p += dsz;
-        cpsz += dsz;
-
-        ppe_cspt_get(spt, i++, &s, &sz);
-        memcpy(p, s, sz);
-        p += sz;
-        cpsz += sz;
-        memcpy(p, d, dsz);
-        p += dsz;
-        cpsz += dsz;
-
-        ppe_cspt_get(spt, i++, &s, &sz);
-        memcpy(p, s, sz);
-        p += sz;
-        cpsz += sz;
-        memcpy(p, d, dsz);
-        p += dsz;
-        cpsz += dsz;
-    } /* while */
-            
-    args->cpsz += cpsz;
-    return ppe_true;
-} /* cs_join_copy_snippet */
-
-static ppe_bool cs_join_act(cs_join_action_fn action[], cs_join_args restrict args)
-{
-    ppe_uint act = PPE_CS_JOIN_END;
-    ppe_int n = 0;
-
-    if (args->cnt == 0) {
-        while ((act = va_arg(*(args->cp), ppe_uint)) != PPE_CS_JOIN_END) {
-            if (! (action[act])(args)) {
-                return ppe_false;
-            }
-        } /* while */
-        return ppe_true;
-    } /* if */
-
-    n = args->cnt;
-
-    if (n & 1) {
-        act = va_arg(*(args->cp), ppe_uint);
-        (action[act])(args);
-    } /* if */
-    n >>= 1;
-
-    if (n & 1) {
-        act = va_arg(*(args->cp), ppe_uint);
-        (action[act])(args);
-        act = va_arg(*(args->cp), ppe_uint);
-        (action[act])(args);
-    } /* if */
-    n >>= 1;
-
-    while (n-- > 0) {
-        act = va_arg(*(args->cp), ppe_uint);
-        (action[act])(args);
-        act = va_arg(*(args->cp), ppe_uint);
-        (action[act])(args);
-        act = va_arg(*(args->cp), ppe_uint);
-        (action[act])(args);
-        act = va_arg(*(args->cp), ppe_uint);
-        (action[act])(args);
-    } /* while */
-    return ppe_true;
-} /* cs_join_act */
-
-static ppe_cstr_c cs_join(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, va_list * restrict ap)
-{
-    static cs_join_action_fn measure_s[] = {
-        &cs_join_measure_cstr,
-        &cs_join_measure_cstr_with_size,
-        &cs_join_measure_str,
-        &cs_join_measure_snippet
-    };
-    static cs_join_action_fn copy_s[] = {
-        &cs_join_copy_cstr,
-        &cs_join_copy_cstr_with_size,
-        &cs_join_copy_str,
-        &cs_join_copy_snippet
-    };
-
-    cs_join_args_st args;
     va_list cp;
     ppe_bool ret = ppe_false;
+    ppe_cstr s = NULL;
+    ppe_size sz = 0;
     ppe_cstr nw = NULL;
+    ppe_sjn_joiner jnr = NULL;
+    ppe_str_action act = PPE_STR_JOIN_END;
 
-    memset(&args, 0, sizeof(args));
-    args.d = d;
-    args.dsz = dsz;
+    jnr = ppe_sjn_create(d, dsz);
+    if (! jnr) {
+        return NULL;
+    }
 
     /* -- Check all arugments and measure the total bytes needed to hold the result. -- */
     va_copy(cp, *ap);
-    args.cp = &cp;
-    ret = cs_join_act(measure_s, &args);
+    while ((act = va_arg(cp, ppe_str_action)) != PPE_STR_JOIN_END) {
+        switch (act) {
+            case PPE_STR_JOIN_CSTR:
+                s = va_arg(cp, ppe_cstr);
+                if (! s) {
+                    ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                    goto CS_JOIN_S_ERROR;
+                }
+                if (ppe_sjn_append_cstr(jnr, PPE_SJN_MEASURE, s, ppe_cs_size(s), NULL, NULL, NULL) < 0) {
+                    goto CS_JOIN_S_ERROR;
+                } /* if */
+                break;
+
+            case PPE_STR_JOIN_CSTR_WITH_SIZE:
+                break;
+
+            case PPE_STR_JOIN_CSTR_ARRAY:
+                break;
+
+            case PPE_STR_JOIN_STRING:
+                break;
+
+            case PPE_STR_JOIN_STRING_ARRAY:
+                break;
+
+            case PPE_STR_JOIN_SNIPPET:
+                break;
+
+            default:
+                ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+                return NULL;
+        } /* switch */
+    } /* while */
     va_end(cp);
 
     if (! ret) {
@@ -1001,7 +792,11 @@ static ppe_cstr_c cs_join(ppe_cstr_c restrict d, ppe_size dsz, ppe_cstr restrict
         *bsz = args.cpsz;
     } /* if */
     return (ppe_cstr_c) nw;
-} /* cs_join */
+
+CS_JOIN_S_ERROR;
+    ppe_sjn_destroy(jnr);
+    return NULL;
+} /* cs_join_s */
  
 PPE_API ppe_cstr_c ppe_cs_join(ppe_cstr_c const restrict d, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt, ...)
 {
@@ -1751,34 +1546,30 @@ PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud,
         return -1;
     }
 
-     if (jnr->n == 0) {
+    if (jnr->n == 0) {
         ret = (*y)(ud, jnr->i, &s, &sz);
         if (ret < 0) {
-            goto PPE_SJN_MEASURE_ERROR;
-        }
-        if (! s) {
+            return ret;
+        } else if (ret == 0) {
             goto PPE_SJN_MEASURE_END;
-        }
+        } /* if */
         goto PPE_SJN_MEASURE_NEXT;
     } /* if */
 
-    while ((ret = (*y)(ud, jnr->i, &s, &sz)) == 0 && s) {
+    do {
         jnr->sz += jnr->dsz;
 
 PPE_SJN_MEASURE_NEXT:
         jnr->sz += sz;
         jnr->i += 1;
         jnr->n += 1;
-    } /* while */
+    } while ((ret = (*y)(ud, jnr->i, &s, &sz)) > 0);
 
 PPE_SJN_MEASURE_END:
     if (ret == 0) {
         jnr->i = 0;
     }
-PPE_SJN_MEASURE_ERROR:
-    if (nbsz) {
-        *nbsz = jnr->sz > *bsz ? jnr->sz : *bsz;
-    }
+    *nbsz = jnr->sz > *bsz ? jnr->sz : *bsz;
     return ret;
 } /* ppe_sjn_measure */
 
@@ -1797,38 +1588,37 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
     if (jnr->n == 0) {
         ret = (*y)(ud, jnr->i, &s, &sz);
         if (ret < 0) {
+            return ret;
+        } else if (ret == 0) {
+            goto PPE_SJN_JOIN_END;
+        }
+        if (*bsz < sz) {
             *nbsz = sz > *bsz ? sz : *bsz;
-            return ret;
-        }
-        if (! s) {
-            return ret;
-        }
-        if (*bsz - cpsz < sz) {
             ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
-            *nbsz = sz > *bsz ? sz : *bsz;
             return -1;
         }
-        goto PPE_SJN_APPEND_NEXT;
+        goto PPE_SJN_JOIN_NEXT;
     } /* if */
 
-    while ((ret = (*y)(ud, jnr->i, &s, &sz)) == 0 && s) {
+    do {
         if (*bsz - cpsz < jnr->dsz + sz) {
-            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
             *nbsz = jnr->dsz + sz > *bsz ? jnr->dsz + sz : *bsz;
+            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
             return -1;
         }
         memcpy(b + cpsz, jnr->d, jnr->dsz);
         cpsz += jnr->dsz;
         jnr->sz += jnr->dsz;
 
-PPE_SJN_APPEND_NEXT:
+PPE_SJN_JOIN_NEXT:
         memcpy(b + cpsz, s, sz);
         cpsz += sz;
         jnr->sz += sz;
         jnr->i += 1;
         jnr->n += 1;
-    } /* while */
+    } while ((ret = (*y)(ud, jnr->i, &s, &sz)) > 0);
 
+PPE_SJN_JOIN_END:
     if (ret == 0) {
         jnr->i = 0;
     } /* if */
@@ -1839,13 +1629,78 @@ PPE_SJN_APPEND_NEXT:
 
 typedef struct
 {
-    ppe_cstr_c * strs;
-    ppe_uint n;
+    ppe_cstr_c s;
+    ppe_size sz;
 } ppe_sjn_cstr_data_st, *ppe_sjn_cstr_data;
 
 static ppe_int ppe_sjn_yield_cstr(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
 {
     ppe_sjn_cstr_data d = (ppe_sjn_cstr_data) ud;
+    *s = d->s;
+    *sz = d->sz;
+    return 0;
+} /* ppe_sjn_yield_cstr */
+
+PPE_API ppe_int ppe_sjn_append_cstr(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+{
+    ppe_sjn_cstr_data_st ud;
+
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+
+    ud.s = s;
+    ud.sz = ppe_cs_size(s);
+    if (act == PPE_SJN_MEASURE) {
+        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr, nbsz);
+    }
+    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr, b, bsz, nbsz);
+} /* ppe_sjn_append_cstr */
+
+PPE_API ppe_int ppe_sjn_append_cstr_with_size(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+{
+    ppe_sjn_cstr_data_st ud;
+
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+
+    ud.s = s;
+    ud.sz = sz;
+    if (act == PPE_SJN_MEASURE) {
+        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr, nbsz);
+    }
+    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr, b, bsz, nbsz);
+} /* ppe_sjn_append_cstr_with_size */
+
+PPE_API ppe_int ppe_sjn_append_string(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+{
+    ppe_sjn_cstr_data_st ud;
+
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return -1;
+    }
+
+    ud.s = ppe_str_addr(s);
+    ud.sz = ppe_str_size(s);
+    if (act == PPE_SJN_MEASURE) {
+        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr, nbsz);
+    }
+    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr, b, bsz, nbsz);
+} /* ppe_sjn_append_string */
+
+typedef struct
+{
+    ppe_cstr_c * strs;
+    ppe_uint n;
+} ppe_sjn_cstr_array_st, *ppe_sjn_cstr_array;
+
+static ppe_int ppe_sjn_yield_cstr_from_array(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
+{
+    ppe_sjn_cstr_array d = (ppe_sjn_cstr_array) ud;
     if (idx < d->n) {
         *s = d->strs[idx];
         *sz = ppe_cs_size(d->strs[idx]);
@@ -1853,30 +1708,30 @@ static ppe_int ppe_sjn_yield_cstr(void * ud, ppe_uint idx, const ppe_char ** s, 
         *s = NULL;
         *sz = 0;
     }
-    return 0;
-} /* ppe_sjn_yield_cstr */
+    return d->n - (idx + 1);
+} /* ppe_sjn_yield_cstr_from_array */
 
 PPE_API ppe_int ppe_sjn_append_cstrs(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
 {
-    ppe_sjn_cstr_data_st ud;
+    ppe_sjn_cstr_array_st ud;
 
     ud.c = strs;
     ud.n = n;
     if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr, nbsz);
+        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr_from_array, nbsz);
     }
-    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr, b, bsz, nbsz);
+    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr_from_array, b, bsz, nbsz);
 } /* ppe_sjn_append_cstrs */
 
 typedef struct
 {
     ppe_string_c * strs;
     ppe_uint n;
-} ppe_sjn_string_data_st, *ppe_sjn_string_data;
+} ppe_sjn_string_array_st, *ppe_sjn_string_array;
 
-static ppe_int ppe_sjn_yield_cstr_from_string(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
+static ppe_int ppe_sjn_yield_cstr_from_string_array(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
 {
-    ppe_sjn_string_data d = (ppe_sjn_string_data) ud;
+    ppe_sjn_string_array d = (ppe_sjn_string_array) ud;
     if (idx < d->n) {
         *s = ppe_str_addr(d->strs[idx]);
         *sz = ppe_cs_size(d->strs[idx]);
@@ -1884,19 +1739,19 @@ static ppe_int ppe_sjn_yield_cstr_from_string(void * ud, ppe_uint idx, const ppe
         *s = NULL;
         *sz = 0;
     }
-    return 0;
-} /* ppe_sjn_yield_cstr_from_string */
+    return d->n - (idx + 1);
+} /* ppe_sjn_yield_cstr_from_string_array */
 
 PPE_API ppe_int ppe_sjn_append_strings(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
 {
-    ppe_sjn_string_data_st ud;
+    ppe_sjn_string_array_st ud;
 
     ud.c = strs;
     ud.n = n;
     if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr_from_string, nbsz);
+        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr_from_string_array, nbsz);
     }
-    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr_from_string, b, bsz, nbsz);
+    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr_from_string_array, b, bsz, nbsz);
 } /* ppe_sjn_append_strings */
 
 static ppe_int ppe_sjn_yield_cstr_from_snippet(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
@@ -1909,7 +1764,7 @@ static ppe_int ppe_sjn_yield_cstr_from_snippet(void * ud, ppe_uint idx, const pp
         *s = NULL;
         *sz = 0;
     } /* if */
-    return 0;
+    return spt->cnt - (idx + 1);
 } /* ppe_sjn_yield_cstr_from_snippet */
 
 PPE_API ppe_int ppe_sjn_append_snippet(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)

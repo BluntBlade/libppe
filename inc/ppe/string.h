@@ -25,20 +25,16 @@ struct PPE_STRING;
 typedef struct PPE_STRING * ppe_string;
 typedef const ppe_string ppe_string_c;
 
-enum
+typedef enum
 {
-    PPE_CS_JOIN_END = 0,
-    PPE_CS_JOIN_CSTR = 1,
-    PPE_CS_JOIN_CSTR_WITH_SIZE = 2,
-    PPE_CS_JOIN_STRING = 3,
-    PPE_CS_JOIN_SNIPPET = 4,
-
     PPE_STR_JOIN_END = 0,
-    PPE_STR_JOIN_STRTR = 1,
-    PPE_STR_JOIN_STRTR_WITH_SIZE = 2,
-    PPE_STR_JOIN_STRING = 3,
-    PPE_STR_JOIN_SNIPPET = 4
-};
+    PPE_STR_JOIN_CSTR = 1,
+    PPE_STR_JOIN_CSTR_WITH_SIZE = 2,
+    PPE_STR_JOIN_CSTR_ARRAY = 3,
+    PPE_STR_JOIN_STRING = 4,
+    PPE_STR_JOIN_STRING_ARRAY = 5,
+    PPE_STR_JOIN_SNIPPET = 6,
+} ppe_str_action;
 
 enum
 {
@@ -376,6 +372,10 @@ PPE_API extern void ppe_sjn_reset(ppe_sjn_joiner restrict jnr);
 
 PPE_API extern ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_size * restrict nbsz);
 PPE_API extern ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
+
+PPE_API extern ppe_int ppe_sjn_append_cstr(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
+PPE_API extern ppe_int ppe_sjn_append_cstr_with_size(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
+PPE_API extern ppe_int ppe_sjn_append_string(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
 
 PPE_API extern ppe_int ppe_sjn_append_cstrs(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
 PPE_API extern ppe_int ppe_sjn_append_strings(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
