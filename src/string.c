@@ -1539,6 +1539,7 @@ PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud,
 {
     const ppe_char * s = NULL;
     const ppe_size sz = 0;
+    ppe_size cpsz = 0;
     ppe_int ret = 0;
 
     if (! jnr || ! y || ! nbsz) {
@@ -1551,25 +1552,27 @@ PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud,
         if (ret < 0) {
             return ret;
         } else if (ret == 0) {
-            goto PPE_SJN_MEASURE_END;
+            jnr->i = 0;
+            *nbsz = 0; /* No entry exists in the array, need no more buffers. */
+            return 0;
         } /* if */
         goto PPE_SJN_MEASURE_NEXT;
     } /* if */
 
     do {
-        jnr->sz += jnr->dsz;
+        cpsz += jnr->dsz;
 
 PPE_SJN_MEASURE_NEXT:
-        jnr->sz += sz;
+        cpsz += sz;
         jnr->i += 1;
         jnr->n += 1;
     } while ((ret = (*y)(ud, jnr->i, &s, &sz)) > 0);
 
-PPE_SJN_MEASURE_END:
+    jnr->sz += cpsz;
     if (ret == 0) {
         jnr->i = 0;
     }
-    *nbsz = jnr->sz > *bsz ? jnr->sz : *bsz;
+    *nbsz = cpsz;
     return ret;
 } /* ppe_sjn_measure */
 
@@ -1577,7 +1580,7 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
 {
     const ppe_char * s = NULL;
     const ppe_size sz = 0;
-    const ppe_size cpsz = 0;
+    ppe_size cpsz = 0;
     ppe_int ret = 0;
 
     if (! jnr || ! y || ! b || ! bsz || ! nbsz) {
@@ -1590,10 +1593,15 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
         if (ret < 0) {
             return ret;
         } else if (ret == 0) {
-            goto PPE_SJN_JOIN_END;
-        }
+            jnr->i = 0;
+            *nbsz = 0; /* No entry exists in the array, need no more buffers. */
+            *bsz = 0;
+            return 0;
+        } /* if */
         if (*bsz < sz) {
+            /* jnr->sz += cpsz; */
             *nbsz = sz > *bsz ? sz : *bsz;
+            *bsz = 0;
             ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
             return -1;
         }
@@ -1602,27 +1610,29 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
 
     do {
         if (*bsz - cpsz < jnr->dsz + sz) {
+            jnr->sz += cpsz;
             *nbsz = jnr->dsz + sz > *bsz ? jnr->dsz + sz : *bsz;
+            *bsz = cpsz;
             ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
             return -1;
         }
         memcpy(b + cpsz, jnr->d, jnr->dsz);
         cpsz += jnr->dsz;
-        jnr->sz += jnr->dsz;
 
 PPE_SJN_JOIN_NEXT:
         memcpy(b + cpsz, s, sz);
         cpsz += sz;
-        jnr->sz += sz;
         jnr->i += 1;
         jnr->n += 1;
     } while ((ret = (*y)(ud, jnr->i, &s, &sz)) > 0);
 
-PPE_SJN_JOIN_END:
+    jnr->sz += cpsz;
     if (ret == 0) {
         jnr->i = 0;
+        *nbsz = 0; /* All entries consumed, need no more buffers. */
+    } else {
+        *nbsz = *bsz; /* When error occurs, the capacity of next buffer equals to the previous one. */
     } /* if */
-    *nbsz = *bsz;
     *bsz = cpsz;
     return ret;
 } /* ppe_sjn_join */
