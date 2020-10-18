@@ -1547,15 +1547,16 @@ PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud,
         return -1;
     }
 
+    ret = (*y)(ud, jnr->i, &s, &sz);
+    if (ret < 0) {
+        return ret;
+    } else if (ret == 0) {
+        jnr->i = 0;
+        *nbsz = 0; /* No entry exists in the array, need no more buffers. */
+        return 0;
+    } /* if */
+
     if (jnr->n == 0) {
-        ret = (*y)(ud, jnr->i, &s, &sz);
-        if (ret < 0) {
-            return ret;
-        } else if (ret == 0) {
-            jnr->i = 0;
-            *nbsz = 0; /* No entry exists in the array, need no more buffers. */
-            return 0;
-        } /* if */
         goto PPE_SJN_MEASURE_NEXT;
     } /* if */
 
@@ -1588,16 +1589,18 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
         return -1;
     }
 
+    ret = (*y)(ud, jnr->i, &s, &sz);
+    if (ret < 0) {
+        *bsz = 0;
+        return ret;
+    } else if (ret == 0) {
+        jnr->i = 0;
+        *nbsz = 0; /* No entry exists in the array, need no more buffers. */
+        *bsz = 0;
+        return 0;
+    } /* if */
+
     if (jnr->n == 0) {
-        ret = (*y)(ud, jnr->i, &s, &sz);
-        if (ret < 0) {
-            return ret;
-        } else if (ret == 0) {
-            jnr->i = 0;
-            *nbsz = 0; /* No entry exists in the array, need no more buffers. */
-            *bsz = 0;
-            return 0;
-        } /* if */
         if (*bsz < sz) {
             /* jnr->sz += cpsz; */
             *nbsz = sz > *bsz ? sz : *bsz;
