@@ -1501,40 +1501,6 @@ PPE_API void ppe_sjn_reset(ppe_sjn_joiner restrict jnr)
 
 /* -- Process -- */
 
-static ppe_bool ppe_sjn_measure_imp(ppe_sjn_joiner sjn, const ppe_char * s, const ppe_size sz)
-{
-    if (jnr->n > 0) {
-        jnr->sz += jnr->dsz;
-    }
-    jnr->sz += sz;
-    jnr->n += 1;
-    return ppe_true;
-} /* ppe_sjn_join_imp */
-
-static ppe_bool ppe_sjn_join_imp(ppe_sjn_joiner sjn, const ppe_char * s, const ppe_size sz)
-{
-    if (jnr->n > 0) {
-        if (jnr->bsz - jnr->cpsz < jnr->dsz + sz) {
-            jnr->nbsz = jnr->dsz + sz;
-            ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
-            return ppe_false;
-        }
-        memcpy(jnr->buf + jnr->cpsz, jnr->d, jnr->dsz);
-        jnr->cpsz += dsz;
-        jnr->sz += dsz;
-    } else if (jnr->bsz - jnr->cpsz < sz) {
-        jnr->nbsz = sz;
-        ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
-        return ppe_false;
-    }
-    memcpy(jnr->buf + jnr->cpsz, s, sz);
-    jnr->cpsz += sz;
-    jnr->sz += sz;
-    jnr->i += 1;
-    jnr->n += 1;
-    return ppe_true;
-} /* ppe_sjn_join_imp */
-
 PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_size * restrict nbsz)
 {
     const ppe_char * s = NULL;
@@ -1577,17 +1543,42 @@ PPE_SJN_MEASURE_NEXT:
     return ret;
 } /* ppe_sjn_measure */
 
+#define sjn_copy_partially(sjn, b, bsz, cpsz) \
+    do \
+    { \
+        if (sjn->s.off < sjn->.sz) { \
+            bytes = *bsz - cpsz; \
+            if (bytes <= sjn->s.sz - sjn->s.off) { \
+                memcpy(b + cpsz, sjn->s.addr + sjn->off, bytes); \
+                sjn->s.off += bytes; \
+                *nbsz = *bsz; \
+                *bsz = cpsz + bytes; \
+                ppe_err_set(PPE_ERR_TRY_AGAIN, NULL); \
+                return -1; \
+            } else { \
+                memcpy(b + cpsz, sjn->s.addr + sjn->off, sjn->s.sz - sjn->s.off); \
+                cpsz += sjn->s.sz - sjn->s.off; \
+                sjn->s.off = sjn->sz; \
+                jnr->i += 1; \
+                jnr->n += 1; \
+            } \
+        } \
+    } while (0);
+
 PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
 {
     const ppe_char * s = NULL;
     const ppe_size sz = 0;
     ppe_size cpsz = 0;
+    ppe_size bytes = 0;
     ppe_int ret = 0;
 
     if (! jnr || ! y || ! b || ! bsz || ! nbsz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return -1;
     }
+
+    sjn_copy_partially(sjn, b, bsz, cpsz);
 
     ret = (*y)(ud, jnr->i, &s, &sz);
     if (ret < 0) {
@@ -1600,34 +1591,75 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
         return 0;
     } /* if */
 
-    if (jnr->n == 0) {
-        if (*bsz < sz) {
-            /* jnr->sz += cpsz; */
-            *nbsz = sz > *bsz ? sz : *bsz;
-            *bsz = 0;
-            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
-            return -1;
-        }
-        goto PPE_SJN_JOIN_NEXT;
-    } /* if */
+    if (jnr->s.addr && jnr->s.addr != jnr->d) {
+        jnr->s.addr = jnr->d;
+        jnr->s.sz = jnr->dsz;
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+    }
+    jnr->s.addr = s;
+    jnr->s.sz = sz;
+    jnr->s.off = 0;
+    sjn_copy_partially(sjn, b, bsz, cpsz);
+
+    switch (ret % 4) {
+        case 0: goto PPE_SJN_JOIN_0_DELI;
+        case 1: goto PPE_SJN_JOIN_3_DELI;
+        case 2: goto PPE_SJN_JOIN_2_DELI;
+        case 3: goto PPE_SJN_JOIN_1_DELI;
+        default:
+            break;
+    } /* switch */
 
     do {
-        if (*bsz - cpsz < jnr->dsz + sz) {
-            jnr->sz += cpsz;
-            *nbsz = jnr->dsz + sz > *bsz ? jnr->dsz + sz : *bsz;
-            *bsz = cpsz;
-            ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
-            return -1;
-        }
-        memcpy(b + cpsz, jnr->d, jnr->dsz);
-        cpsz += jnr->dsz;
+PPE_SJN_JOIN_0_DELI:
+        jnr->s.addr = jnr->d;
+        jnr->s.sz = jnr->dsz;
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
 
-PPE_SJN_JOIN_NEXT:
-        memcpy(b + cpsz, s, sz);
-        cpsz += sz;
-        jnr->i += 1;
-        jnr->n += 1;
-    } while ((ret = (*y)(ud, jnr->i, &s, &sz)) > 0);
+        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
+            break;
+        }
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+
+PPE_SJN_JOIN_1_DELI:
+        jnr->s.addr = jnr->d;
+        jnr->s.sz = jnr->dsz;
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+
+        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
+            break;
+        }
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+
+PPE_SJN_JOIN_2_DELI:
+        jnr->s.addr = jnr->d;
+        jnr->s.sz = jnr->dsz;
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+
+        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
+            break;
+        }
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+
+PPE_SJN_JOIN_3_DELI:
+        jnr->s.addr = jnr->d;
+        jnr->s.sz = jnr->dsz;
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+
+        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
+            break;
+        }
+        jnr->s.off = 0;
+        sjn_copy_partially(sjn, b, bsz, cpsz);
+    } while (ret > 0);
 
     jnr->sz += cpsz;
     if (ret == 0) {
