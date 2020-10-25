@@ -1501,45 +1501,56 @@ PPE_API void ppe_sjn_reset(ppe_sjn_joiner restrict jnr)
 
 /* -- Process -- */
 
-PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_size * restrict nbsz)
+PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y)
 {
-    const ppe_char * s = NULL;
-    const ppe_size sz = 0;
+    const ppe_char * s[4];
+    const ppe_size sz[4];
+    ppe_uint c = 0;
     ppe_size cpsz = 0;
     ppe_int ret = 0;
 
-    if (! jnr || ! y || ! nbsz) {
+    if (! jnr || ! y) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return -1;
     }
 
-    ret = (*y)(ud, jnr->i, &s, &sz);
+    ret = (*y)(ud, jnr->i, s, sz, sizeof(s) / sizeof(s[0]));
     if (ret < 0) {
         return ret;
     } else if (ret == 0) {
+        /* No more strings from the yielder. */
         jnr->i = 0;
-        *nbsz = 0; /* No entry exists in the array, need no more buffers. */
         return 0;
     } /* if */
 
-    if (jnr->n == 0) {
-        goto PPE_SJN_MEASURE_NEXT;
-    } /* if */
+    while (ret == sizeof(s) / sizeof(s[0])) {
+        cpsz += jnr->dsz * 4;
+        cpsz += sz[0] + sz[1] + sz[2] + sz[3];
+        c += sizeof(s) / sizeof(s[0]);
+        ret = (*y)(ud, jnr->i + c, &s, &sz);
+    } /* while */
 
-    do {
-        cpsz += jnr->dsz;
+    switch (ret) {
+        case 3:
+            cpsz += jnr->dsz;
+            cpsz += sz[2];
+            c += 1;
+        case 2:
+            cpsz += jnr->dsz;
+            cpsz += sz[1];
+            c += 1;
+        case 1:
+            cpsz += jnr->dsz;
+            cpsz += sz[0];
+            c += 1;
+        default:
+            break;
+    } /* switch */
 
-PPE_SJN_MEASURE_NEXT:
-        cpsz += sz;
-        jnr->i += 1;
-        jnr->n += 1;
-    } while ((ret = (*y)(ud, jnr->i, &s, &sz)) > 0);
-
+    cpsz -= jnr->n == 0 ? jnr->dsz : 0;
     jnr->sz += cpsz;
-    if (ret == 0) {
-        jnr->i = 0;
-    }
-    *nbsz = cpsz;
+    jnr->i = ret >= 0 ? 0 : jnr->i + c;
+    jnr->n += c;
     return ret;
 } /* ppe_sjn_measure */
 
@@ -1584,10 +1595,11 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
     sjn_copy_partially(sjn, b, bsz, cpsz);
 
     /* Get a new string entry. */
-    ret = (*y)(ud, jnr->i, &s, &sz);
+    ret = (*y)(ud, jnr->i, &s, &sz, 1);
     if (ret < 0) {
         return ret;
-    } else if (! s) {
+    } else if (ret == 0) {
+        /* No more strings from the yielder. */
         jnr->i = 0;
         return 0;
     } /* if */
@@ -1610,7 +1622,7 @@ PPE_SJN_JOIN_STRING:
         jnr->s.sz = sz;
         jnr->s.off = 0;
         sjn_copy_partially(sjn, b, bsz, cpsz);
-    } while ((ret = (*y)(ud, jnr->i, &s, &sz)) >= 0 && s);
+    } while ((ret = (*y)(ud, jnr->i, &s, &sz, 1)) >= 0 && ret == 1);
 
     jnr->sz += cpsz;
     if (ret == 0) {

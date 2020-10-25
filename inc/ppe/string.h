@@ -353,7 +353,7 @@ typedef enum
 } ppe_sjn_action;
 
 typedef ppe_bool (*ppe_sjn_process_fn)(ppe_sjn_joiner sjn, const ppe_char * s, const ppe_size sz);
-typedef ppe_int (*ppe_sjn_yield_fn)(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz);
+typedef ppe_int (*ppe_sjn_yield_fn)(void * ud, ppe_uint idx, const ppe_char * s[], const ppe_size * sz[], const ppe_uint n);
 
 /* ---- Functions ----------------------------------------------------------- */
 
@@ -370,7 +370,7 @@ PPE_API extern void ppe_sjn_reset(ppe_sjn_joiner restrict jnr);
 
 /* -- Process -- */
 
-PPE_API extern ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_size * restrict nbsz);
+PPE_API extern ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y);
 PPE_API extern ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz);
 
 PPE_API extern ppe_int ppe_sjn_append_cstr(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
