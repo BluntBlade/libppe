@@ -353,7 +353,7 @@ typedef enum
 } ppe_sjn_action;
 
 typedef ppe_bool (*ppe_sjn_process_fn)(ppe_sjn_joiner sjn, const ppe_char * s, const ppe_size sz);
-typedef ppe_int (*ppe_sjn_yield_fn)(void * ud, ppe_uint idx, const ppe_char * s[], const ppe_size * sz[], const ppe_uint n);
+typedef ppe_int (*ppe_sjn_yield_fn)(void * ud, const ppe_uint idx, const ppe_char * s[], const ppe_size * sz[], ppe_uint n);
 
 /* ---- Functions ----------------------------------------------------------- */
 

@@ -1638,12 +1638,12 @@ typedef struct
     ppe_size sz;
 } ppe_sjn_cstr_data_st, *ppe_sjn_cstr_data;
 
-static ppe_int ppe_sjn_yield_cstr(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
+static ppe_int ppe_sjn_yield_cstr(void * ud, const ppe_uint idx, const ppe_char ** s, const ppe_size * sz, ppe_uint n)
 {
     ppe_sjn_cstr_data d = (ppe_sjn_cstr_data) ud;
-    *s = d->s;
-    *sz = d->sz;
-    return 0;
+    s[0] = d->s;
+    sz[0] = d->sz;
+    return 1;
 } /* ppe_sjn_yield_cstr */
 
 PPE_API ppe_int ppe_sjn_append_cstr(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
@@ -1703,17 +1703,60 @@ typedef struct
     ppe_uint n;
 } ppe_sjn_cstr_array_st, *ppe_sjn_cstr_array;
 
-static ppe_int ppe_sjn_yield_cstr_from_array(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
+static ppe_int ppe_sjn_yield_cstr_from_array(void * ud, const ppe_uint idx, const ppe_char ** s, const ppe_size * sz, ppe_uint n)
 {
     ppe_sjn_cstr_array d = (ppe_sjn_cstr_array) ud;
-    if (idx < d->n) {
-        *s = d->strs[idx];
-        *sz = ppe_cs_size(d->strs[idx]);
-    } else {
-        *s = NULL;
-        *sz = 0;
+    ppe_uint i = 0;
+    ppe_uint k = idx;
+
+    if (idx >= d->n) {
+        return 0;
+    } 
+    if (d->n - idx < n) {
+        n = d->n - idx;
     }
-    return d->n - (idx + 1);
+
+    k = idx;
+    while (n >= 4) {
+        s[i] = d->strs[k];
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        s[i] = d->strs[k];
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        s[i] = d->strs[k];
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        s[i] = d->strs[k];
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        n -= 4;
+    } /* while */
+
+    switch (n) {
+        case 3:
+            s[i] = d->strs[k];
+            sz[i] = ppe_cs_size(d->strs[k]);
+            i++;
+            k++;
+        case 2:
+            s[i] = d->strs[k];
+            sz[i] = ppe_cs_size(d->strs[k]);
+            i++;
+            k++;
+        case 1:
+            s[i] = d->strs[k];
+            sz[i] = ppe_cs_size(d->strs[k]);
+            i++;
+            k++;
+        default:
+            break;
+    } /* switch */
+    return i;
 } /* ppe_sjn_yield_cstr_from_array */
 
 PPE_API ppe_int ppe_sjn_append_cstrs(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
@@ -1734,17 +1777,60 @@ typedef struct
     ppe_uint n;
 } ppe_sjn_string_array_st, *ppe_sjn_string_array;
 
-static ppe_int ppe_sjn_yield_cstr_from_string_array(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
+static ppe_int ppe_sjn_yield_cstr_from_string_array(void * ud, const ppe_uint idx, const ppe_char ** s, const ppe_size * sz, ppe_uint n)
 {
     ppe_sjn_string_array d = (ppe_sjn_string_array) ud;
-    if (idx < d->n) {
-        *s = ppe_str_addr(d->strs[idx]);
-        *sz = ppe_cs_size(d->strs[idx]);
-    } else {
-        *s = NULL;
-        *sz = 0;
+    ppe_uint i = 0;
+    ppe_uint k = idx;
+
+    if (idx >= d->n) {
+        return 0;
+    } 
+    if (d->n - idx < n) {
+        n = d->n - idx;
     }
-    return d->n - (idx + 1);
+
+    k = idx;
+    while (n >= 4) {
+        s[i] = ppe_str_addr(d->strs[k]);
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        s[i] = ppe_str_addr(d->strs[k]);
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        s[i] = ppe_str_addr(d->strs[k]);
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        s[i] = ppe_str_addr(d->strs[k]);
+        sz[i] = ppe_cs_size(d->strs[k]);
+        i++;
+        k++;
+        n -= 4;
+    } /* while */
+
+    switch (n) {
+        case 3:
+            s[i] = ppe_str_addr(d->strs[k]);
+            sz[i] = ppe_cs_size(d->strs[k]);
+            i++;
+            k++;
+        case 2:
+            s[i] = ppe_str_addr(d->strs[k]);
+            sz[i] = ppe_cs_size(d->strs[k]);
+            i++;
+            k++;
+        case 1:
+            s[i] = ppe_str_addr(d->strs[k]);
+            sz[i] = ppe_cs_size(d->strs[k]);
+            i++;
+            k++;
+        default:
+            break;
+    } /* switch */
+    return i;
 } /* ppe_sjn_yield_cstr_from_string_array */
 
 PPE_API ppe_int ppe_sjn_append_strings(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
@@ -1759,17 +1845,60 @@ PPE_API ppe_int ppe_sjn_append_strings(ppe_sjn_joiner restrict jnr, ppe_sjn_acti
     return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr_from_string_array, b, bsz, nbsz);
 } /* ppe_sjn_append_strings */
 
-static ppe_int ppe_sjn_yield_cstr_from_snippet(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz)
+static ppe_int ppe_sjn_yield_cstr_from_snippet(void * ud, ppe_uint idx, const ppe_char ** s, const ppe_size * sz, ppe_uint n)
 {
     ppe_cs_snippet spt = (ppe_cs_snippet) ud;
-    if (idx < spt->cnt) {
-        *s = spt->items[idx].s;
-        *sz = spt->items[idx].sz;
-    } else {
-        *s = NULL;
-        *sz = 0;
-    } /* if */
-    return spt->cnt - (idx + 1);
+    ppe_uint i = 0;
+    ppe_uint k = 0;
+
+    if (idx >= spt->cnt) {
+        return 0;
+    } 
+    if (spt->cnt - idx < n) {
+        n = spt->cnt - idx;
+    }
+
+    k = idx;
+    while (n >= 4) {
+        s[i] = spt->items[k].s;
+        sz[i] = spt->items[k].sz;
+        i++;
+        k++;
+        s[i] = spt->items[k].s;
+        sz[i] = spt->items[k].sz;
+        i++;
+        k++;
+        s[i] = spt->items[k].s;
+        sz[i] = spt->items[k].sz;
+        i++;
+        k++;
+        s[i] = spt->items[k].s;
+        sz[i] = spt->items[k].sz;
+        i++;
+        k++;
+        n -= 4;
+    } /* while */
+
+    switch (n) {
+        case 3:
+            s[i] = spt->items[k].s;
+            sz[i] = spt->items[k].sz;
+            i++;
+            k++;
+        case 2:
+            s[i] = spt->items[k].s;
+            sz[i] = spt->items[k].sz;
+            i++;
+            k++;
+        case 1:
+            s[i] = spt->items[k].s;
+            sz[i] = spt->items[k].sz;
+            i++;
+            k++;
+        default:
+            break;
+    } /* switch */
+    return i;
 } /* ppe_sjn_yield_cstr_from_snippet */
 
 PPE_API ppe_int ppe_sjn_append_snippet(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
