@@ -1551,7 +1551,7 @@ PPE_SJN_MEASURE_NEXT:
             if (bytes <= sjn->s.sz - sjn->s.off) { \
                 memcpy(b + cpsz, sjn->s.addr + sjn->off, bytes); \
                 sjn->s.off += bytes; \
-                *nbsz = *bsz; \
+                sjn->sz += cpsz + bytes; \
                 *bsz = cpsz + bytes; \
                 ppe_err_set(PPE_ERR_TRY_AGAIN, NULL); \
                 return -1; \
@@ -1559,13 +1559,15 @@ PPE_SJN_MEASURE_NEXT:
                 memcpy(b + cpsz, sjn->s.addr + sjn->off, sjn->s.sz - sjn->s.off); \
                 cpsz += sjn->s.sz - sjn->s.off; \
                 sjn->s.off = sjn->sz; \
-                jnr->i += 1; \
-                jnr->n += 1; \
+                if (jnr->s.addr != jnr->d) { \
+                    jnr->i += 1; \
+                    jnr->n += 1; \
+                } \
             } \
         } \
     } while (0);
 
-PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz)
 {
     const ppe_char * s = NULL;
     const ppe_size sz = 0;
@@ -1573,100 +1575,46 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
     ppe_size bytes = 0;
     ppe_int ret = 0;
 
-    if (! jnr || ! y || ! b || ! bsz || ! nbsz) {
+    if (! jnr || ! y || ! b || ! bsz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return -1;
     }
 
+    /* If there is reminder characters in the copying delimiter or string, just copy it. */
     sjn_copy_partially(sjn, b, bsz, cpsz);
 
+    /* Get a new string entry. */
     ret = (*y)(ud, jnr->i, &s, &sz);
     if (ret < 0) {
-        *bsz = 0;
         return ret;
-    } else if (ret == 0) {
+    } else if (! s) {
         jnr->i = 0;
-        *nbsz = 0; /* No entry exists in the array, need no more buffers. */
-        *bsz = 0;
         return 0;
     } /* if */
 
-    if (jnr->s.addr && jnr->s.addr != jnr->d) {
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
+    if (jnr->s.addr == jnr->d || ! jnr->s.addr) {
+        /* CASE-1: The last added entry is the delimiter. */
+        /* CASE-2: No string is added. */
+        goto PPE_SJN_JOIN_STRING;
     }
-    jnr->s.addr = s;
-    jnr->s.sz = sz;
-    jnr->s.off = 0;
-    sjn_copy_partially(sjn, b, bsz, cpsz);
-
-    switch (ret % 4) {
-        case 0: goto PPE_SJN_JOIN_0_DELI;
-        case 1: goto PPE_SJN_JOIN_3_DELI;
-        case 2: goto PPE_SJN_JOIN_2_DELI;
-        case 3: goto PPE_SJN_JOIN_1_DELI;
-        default:
-            break;
-    } /* switch */
+    /* CASE-3: The last added entry is a string. */
 
     do {
-PPE_SJN_JOIN_0_DELI:
         jnr->s.addr = jnr->d;
         jnr->s.sz = jnr->dsz;
         jnr->s.off = 0;
         sjn_copy_partially(sjn, b, bsz, cpsz);
 
-        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
-            break;
-        }
+PPE_SJN_JOIN_STRING:
+        jnr->s.addr = s;
+        jnr->s.sz = sz;
         jnr->s.off = 0;
         sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_1_DELI:
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
-            break;
-        }
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_2_DELI:
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
-            break;
-        }
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_3_DELI:
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-        if ((ret = (*y)(ud, jnr->i, &jnr->s.addr, &jnr->s.sz)) <= 0) {
-            break;
-        }
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-    } while (ret > 0);
+    } while ((ret = (*y)(ud, jnr->i, &s, &sz)) >= 0 && s);
 
     jnr->sz += cpsz;
     if (ret == 0) {
         jnr->i = 0;
-        *nbsz = 0; /* All entries consumed, need no more buffers. */
-    } else {
-        *nbsz = *bsz; /* When error occurs, the capacity of next buffer equals to the previous one. */
     } /* if */
     *bsz = cpsz;
     return ret;

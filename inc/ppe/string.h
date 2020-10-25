@@ -371,7 +371,7 @@ PPE_API extern void ppe_sjn_reset(ppe_sjn_joiner restrict jnr);
 /* -- Process -- */
 
 PPE_API extern ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_size * restrict nbsz);
-PPE_API extern ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
+PPE_API extern ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz);
 
 PPE_API extern ppe_int ppe_sjn_append_cstr(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
 PPE_API extern ppe_int ppe_sjn_append_cstr_with_size(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
