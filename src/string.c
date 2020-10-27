@@ -13,6 +13,15 @@ extern "C"
 
 /* ==== Declaration : C-String Snippet ====================================== */
 
+/* -- Macro -- */
+
+#define CSPT_PRESERVED_CAPACITY 4
+#define cspt_init(spt, cap) \
+    do { \
+        memset(spt, 0, sizeof(*spt) + sizeof(spt->items[0]) * ((cap > CSPT_PRESERVED_CAPACITY) ? cap - CSPT_PRESERVED_CAPACITY : 0)); \
+        spt->cap = cap; \
+    } while (0);
+
 /* ---- Types --------------------------------------------------------------- */
 
 typedef struct PPE_CSPT_ITEM {
@@ -24,7 +33,7 @@ typedef struct PPE_CS_SNIPPET {
     ppe_int cnt;
     ppe_int cap;
     ppe_size total;
-    ppe_cspt_item_st items[4];
+    ppe_cspt_item_st items[CSPT_PRESERVED_CAPACITY];
 } ppe_cs_snippet_st;
 
 /* ---- Preset Values ------------------------------------------------------- */
@@ -61,7 +70,7 @@ PPE_API ppe_cs_snippet ppe_cspt_create(const ppe_uint cap)
         return NULL;
     }
 
-    nwsz += cap > 4 ? sizeof(ppe_cspt_item_st) * (cap - 4) : 0;
+    nwsz += cap > CSPT_PRESERVED_CAPACITY ? sizeof(ppe_cspt_item_st) * (cap - CSPT_PRESERVED_CAPACITY) : 0;
     nw = ppe_mp_malloc(nwsz);
     if (! nw) {
         ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
@@ -1510,48 +1519,26 @@ PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud,
     ppe_size cpsz = 0;
     ppe_int ret = 0;
 
+    assert(CSPT_PRESERVED_CAPACITY == 4);
+
     if (! jnr || ! y) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return -1;
     }
 
-    cspt_init(&spt, 4);
+    cspt_init(&spt, CSPT_PRESERVED_CAPACITY);
 
-    ret = (*y)(ud, jnr->i, &spt);
-    if (ret < 0) {
-        return ret;
-    } else if (ret == 0) {
-        /* No more strings from the yielder. */
-        jnr->i = 0;
-        return 0;
-    } /* if */
-
-    while (ret == 4) {
-        cpsz += jnr->dsz * (sizeof(spt->items) / sizeof(spt->items[0]));
-        cpsz += spt->items[0].sz + spt->items[1].sz + spt->items[2].sz + spt->items[3].sz;
-        cnt += 4;
+    while ((ret = (*y)(ud, jnr->i, &spt)) > 0) {
+        cpsz += jnr->dsz * spt->cnt;
+        cpsz += spt->total;
+        cnt += spt->cnt;
         ret = (*y)(ud, jnr->i + cnt, spt);
     } /* while */
 
-    switch (ret) {
-        case 3:
-            cpsz += jnr->dsz;
-            cpsz += spt->items[2].sz;
-            cnt += 1;
-        case 2:
-            cpsz += jnr->dsz;
-            cpsz += spt->items[1].sz;
-            cnt += 1;
-        case 1:
-            cpsz += jnr->dsz;
-            cpsz += spt->items[0].sz;
-            cnt += 1;
-        default:
-            break;
-    } /* switch */
-
-    cpsz -= jnr->n == 0 ? jnr->dsz : 0;
-    jnr->sz += cpsz;
+    if (cpsz > 0) {
+        cpsz -= jnr->n == 0 ? jnr->dsz : 0;
+        jnr->sz += cpsz;
+    }
     jnr->i = ret >= 0 ? 0 : jnr->i + cnt;
     jnr->n += cnt;
     return ret;
@@ -1588,12 +1575,14 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
     ppe_size bytes = 0;
     ppe_int ret = 0;
 
+    assert(CSPT_PRESERVED_CAPACITY == 4);
+
     if (! jnr || ! y || ! b || ! bsz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return -1;
     }
 
-    cspt_init(&spt, 4);
+    cspt_init(&spt, CSPT_PRESERVED_CAPACITY);
 
     /* If there is reminder characters in the copying delimiter or string, just copy it. */
     sjn_copy_partially(sjn, b, bsz, cpsz);
@@ -1605,7 +1594,9 @@ PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, pp
     } else if (ret == 0) {
         /* No more strings from the yielder. */
         jnr->i = 0;
-        break;
+        jnr->sz += cpsz;
+        *bsz = cpsz;
+        return 0;
     } /* if */
 
     if (jnr->s.addr == jnr->d || ! jnr->s.addr) {
@@ -1675,12 +1666,13 @@ PPE_SJN_JOIN_STRING_1:
         if (ret == 4) {
             ret = (*y)(ud, jnr->i, &spt);
             if (ret < 0) {
-                return ret;
+                break;
             } else if (ret == 0) {
                 /* No more strings from the yielder. */
                 jnr->i = 0;
                 break;
             } /* if */
+            if (ret == 4) { goto PPE_SJN_JOIN_DELI_4; }
             if (ret == 3) { goto PPE_SJN_JOIN_DELI_3; }
             if (ret == 2) { goto PPE_SJN_JOIN_DELI_2; }
             if (ret == 1) { goto PPE_SJN_JOIN_DELI_1; }
