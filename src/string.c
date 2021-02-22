@@ -1512,14 +1512,12 @@ PPE_API void ppe_sjn_reset(ppe_sjn_joiner restrict jnr)
 
 /* -- Process -- */
 
-PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y)
+PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y)
 {
     ppe_cs_snippet_st spt;
-    ppe_uint cnt = 0;
+    ppe_uint idx = 0;
     ppe_size cpsz = 0;
     ppe_int ret = 0;
-
-    assert(CSPT_PRESERVED_CAPACITY == 4);
 
     if (! jnr || ! y) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -1528,20 +1526,19 @@ PPE_API ppe_int ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud,
 
     cspt_init(&spt, CSPT_PRESERVED_CAPACITY);
 
-    while ((ret = (*y)(ud, jnr->i, &spt)) > 0) {
-        cpsz += jnr->dsz * spt->cnt;
+    idx = jnr->i;
+    while ((ret = (*y)(ud, idx, &spt)) > 0) {
         cpsz += spt->total;
-        cnt += spt->cnt;
-        ret = (*y)(ud, jnr->i + cnt, spt);
+        idx += spt->cnt;
     } /* while */
 
-    if (cpsz > 0) {
-        cpsz -= jnr->n == 0 ? jnr->dsz : 0;
-        jnr->sz += cpsz;
+    jnr->sz += cpsz + jnr->dsz * (idx - jnr->i);
+    if (jnr->n == 0) {
+        jnr->sz -= jnr->dsz;
     }
-    jnr->i = ret >= 0 ? 0 : jnr->i + cnt;
-    jnr->n += cnt;
-    return ret;
+    jnr->n += (idx - jnr->i);
+    jnr->i = ret >= 0 ? 0 : idx; /* Reset the index if all strings are measured. */
+    return ret >= 0;
 } /* ppe_sjn_measure */
 
 #define sjn_copy_partially(sjn, b, bsz, cpsz) \
