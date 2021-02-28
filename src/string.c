@@ -22,6 +22,12 @@ extern "C"
         spt->cap = cap; \
     } while (0);
 
+#define cspt_reset(spt) \
+    do { \
+        spt->cnt = 0; \
+        spt->total = 0; \
+    } while (0);
+
 /* ---- Types --------------------------------------------------------------- */
 
 typedef struct PPE_CSPT_ITEM {
@@ -91,8 +97,7 @@ PPE_API void ppe_cspt_destroy(ppe_cs_snippet restrict spt)
 
 PPE_API void ppe_cspt_reset(ppe_cs_snippet restrict spt)
 {
-    spt->cnt = 0;
-    spt->total = 0;
+    cspt_reset(spt);
 } /* ppe_cspt_reset */
 
 /* -- Manipulators -- */
@@ -1521,7 +1526,7 @@ PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud
 
     if (! jnr || ! y) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return ppe_false;
     }
 
     cspt_init(&spt, CSPT_PRESERVED_CAPACITY);
@@ -1541,22 +1546,28 @@ PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud
     return ret >= 0;
 } /* ppe_sjn_measure */
 
-#define sjn_copy_partially(sjn, b, bsz, cpsz) \
-    do \
-    { \
-        if (sjn->s.off < sjn->.sz) { \
+#define sjn_init_copy(jnr, s, sz) \
+    do { \
+        jnr->s.addr = s; \
+        jnr->s.sz = sz; \
+        jnr->s.off = 0; \
+    } while (0);
+
+#define sjn_copy_partially(jnr, b, bsz, cpsz) \
+    do { \
+        if (jnr->s.off < jnr->s.sz) { \
             bytes = *bsz - cpsz; \
-            if (bytes <= sjn->s.sz - sjn->s.off) { \
-                memcpy(b + cpsz, sjn->s.addr + sjn->off, bytes); \
-                sjn->s.off += bytes; \
-                sjn->sz += cpsz + bytes; \
+            if (bytes <= jnr->s.sz - jnr->s.off) { \
+                memcpy(b + cpsz, jnr->s.addr + jnr->off, bytes); \
+                jnr->s.off += bytes; \
+                jnr->sz += cpsz + bytes; \
                 *bsz = cpsz + bytes; \
                 ppe_err_set(PPE_ERR_TRY_AGAIN, NULL); \
-                return -1; \
+                return ppe_false; \
             } else { \
-                memcpy(b + cpsz, sjn->s.addr + sjn->off, sjn->s.sz - sjn->s.off); \
-                cpsz += sjn->s.sz - sjn->s.off; \
-                sjn->s.off = sjn->sz; \
+                memcpy(b + cpsz, jnr->s.addr + jnr->off, jnr->s.sz - jnr->s.off); \
+                cpsz += jnr->s.sz - jnr->s.off; \
+                jnr->s.off = jnr->sz; \
                 if (jnr->s.addr != jnr->d) { \
                     jnr->i += 1; \
                     jnr->n += 1; \
@@ -1565,120 +1576,92 @@ PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud
         } \
     } while (0);
 
-PPE_API ppe_int ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz)
+PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz)
 {
     ppe_cs_snippet_st spt;
     ppe_size cpsz = 0;
     ppe_size bytes = 0;
+    ppe_uint idx = 0;
     ppe_int ret = 0;
-
-    assert(CSPT_PRESERVED_CAPACITY == 4);
 
     if (! jnr || ! y || ! b || ! bsz) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return ppe_false;
     }
 
     cspt_init(&spt, CSPT_PRESERVED_CAPACITY);
 
-    /* If there is reminder characters in the copying delimiter or string, just copy it. */
-    sjn_copy_partially(sjn, b, bsz, cpsz);
+    /* Copy remaining bytes first. */
+    sjn_copy_partially(jnr, b, bsz, cpsz);
 
-    /* Get a new string entry. */
+    /* Try to get new source strings. */
     ret = (*y)(ud, jnr->i, &spt);
-    if (ret < 0) {
-        return ret;
-    } else if (ret == 0) {
-        /* No more strings from the yielder. */
-        jnr->i = 0;
-        jnr->sz += cpsz;
-        *bsz = cpsz;
-        return 0;
-    } /* if */
-
-    if (jnr->s.addr == jnr->d || ! jnr->s.addr) {
-        /* CASE-1: The last added entry is the delimiter. */
-        /* CASE-2: No string is added. */
-        if (ret == 4) { goto PPE_SJN_JOIN_STRING_4; }
-        if (ret == 3) { goto PPE_SJN_JOIN_STRING_3; }
-        if (ret == 2) { goto PPE_SJN_JOIN_STRING_2; }
-        if (ret == 1) { goto PPE_SJN_JOIN_STRING_1; }
-    } /* if */
-
-    /* CASE-3: The last added entry is a string. */
-    if (ret == 3) { goto PPE_SJN_JOIN_DELI_3; }
-    if (ret == 2) { goto PPE_SJN_JOIN_DELI_2; }
-    if (ret == 1) { goto PPE_SJN_JOIN_DELI_1; }
-
-    do {
-PPE_SJN_JOIN_DELI_4:
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_STRING_4:
-        jnr->s.addr = spt->items[ret - 4].s;
-        jnr->s.sz = spt->items[ret - 4].sz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_DELI_3:
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_STRING_3:
-        jnr->s.addr = spt->items[ret - 3].s;
-        jnr->s.sz = spt->items[ret - 3].sz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_DELI_2:
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_STRING_2:
-        jnr->s.addr = spt->items[ret - 2].s;
-        jnr->s.sz = spt->items[ret - 2].sz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_DELI_1:
-        jnr->s.addr = jnr->d;
-        jnr->s.sz = jnr->dsz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-PPE_SJN_JOIN_STRING_1:
-        jnr->s.addr = spt->items[ret - 1].s;
-        jnr->s.sz = spt->items[ret - 1].sz;
-        jnr->s.off = 0;
-        sjn_copy_partially(sjn, b, bsz, cpsz);
-
-        /* Get a new string entry. */
-        if (ret == 4) {
-            ret = (*y)(ud, jnr->i, &spt);
-            if (ret < 0) {
-                break;
-            } else if (ret == 0) {
-                /* No more strings from the yielder. */
-                jnr->i = 0;
-                break;
-            } /* if */
-            if (ret == 4) { goto PPE_SJN_JOIN_DELI_4; }
-            if (ret == 3) { goto PPE_SJN_JOIN_DELI_3; }
-            if (ret == 2) { goto PPE_SJN_JOIN_DELI_2; }
-            if (ret == 1) { goto PPE_SJN_JOIN_DELI_1; }
+    if (ret > 0) {
+        if (jnr->s.addr == jnr->d || ! jnr->s.addr) {
+            /* CASE-1: The last copied string is the delimiter. */
+            /* CASE-2: No string has been copied. */
+            sjn_init_copy(jnr, spt->items[idx].s, spt->items[idx].sz);
+            sjn_copy_partially(jnr, b, bsz, cpsz);
+            idx += 1;
+            ret -= 1;
         } /* if */
-    } while (0);
+
+        /* CASE-3: The last copied string is a source string. */
+
+        do {
+            switch (ret) {
+                case 4:
+                    sjn_init_copy(jnr, jnr->d, jnr->dsz);
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+
+                    sjn_init_copy(jnr, spt->items[idx].s, spt->items[idx].sz);
+                    idx += 1;
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+
+                case 3:
+                    sjn_init_copy(jnr, jnr->d, jnr->dsz);
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+
+                    sjn_init_copy(jnr, spt->items[idx].s, spt->items[idx].sz);
+                    idx += 1;
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+
+                case 2:
+                    sjn_init_copy(jnr, jnr->d, jnr->dsz);
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+
+                    sjn_init_copy(jnr, spt->items[idx].s, spt->items[idx].sz);
+                    idx += 1;
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+
+                case 1:
+                    sjn_init_copy(jnr, jnr->d, jnr->dsz);
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+
+                    sjn_init_copy(jnr, spt->items[idx].s, spt->items[idx].sz);
+                    idx += 1;
+                    sjn_copy_partially(jnr, b, bsz, cpsz);
+                    break;
+
+                default:
+                    ppe_err_set(PPE_ERR_OUT_OF_RANGE, "The number of joining strings must be 4 or less");
+                    return ppe_false;
+            } /* switch */
+
+            /* Try to get new source strings. */
+            cspt_reset(&spt);
+        } while ((ret = (*y)(ud, jnr->i, &spt)) > 0);
+    } /* if */
 
     jnr->sz += cpsz;
     *bsz = cpsz;
-    return ret;
+    if (ret < 0) {
+        return ppe_false;
+    } else if (ret == 0) {
+        /* No more strings from the yielder. */
+        jnr->i = 0;
+    } /* if */
+    return ppe_true;
 } /* ppe_sjn_join */
 
 typedef struct
