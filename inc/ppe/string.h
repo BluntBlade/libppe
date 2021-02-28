@@ -346,12 +346,6 @@ struct PPE_SJN_JOINER;
 typedef struct PPE_SJN_JOINER * ppe_sjn_joiner; 
 typedef const ppe_sjn_joiner ppe_sjn_joiner_c; 
 
-typedef enum
-{
-    PPE_SJN_MEASURE = 0,
-    PPE_SJN_JOIN = 1
-} ppe_sjn_action;
-
 typedef ppe_bool (*ppe_sjn_process_fn)(ppe_sjn_joiner sjn, const ppe_char * s, const ppe_size sz);
 typedef ppe_int (*ppe_sjn_yield_fn)(void * ud, const ppe_uint idx, ppe_cs_snippet spt);
 
@@ -373,13 +367,20 @@ PPE_API extern void ppe_sjn_reset(ppe_sjn_joiner restrict jnr);
 PPE_API extern ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y);
 PPE_API extern ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz);
 
-PPE_API extern ppe_int ppe_sjn_append_cstr(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
-PPE_API extern ppe_int ppe_sjn_append_cstr_with_size(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
-PPE_API extern ppe_int ppe_sjn_append_string(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
+PPE_API extern ppe_bool ppe_sjn_measure_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz);
+PPE_API extern ppe_bool ppe_sjn_join_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz, ppe_cstr restrict b, ppe_size * restrict bsz);
 
-PPE_API extern ppe_int ppe_sjn_append_cstrs(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
-PPE_API extern ppe_int ppe_sjn_append_strings(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
-PPE_API extern ppe_int ppe_sjn_append_snippet(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz);
+PPE_API extern ppe_bool ppe_sjn_measure_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s);
+PPE_API extern ppe_bool ppe_sjn_join_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s, ppe_cstr restrict b, ppe_size * restrict bsz);
+
+PPE_API extern ppe_bool ppe_sjn_measure_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n);
+PPE_API extern ppe_bool ppe_sjn_join_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz);
+
+PPE_API extern ppe_bool ppe_sjn_measure_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n);
+PPE_API extern ppe_bool ppe_sjn_join_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz);
+
+PPE_API extern ppe_bool ppe_sjn_measure_snippet(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt);
+PPE_API extern ppe_bool ppe_sjn_join_snippet(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz);
 
 #ifdef __cplusplus
 }

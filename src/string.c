@@ -16,17 +16,6 @@ extern "C"
 /* -- Macro -- */
 
 #define CSPT_PRESERVED_CAPACITY 4
-#define cspt_init(spt, cap) \
-    do { \
-        memset(spt, 0, sizeof(*spt) + sizeof(spt->items[0]) * ((cap > CSPT_PRESERVED_CAPACITY) ? cap - CSPT_PRESERVED_CAPACITY : 0)); \
-        spt->cap = cap; \
-    } while (0);
-
-#define cspt_reset(spt) \
-    do { \
-        spt->cnt = 0; \
-        spt->total = 0; \
-    } while (0);
 
 /* ---- Types --------------------------------------------------------------- */
 
@@ -46,6 +35,52 @@ typedef struct PPE_CS_SNIPPET {
 
 static const ppe_cstr_c cs_empty_s = "";
 static ppe_cs_snippet_st cspt_empty_s = {1, 1, 0, {{cs_empty_s, 0}}};
+
+/* ---- Functions ------------------------------------------------------- */
+
+/* -- Internals -- */
+
+static inline void cspt_init_on_stack(ppe_cs_snippet restrict spt)
+{
+    memset(spt, 0, sizeof(ppe_cs_snippet_st));
+    spt->cap = sizeof(spt->items) / sizeof(spt->items[0]);
+} /* cspt_init_on_stack */
+
+static inline void cspt_reset(ppe_cs_snippet restrict spt)
+{
+    spt->cnt = 0;
+    spt->total = 0;
+} /* cspt_reset */
+
+static inline ppe_int cspt_count(ppe_cs_snippet restrict spt)
+{
+    return spt->cnt;
+} /* cspt_count */
+
+static inline ppe_int cspt_capacity(ppe_cs_snippet restrict spt)
+{
+    return spt->cap;
+} /* cspt_capacity */
+
+static inline ppe_int cspt_total_bytes(ppe_cs_snippet restrict spt)
+{
+    return spt->total;
+} /* cspt_total_bytes */
+
+static inline ppe_int cspt_unused(ppe_cs_snippet restrict spt)
+{
+    return spt->cap - spt->cnt;
+} /* cspt_unused */
+
+static inline ppe_cstr_c cspt_addr(ppe_cs_snippet restrict spt, const ppe_uint idx)
+{
+    return spt->items[idx].s;
+} /* cspt_addr */
+
+static inline ppe_cstr_c cspt_size(ppe_cs_snippet restrict spt, const ppe_uint idx)
+{
+    return spt->items[idx].sz;
+} /* cspt_size */
 
 /* -- Property -- */
 
@@ -118,6 +153,14 @@ PPE_API ppe_bool ppe_cspt_get(ppe_cs_snippet const restrict spt, const ppe_uint 
     return ppe_true;
 } /* ppe_cspt_get */
 
+static inline cspt_append(ppe_cs_snippet restrict spt, ppe_cstr_c const restrict s, const ppe_size sz)
+{
+    spt->items[spt->cnt].s = s;
+    spt->items[spt->cnt].sz = sz;
+    spt->cnt += 1;
+    spt->total += sz;
+} /* cspt_append */
+
 PPE_API ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, ppe_cstr_c const restrict s, const ppe_size sz)
 {
     if (! spt) {
@@ -129,10 +172,7 @@ PPE_API ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, ppe_cstr_c const r
         return ppe_false;
     }
 
-    spt->items[spt->cnt].s = s;
-    spt->items[spt->cnt].sz = sz;
-    spt->cnt += 1;
-    spt->total += sz;
+    cspt_append(spt, s, sz);
     return ppe_true;
 } /* ppe_cspt_append */
 
@@ -1529,21 +1569,30 @@ PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud
         return ppe_false;
     }
 
-    cspt_init(&spt, CSPT_PRESERVED_CAPACITY);
+    cspt_init_on_stack(&spt);
 
     idx = jnr->i;
     while ((ret = (*y)(ud, idx, &spt)) > 0) {
-        cpsz += spt->total;
-        idx += spt->cnt;
+        cpsz += cspt_total_bytes(spt);
+        idx += cspt_count(spt);
+        cspt_reset(spt);
     } /* while */
 
-    jnr->sz += cpsz + jnr->dsz * (idx - jnr->i);
-    if (jnr->n == 0) {
-        jnr->sz -= jnr->dsz;
+    if ((idx - jnr->i) > 0) {
+        jnr->sz += cpsz + jnr->dsz * (idx - jnr->i);
+        if (jnr->n == 0) {
+            /* No string has been measured yet, subtract one delimiter's bytes. */
+            jnr->sz -= jnr->dsz;
+        }
+        jnr->n += (idx - jnr->i);
+    } /* if */
+
+    if (ret < 0) {
+        jnr->i = idx; /* Keep the last index when any error occurs. */
+        return ppe_false;
     }
-    jnr->n += (idx - jnr->i);
-    jnr->i = ret >= 0 ? 0 : idx; /* Reset the index if all strings are measured. */
-    return ret >= 0;
+    jnr->i = 0; /* Reset the index if all strings are measured. */
+    return ppe_true;
 } /* ppe_sjn_measure */
 
 #define sjn_init_copy(jnr, s, sz) \
@@ -1589,7 +1638,7 @@ PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, p
         return ppe_false;
     }
 
-    cspt_init(&spt, CSPT_PRESERVED_CAPACITY);
+    cspt_init_on_stack(&spt);
 
     /* Copy remaining bytes first. */
     sjn_copy_partially(jnr, b, bsz, cpsz);
@@ -1670,73 +1719,78 @@ typedef struct
     ppe_size sz;
 } ppe_sjn_cstr_data_st, *ppe_sjn_cstr_data;
 
-static ppe_int ppe_sjn_yield_cstr(void * ud, const ppe_uint idx, ppe_cs_snippet spt)
+static ppe_int sjn_yield_cstr(void * ud, const ppe_uint idx, ppe_cs_snippet spt)
 {
     ppe_sjn_cstr_data d = (ppe_sjn_cstr_data) ud;
     ppe_cspt_append(d->s, d->sz);
     return (spt->cnt = 1);
-} /* ppe_sjn_yield_cstr */
+} /* sjn_yield_cstr */
 
-PPE_API ppe_int ppe_sjn_append_cstr(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+PPE_API ppe_bool ppe_sjn_measure_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz)
 {
     ppe_sjn_cstr_data_st ud;
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return ppe_false;
     }
 
     ud.s = s;
-    ud.sz = ppe_cs_size(s);
-    if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr, nbsz);
-    }
-    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr, b, bsz, nbsz);
-} /* ppe_sjn_append_cstr */
+    ud.sz = sz < 0 ? ppe_cs_size(s) : (ppe_size)sz;
+    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr);
+} /* ppe_sjn_measure_cstr */
 
-PPE_API ppe_int ppe_sjn_append_cstr_with_size(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c restrict s, const ppe_size sz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+PPE_API ppe_bool ppe_sjn_join_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz, ppe_cstr restrict b, ppe_size * restrict bsz)
 {
     ppe_sjn_cstr_data_st ud;
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return ppe_false;
     }
 
     ud.s = s;
-    ud.sz = sz;
-    if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr, nbsz);
-    }
-    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr, b, bsz, nbsz);
-} /* ppe_sjn_append_cstr_with_size */
+    ud.sz = sz < 0 ? ppe_cs_size(s) : (ppe_size)sz;
+    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr, b, bsz);
+} /* ppe_sjn_join_cstr */
 
-PPE_API ppe_int ppe_sjn_append_string(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+PPE_API ppe_bool ppe_sjn_measure_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s)
 {
     ppe_sjn_cstr_data_st ud;
 
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return -1;
+        return ppe_false;
     }
 
     ud.s = ppe_str_addr(s);
     ud.sz = ppe_str_size(s);
-    if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr, nbsz);
+    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr);
+} /* ppe_sjn_measure_string */
+
+PPE_API ppe_bool ppe_sjn_join_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s, ppe_cstr restrict b, ppe_size * restrict bsz)
+{
+    ppe_sjn_cstr_data_st ud;
+
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
     }
-    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr, b, bsz, nbsz);
-} /* ppe_sjn_append_string */
+
+    ud.s = ppe_str_addr(s);
+    ud.sz = ppe_str_size(s);
+    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr, b, bsz);
+} /* ppe_sjn_join_string */
 
 typedef struct
 {
     ppe_cstr_c * strs;
     ppe_uint n;
-} ppe_sjn_cstr_array_st, *ppe_sjn_cstr_array;
+} sjn_cstr_array_st, *sjn_cstr_array;
 
-static ppe_int ppe_sjn_yield_cstr_from_array(void * ud, const ppe_uint idx, ppe_cs_snippet spt)
+static ppe_int sjn_yield_cstr_from_array(void * ud, const ppe_uint idx, ppe_cs_snippet spt)
 {
-    ppe_sjn_cstr_array d = (ppe_sjn_cstr_array) ud;
+    sjn_cstr_array d = (sjn_cstr_array) ud;
     ppe_uint i = 0;
     ppe_uint m = 0;
     ppe_uint cnt = 0;
@@ -1745,63 +1799,74 @@ static ppe_int ppe_sjn_yield_cstr_from_array(void * ud, const ppe_uint idx, ppe_
         return 0;
     } 
 
-    cnt = (d->n - idx < n) ? d->n - idx : n;
+    cnt = cspt_unused(spt);
+    if (d->n - idx < cnt) {
+        cnt = d->n - idx;
+    }
+    i = cnt;
     m = idx;
-    while (cnt >= 4) {
-        ppe_cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
-        i++;
-        m++;
-        ppe_cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
-        i++;
-        m++;
-        ppe_cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
-        i++;
-        m++;
-        ppe_cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
-        i++;
-        m++;
-        cnt -= 4;
+    while (i >= 4) {
+        cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
+        m += 1;
+        i -= 4;
     } /* while */
 
-    if (cnt & 1) {
-        ppe_cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
-        i++;
-        m++;
-        cnt >>= 1;
+    if (i & 0x2) {
+        cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
+        m += 1;
     } /* if */
-    if (cnt & 1) {
-        ppe_cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
-        i++;
-        m++;
-        ppe_cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
-        i++;
-        m++;
-        cnt >>= 1;
+    if (i & 0x1) {
+        cspt_append(spt, d->str[m], ppe_cs_size(d->strs[m]));
+        m += 1;
     } /* if */
-    return i;
-} /* ppe_sjn_yield_cstr_from_array */
+    return cnt;
+} /* sjn_yield_cstr_from_array */
 
-PPE_API ppe_int ppe_sjn_append_cstrs(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+PPE_API ppe_bool ppe_sjn_measure_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n)
 {
-    ppe_sjn_cstr_array_st ud;
+    sjn_cstr_array_st ud;
+
+    if (! strs || n == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
+    }
 
     ud.c = strs;
     ud.n = n;
-    if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr_from_array, nbsz);
+    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr_from_array);
+} /* ppe_sjn_measure_cstrs */
+
+PPE_API ppe_bool ppe_sjn_join_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz)
+{
+    sjn_cstr_array_st ud;
+
+    if (! strs || n == 0) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        return ppe_false;
     }
-    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr_from_array, b, bsz, nbsz);
-} /* ppe_sjn_append_cstrs */
+
+    ud.c = strs;
+    ud.n = n;
+    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr_from_array, b, bsz);
+} /* ppe_sjn_join_cstrs */
 
 typedef struct
 {
     ppe_string_c * strs;
     ppe_uint n;
-} ppe_sjn_string_array_st, *ppe_sjn_string_array;
+} sjn_string_array_st, *sjn_string_array;
 
-static ppe_int ppe_sjn_yield_cstr_from_string_array(void * ud, const ppe_uint idx, ppe_cs_snippet spt)
+static ppe_int sjn_yield_cstr_from_string_array(void * ud, const ppe_uint idx, ppe_cs_snippet restrict spt)
 {
-    ppe_sjn_string_array d = (ppe_sjn_string_array) ud;
+    sjn_string_array d = (sjn_string_array) ud;
     ppe_uint i = 0;
     ppe_uint m = 0;
     ppe_uint cnt = 0;
@@ -1810,123 +1875,106 @@ static ppe_int ppe_sjn_yield_cstr_from_string_array(void * ud, const ppe_uint id
         return 0;
     } 
 
-    cnt = (d->n - idx < n) ? d->n - idx : n;
+    cnt = cspt_unused(spt);
+    if (d->n - idx < cnt) {
+        cnt = d->n - idx;
+    }
+    i = cnt;
     m = idx;
-    while (cnt >= 4) {
-        s[i] = ppe_str_addr(d->strs[m]);
-        sz[i] = ppe_cs_size(d->strs[m]);
-        i++;
-        m++;
-        s[i] = ppe_str_addr(d->strs[m]);
-        sz[i] = ppe_cs_size(d->strs[m]);
-        i++;
-        m++;
-        s[i] = ppe_str_addr(d->strs[m]);
-        sz[i] = ppe_cs_size(d->strs[m]);
-        i++;
-        m++;
-        s[i] = ppe_str_addr(d->strs[m]);
-        sz[i] = ppe_cs_size(d->strs[m]);
-        i++;
-        m++;
-        cnt -= 4;
+    while (i >= 4) {
+        cspt_append(spt, ppe_str_addr(d->strs[m]), ppe_str_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, ppe_str_addr(d->strs[m]), ppe_str_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, ppe_str_addr(d->strs[m]), ppe_str_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, ppe_str_addr(d->strs[m]), ppe_str_size(d->strs[m]));
+        m += 1;
+        i -= 4;
     } /* while */
 
-    if (cnt & 1) {
-        s[i] = ppe_str_addr(d->strs[m]);
-        sz[i] = ppe_cs_size(d->strs[m]);
-        i++;
-        m++;
-        cnt >>= 1;
+    if (cnt & 0x2) {
+        cspt_append(spt, ppe_str_addr(d->strs[m]), ppe_str_size(d->strs[m]));
+        m += 1;
+        cspt_append(spt, ppe_str_addr(d->strs[m]), ppe_str_size(d->strs[m]));
+        m += 1;
     } /* if */
-    if (cnt & 1) {
-        s[i] = ppe_str_addr(d->strs[m]);
-        sz[i] = ppe_cs_size(d->strs[m]);
-        i++;
-        m++;
-        s[i] = ppe_str_addr(d->strs[m]);
-        sz[i] = ppe_cs_size(d->strs[m]);
-        i++;
-        m++;
-        cnt >>= 1;
+    if (cnt & 0x1) {
+        cspt_append(spt, ppe_str_addr(d->strs[m]), ppe_str_size(d->strs[m]));
+        m += 1;
     } /* if */
-    return i;
-} /* ppe_sjn_yield_cstr_from_string_array */
+    return cnt;
+} /* sjn_yield_cstr_from_string_array */
 
-PPE_API ppe_int ppe_sjn_append_strings(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+PPE_API ppe_bool ppe_sjn_measure_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n)
 {
-    ppe_sjn_string_array_st ud;
+    sjn_string_array_st ud;
 
     ud.c = strs;
     ud.n = n;
-    if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, &ud, &ppe_sjn_yield_cstr_from_string_array, nbsz);
-    }
-    return ppe_sjn_join(jnr, &ud, &ppe_sjn_yield_cstr_from_string_array, b, bsz, nbsz);
-} /* ppe_sjn_append_strings */
+    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr_from_string_array);
+} /* ppe_sjn_measure_strings */
 
-static ppe_int ppe_sjn_yield_cstr_from_snippet(void * ud, const ppe_uint idx, const ppe_char ** s, const ppe_size * sz, const ppe_uint n)
+PPE_API ppe_bool ppe_sjn_join_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz)
+{
+    sjn_string_array_st ud;
+
+    ud.c = strs;
+    ud.n = n;
+    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr_from_string_array, b, bsz);
+} /* ppe_sjn_join_strings */
+
+static ppe_int sjn_yield_cstr_from_snippet(void * ud, const ppe_uint idx, const ppe_char ** s, const ppe_size * sz, const ppe_uint n)
 {
     ppe_cs_snippet spt = (ppe_cs_snippet) ud;
     ppe_uint i = 0;
     ppe_uint m = 0;
-    ppe_uint c = 0;
+    ppe_uint cnt = 0;
 
-    if (idx >= spt->cnt) {
+    if (idx >= d->n) {
         return 0;
     } 
 
-    c = (spt->cnt - idx < n) ? spt->cnt - idx : n;
+    cnt = cspt_unused(spt);
+    if (d->n - idx < cnt) {
+        cnt = d->n - idx;
+    }
+    i = cnt;
     m = idx;
-    while (c >= 4) {
-        s[i] = spt->items[m].s;
-        sz[i] = spt->items[m].sz;
-        i++;
-        m++;
-        s[i] = spt->items[m].s;
-        sz[i] = spt->items[m].sz;
-        i++;
-        m++;
-        s[i] = spt->items[m].s;
-        sz[i] = spt->items[m].sz;
-        i++;
-        m++;
-        s[i] = spt->items[m].s;
-        sz[i] = spt->items[m].sz;
-        i++;
-        m++;
-        c -= 4;
+    while (i >= 4) {
+        cspt_append(spt, cspt_addr(spt, m), cspt_size(spt, m));
+        m += 1;
+        cspt_append(spt, cspt_addr(spt, m), cspt_size(spt, m));
+        m += 1;
+        cspt_append(spt, cspt_addr(spt, m), cspt_size(spt, m));
+        m += 1;
+        cspt_append(spt, cspt_addr(spt, m), cspt_size(spt, m));
+        m += 1;
+        i -= 4;
     } /* while */
 
-    if (c & 1) {
-        s[i] = spt->items[m].s;
-        sz[i] = spt->items[m].sz;
-        i++;
-        m++;
-        c >>= 1;
+    if (c & 0x2) {
+        cspt_append(spt, cspt_addr(spt, m), cspt_size(spt, m));
+        m += 1;
+        cspt_append(spt, cspt_addr(spt, m), cspt_size(spt, m));
+        m += 1;
     } /* if */
-
-    if (c & 1) {
-        s[i] = spt->items[m].s;
-        sz[i] = spt->items[m].sz;
-        i++;
-        m++;
-        s[i] = spt->items[m].s;
-        sz[i] = spt->items[m].sz;
-        i++;
-        m++;
-        c >>= 1;
+    if (c & 0x1) {
+        cspt_append(spt, cspt_addr(spt, m), cspt_size(spt, m));
+        m += 1;
     } /* if */
-    return i;
-} /* ppe_sjn_yield_cstr_from_snippet */
+    return cnt;
+} /* sjn_yield_cstr_from_snippet */
 
-PPE_API ppe_int ppe_sjn_append_snippet(ppe_sjn_joiner restrict jnr, ppe_sjn_action act, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_size * restrict nbsz)
+PPE_API ppe_bool ppe_sjn_measure_snippet(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt)
 {
-    if (act == PPE_SJN_MEASURE) {
-        return ppe_sjn_measure(jnr, spt, &ppe_sjn_yield_cstr_from_snippet, nbsz);
-    }
-    return ppe_sjn_join(jnr, spt, &ppe_sjn_yield_cstr_from_snippet, b, bsz, nbsz);
-} /* ppe_sjn_append_snippet */
+    return ppe_sjn_measure(jnr, spt, &sjn_yield_cstr_from_snippet);
+} /* ppe_sjn_measure_snippet */
+
+PPE_API ppe_bool ppe_sjn_join_snippet(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz)
+{
+    return ppe_sjn_join(jnr, spt, &sjn_yield_cstr_from_snippet, b, bsz);
+} /* ppe_sjn_join_snippet */
 
 #ifdef __cplusplus
 }
