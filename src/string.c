@@ -1572,11 +1572,16 @@ PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud
     cspt_init_on_stack(&spt);
 
     idx = jnr->i;
-    while ((ret = (*y)(ud, idx, &spt)) > 0) {
+    while ((ret = (*y)(ud, idx, &spt)) == CSPT_PRESERVED_CAPACITY) {
         cpsz += cspt_total_bytes(spt);
-        idx += cspt_count(spt);
+        idx += CSPT_PRESERVED_CAPACITY;
         cspt_reset(spt);
     } /* while */
+
+    if (ret > 0) {
+        cpsz += cspt_total_bytes(spt);
+        idx += cspt_count(spt);
+    }
 
     if ((idx - jnr->i) > 0) {
         jnr->sz += cpsz + jnr->dsz * (idx - jnr->i);
