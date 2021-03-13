@@ -1557,7 +1557,7 @@ PPE_API void ppe_sjn_reset(ppe_sjn_joiner restrict jnr)
 
 /* -- Process -- */
 
-PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y)
+PPE_API ppe_bool ppe_sjn_measure_some(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y)
 {
     ppe_cs_snippet_st spt;
     ppe_uint idx = 0;
@@ -1594,7 +1594,7 @@ PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud
     }
     jnr->i = 0; /* Reset the index if all strings are measured. */
     return ppe_true;
-} /* ppe_sjn_measure */
+} /* ppe_sjn_measure_some */
 
 #define sjn_init_copy(jnr, s, sz) \
     do { \
@@ -1625,7 +1625,7 @@ PPE_API ppe_bool ppe_sjn_measure(ppe_sjn_joiner restrict jnr, void * restrict ud
         } \
     } while (0);
 
-PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz)
+PPE_API ppe_bool ppe_sjn_join_some(ppe_sjn_joiner restrict jnr, void * restrict ud, ppe_sjn_yield_fn y, ppe_char * restrict b, ppe_size * restrict bsz)
 {
     ppe_cs_snippet_st spt;
     ppe_size cpsz = 0;
@@ -1732,7 +1732,7 @@ PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, p
     } /* if */
     jnr->i = 0;
     return ppe_true;
-} /* ppe_sjn_join */
+} /* ppe_sjn_join_some */
 
 typedef struct
 {
@@ -1747,7 +1747,7 @@ static ppe_int sjn_yield_cstr(void * ud, const ppe_uint idx, ppe_cs_snippet spt)
     return (spt->cnt = 1);
 } /* sjn_yield_cstr */
 
-PPE_API ppe_bool ppe_sjn_measure_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz)
+PPE_API ppe_bool ppe_sjn_measure_one_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz)
 {
     ppe_sjn_cstr_data_st ud;
 
@@ -1758,10 +1758,10 @@ PPE_API ppe_bool ppe_sjn_measure_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c re
 
     ud.s = s;
     ud.sz = sz < 0 ? ppe_cs_size(s) : (ppe_size)sz;
-    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr);
-} /* ppe_sjn_measure_cstr */
+    return ppe_sjn_measure_some(jnr, &ud, &sjn_yield_cstr);
+} /* ppe_sjn_measure_one_cstr */
 
-PPE_API ppe_bool ppe_sjn_join_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz, ppe_cstr restrict b, ppe_size * restrict bsz)
+PPE_API ppe_bool ppe_sjn_join_on_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restrict s, ppe_ssize const sz, ppe_cstr restrict b, ppe_size * restrict bsz)
 {
     ppe_sjn_cstr_data_st ud;
 
@@ -1772,10 +1772,10 @@ PPE_API ppe_bool ppe_sjn_join_cstr(ppe_sjn_joiner restrict jnr, ppe_cstr_c restr
 
     ud.s = s;
     ud.sz = sz < 0 ? ppe_cs_size(s) : (ppe_size)sz;
-    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr, b, bsz);
-} /* ppe_sjn_join_cstr */
+    return ppe_sjn_join_some(jnr, &ud, &sjn_yield_cstr, b, bsz);
+} /* ppe_sjn_join_on_cstr */
 
-PPE_API ppe_bool ppe_sjn_measure_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s)
+PPE_API ppe_bool ppe_sjn_measure_one_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s)
 {
     ppe_sjn_cstr_data_st ud;
 
@@ -1786,10 +1786,10 @@ PPE_API ppe_bool ppe_sjn_measure_string(ppe_sjn_joiner restrict jnr, ppe_string 
 
     ud.s = ppe_str_addr(s);
     ud.sz = ppe_str_size(s);
-    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr);
-} /* ppe_sjn_measure_string */
+    return ppe_sjn_measure_some(jnr, &ud, &sjn_yield_cstr);
+} /* ppe_sjn_measure_one_string */
 
-PPE_API ppe_bool ppe_sjn_join_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s, ppe_cstr restrict b, ppe_size * restrict bsz)
+PPE_API ppe_bool ppe_sjn_join_one_string(ppe_sjn_joiner restrict jnr, ppe_string restrict s, ppe_cstr restrict b, ppe_size * restrict bsz)
 {
     ppe_sjn_cstr_data_st ud;
 
@@ -1800,8 +1800,8 @@ PPE_API ppe_bool ppe_sjn_join_string(ppe_sjn_joiner restrict jnr, ppe_string res
 
     ud.s = ppe_str_addr(s);
     ud.sz = ppe_str_size(s);
-    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr, b, bsz);
-} /* ppe_sjn_join_string */
+    return ppe_sjn_join_some(jnr, &ud, &sjn_yield_cstr, b, bsz);
+} /* ppe_sjn_join_one_string */
 
 typedef struct
 {
@@ -1851,7 +1851,7 @@ static ppe_int sjn_yield_cstr_from_array(void * ud, const ppe_uint idx, ppe_cs_s
     return cnt;
 } /* sjn_yield_cstr_from_array */
 
-PPE_API ppe_bool ppe_sjn_measure_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n)
+PPE_API ppe_bool ppe_sjn_measure_some_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n)
 {
     sjn_cstr_array_st ud;
 
@@ -1862,10 +1862,10 @@ PPE_API ppe_bool ppe_sjn_measure_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c *
 
     ud.c = strs;
     ud.n = n;
-    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr_from_array);
-} /* ppe_sjn_measure_cstrs */
+    return ppe_sjn_measure_some(jnr, &ud, &sjn_yield_cstr_from_array);
+} /* ppe_sjn_measure_some_cstrs */
 
-PPE_API ppe_bool ppe_sjn_join_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz)
+PPE_API ppe_bool ppe_sjn_join_some_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz)
 {
     sjn_cstr_array_st ud;
 
@@ -1876,8 +1876,8 @@ PPE_API ppe_bool ppe_sjn_join_cstrs(ppe_sjn_joiner restrict jnr, ppe_cstr_c * re
 
     ud.c = strs;
     ud.n = n;
-    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr_from_array, b, bsz);
-} /* ppe_sjn_join_cstrs */
+    return ppe_sjn_join_some(jnr, &ud, &sjn_yield_cstr_from_array, b, bsz);
+} /* ppe_sjn_join_some_cstrs */
 
 typedef struct
 {
@@ -1927,23 +1927,23 @@ static ppe_int sjn_yield_cstr_from_string_array(void * ud, const ppe_uint idx, p
     return cnt;
 } /* sjn_yield_cstr_from_string_array */
 
-PPE_API ppe_bool ppe_sjn_measure_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n)
+PPE_API ppe_bool ppe_sjn_measure_some_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n)
 {
     sjn_string_array_st ud;
 
     ud.c = strs;
     ud.n = n;
-    return ppe_sjn_measure(jnr, &ud, &sjn_yield_cstr_from_string_array);
-} /* ppe_sjn_measure_strings */
+    return ppe_sjn_measure_some(jnr, &ud, &sjn_yield_cstr_from_string_array);
+} /* ppe_sjn_measure_some_strings */
 
-PPE_API ppe_bool ppe_sjn_join_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz)
+PPE_API ppe_bool ppe_sjn_join_some_strings(ppe_sjn_joiner restrict jnr, ppe_string_c * restrict strs, const ppe_uint n, ppe_cstr restrict b, ppe_size * restrict bsz)
 {
     sjn_string_array_st ud;
 
     ud.c = strs;
     ud.n = n;
-    return ppe_sjn_join(jnr, &ud, &sjn_yield_cstr_from_string_array, b, bsz);
-} /* ppe_sjn_join_strings */
+    return ppe_sjn_join_some(jnr, &ud, &sjn_yield_cstr_from_string_array, b, bsz);
+} /* ppe_sjn_join_some_strings */
 
 static ppe_int sjn_yield_cstr_from_snippet(void * ud, const ppe_uint idx, const ppe_char ** s, const ppe_size * sz, const ppe_uint n)
 {
@@ -1987,15 +1987,15 @@ static ppe_int sjn_yield_cstr_from_snippet(void * ud, const ppe_uint idx, const 
     return cnt;
 } /* sjn_yield_cstr_from_snippet */
 
-PPE_API ppe_bool ppe_sjn_measure_snippet(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt)
+PPE_API ppe_bool ppe_sjn_measure_some_snippets(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt)
 {
-    return ppe_sjn_measure(jnr, spt, &sjn_yield_cstr_from_snippet);
-} /* ppe_sjn_measure_snippet */
+    return ppe_sjn_measure_some(jnr, spt, &sjn_yield_cstr_from_snippet);
+} /* ppe_sjn_measure_some_snippets */
 
-PPE_API ppe_bool ppe_sjn_join_snippet(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz)
+PPE_API ppe_bool ppe_sjn_join_some_snippets(ppe_sjn_joiner restrict jnr, ppe_cs_snippet restrict spt, ppe_cstr restrict b, ppe_size * restrict bsz)
 {
-    return ppe_sjn_join(jnr, spt, &sjn_yield_cstr_from_snippet, b, bsz);
-} /* ppe_sjn_join_snippet */
+    return ppe_sjn_join_some(jnr, spt, &sjn_yield_cstr_from_snippet, b, bsz);
+} /* ppe_sjn_join_some_snippets */
 
 #ifdef __cplusplus
 }
