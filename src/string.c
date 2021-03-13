@@ -1648,7 +1648,6 @@ PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, p
     /* Try to get new source strings. */
     ret = (*y)(ud, jnr->i, &spt);
     if (ret > 0) {
-        m = 0;
         if (jnr->s.addr == jnr->d || ! jnr->s.addr) {
             /* CASE-1: The last copied string is the delimiter. */
             /* CASE-2: No string has been copied. */
@@ -1662,6 +1661,7 @@ PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, p
 
         do {
             switch (ret) {
+#if (CSPT_PRESERVED_CAPACITY == 8)
                 case 8:
                     sjn_init_copy(jnr, jnr->d, jnr->dsz);
                     sjn_try_copy(jnr, b, bsz, cpsz);
@@ -1686,6 +1686,7 @@ PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, p
                     sjn_init_copy(jnr, cspt_addr(m), cspt_size(m));
                     sjn_try_copy(jnr, b, bsz, cpsz);
                     m += 1;
+#endif
                 case 4:
                     sjn_init_copy(jnr, jnr->d, jnr->dsz);
                     sjn_try_copy(jnr, b, bsz, cpsz);
@@ -1710,6 +1711,7 @@ PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, p
                     sjn_init_copy(jnr, cspt_addr(m), cspt_size(m));
                     sjn_try_copy(jnr, b, bsz, cpsz);
                     m += 1;
+                case 0:
                     break;
 
                 default:
@@ -1720,7 +1722,7 @@ PPE_API ppe_bool ppe_sjn_join(ppe_sjn_joiner restrict jnr, void * restrict ud, p
             /* Try to get new source strings. */
             cspt_reset(&spt);
             m = 0;
-        } while ((ret = (*y)(ud, jnr->i, &spt)) > 0);
+        } while (m == CSPT_PRESERVED_CAPACITY && (ret = (*y)(ud, jnr->i, &spt)) > 0);
     } /* if */
 
     jnr->sz += cpsz;
