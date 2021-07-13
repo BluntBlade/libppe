@@ -1206,7 +1206,7 @@ PPE_API ppe_string ppe_str_trim_chars_cs(ppe_string_c restrict s, ppe_cstr_c res
     ppe_cstr_c p = NULL;
     ppe_size cpsz = 0;
 
-    if (! s || ! (opt & (PPE_STR_OPT_LEFT_END | PPE_STR_OPT_RIGHT_END))) {
+    if (! s || ! (opt & (PPE_STR_OPT_LEFT_END | PPE_STR_OPT_RIGHT_END)) || str_addr(s) == t) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
@@ -1229,7 +1229,7 @@ PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_optio
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (ppe_str_is_empty(s)) {
+    if (str_is_empty(s)) {
         return &str_empty_s;
     }
     return ppe_str_create(s->buf, s->sz - 1);
