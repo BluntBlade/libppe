@@ -1201,7 +1201,7 @@ PPE_API ppe_string ppe_str_substr(ppe_string_c restrict s, const ppe_size start,
 
 /* ---- */
 
-PPE_API ppe_string ppe_str_trim_any_cs(ppe_string_c restrict s, ppe_cstr_c restrict t, const ppe_str_option opt)
+PPE_API ppe_string ppe_str_trim_chars_cs(ppe_string_c restrict s, ppe_cstr_c restrict t, const ppe_str_option opt)
 {
     ppe_cstr_c p = NULL;
     ppe_size cpsz = 0;
@@ -1219,7 +1219,7 @@ PPE_API ppe_string ppe_str_trim_any_cs(ppe_string_c restrict s, ppe_cstr_c restr
         return &str_empty_s;
     }
     return str_create(p, cpsz);
-} /* ppe_str_trim_any_cs */
+} /* ppe_str_trim_chars_cs */
 
 /* ---- */
 

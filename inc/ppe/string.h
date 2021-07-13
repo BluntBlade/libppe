@@ -264,26 +264,26 @@ PPE_API extern ppe_string ppe_str_substr(ppe_string_c restrict s, const ppe_size
 
 /* ---- */
 
-PPE_API extern ppe_string ppe_str_trim_any_cs(ppe_string_c restrict s, ppe_cstr_c restrict t, const ppe_str_option opt);
+PPE_API extern ppe_string ppe_str_trim_chars_cs(ppe_string_c restrict s, ppe_cstr_c restrict t, const ppe_str_option opt);
 
-static inline ppe_string ppe_str_trim_any(ppe_string_c restrict s, ppe_string_c restrict t, const ppe_str_option opt)
+static inline ppe_string ppe_str_trim_chars(ppe_string_c restrict s, ppe_string_c restrict t, const ppe_str_option opt)
 {
-    return ppe_str_trim_any_cs(s, t ? ppe_str_addr(t) : NULL, opt);
+    return ppe_str_trim_chars_cs(s, t ? ppe_str_addr(t) : NULL, opt);
 } /* ppe_str_trim_any */
 
 static inline ppe_string ppe_str_trim_left(ppe_string_c restrict s)
 {
-    return ppe_str_trim_any_cs(s, NULL, PPE_STR_OPT_LEFT_END);
+    return ppe_str_trim_chars_cs(s, NULL, PPE_STR_OPT_LEFT_END);
 } /* ppe_str_trim_left */
 
 static inline ppe_string ppe_str_trim_right(ppe_string_c restrict s)
 {
-    return ppe_str_trim_any_cs(s, NULL, PPE_STR_OPT_RIGHT_END);
+    return ppe_str_trim_chars_cs(s, NULL, PPE_STR_OPT_RIGHT_END);
 } /* ppe_str_trim_right */
 
 static inline ppe_string ppe_str_trim(ppe_string_c restrict s)
 {
-    return ppe_str_trim_any_cs(s, NULL, PPE_STR_OPT_BOTH_ENDS);
+    return ppe_str_trim_chars_cs(s, NULL, PPE_STR_OPT_BOTH_ENDS);
 } /* ppe_str_trim */
 
 /* ---- */
