@@ -1223,7 +1223,7 @@ PPE_API ppe_string ppe_str_trim_chars_cs(ppe_string_c restrict s, ppe_cstr_c res
 
 /* ---- */
 
-PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_option opt)
+PPE_API ppe_string ppe_str_chop(ppe_string_c restrict s, const ppe_str_option opt)
 {
     if (! s) {
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
@@ -1234,42 +1234,6 @@ PPE_API ppe_string ppe_str_chop(const ppe_string restrict s, const ppe_str_optio
     }
     return ppe_str_create(s->buf, s->sz - 1);
 } /* ppe_str_chop */
-
-PPE_API ppe_string ppe_str_chomp_ex(const ppe_string restrict s, const ppe_str_option opt, const void * restrict v, const ppe_size vsz)
-{
-    ppe_string nw = NULL;
-    ppe_cstr_c t = NULL;
-    ppe_size tsz = 0;
-    ppe_size nwsz = 0;
-
-    ppe_str_get_var_args_with_size(opt, v, vsz, &t, &tsz);
-
-    if (! s) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    } else if (ppe_str_is_empty(s)) {
-        return &str_empty_s;
-    } /* if */
-
-    if (! t) {
-        t = PPE_STR_NEWLINE;
-        tsz = strlen(PPE_STR_NEWLINE);
-    } else if (tsz == 0 || ppe_cs_is_empty(t) || s->buf == t) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
-        return NULL;
-    } /* if */
-
-    cs_chomp(s->buf, s->sz, PPE_STR_NEWLINE, strlen(PPE_STR_NEWLINE), PPE_STR_UNLIMITED, NULL, &nwsz, opt);
-    nw = (ppe_string) ppe_mp_malloc(sizeof(ppe_string_st) + nwsz - 1); /* The terminating NUL byte have been counted twice. */
-    if (! nw) {
-        ppe_err_set(PPE_ERR_OUT_OF_MEMORY, NULL);
-        return NULL;
-    }
-
-    cs_chomp(s->buf, s->sz, PPE_STR_NEWLINE, strlen(PPE_STR_NEWLINE), PPE_STR_UNLIMITED, nw->buf, &nwsz, opt);
-    nw->sz = nwsz;
-    return nw;
-} /* ppe_str_chomp */
 
 /* -- Join & Concat -- */
 
