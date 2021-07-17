@@ -18,9 +18,6 @@ extern "C"
 typedef ppe_char * ppe_cstr;
 typedef const ppe_char * ppe_cstr_c;
 
-struct PPE_CS_SNIPPET;
-typedef struct PPE_CS_SNIPPET * ppe_cs_snippet;
-
 struct PPE_STRING; 
 typedef struct PPE_STRING * ppe_string;
 typedef const ppe_string ppe_string_c;
@@ -68,42 +65,6 @@ typedef ppe_uint ppe_str_option;
 #endif
 
 #define PPE_STR_ARG_END NULL
-
-/* ==== Declaration : C-String Snippet ====================================== */
-
-/* -- Property -- */
-
-PPE_API extern ppe_int ppe_cspt_count(const ppe_cs_snippet restrict spt);
-PPE_API extern ppe_int ppe_cspt_capacity(const ppe_cs_snippet restrict spt);
-PPE_API extern ppe_size ppe_cspt_total_size(const ppe_cs_snippet restrict spt);
-
-/* -- Create & Destroy -- */
-
-PPE_API extern ppe_cs_snippet ppe_cspt_create(const ppe_uint cap);
-PPE_API extern void ppe_cspt_destroy(ppe_cs_snippet restrict spt);
-PPE_API extern void ppe_cspt_reset(ppe_cs_snippet restrict spt);
-
-/* -- Manipulators -- */
-
-PPE_API extern ppe_bool ppe_cspt_get(ppe_cs_snippet const restrict spt, const ppe_uint idx, ppe_cstr_c * const restrict s, ppe_size * restrict sz);
-PPE_API extern ppe_bool ppe_cspt_append(ppe_cs_snippet restrict spt, ppe_cstr_c const restrict s, const ppe_size sz);
-
-/* -- Producer -- */
-
-PPE_API extern ppe_cstr_c ppe_cspt_copy(ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_cstr restrict b, ppe_size * restrict bsz);
-PPE_API extern ppe_cstr_c * ppe_cspt_copy_some(const ppe_cs_snippet restrict spt, const ppe_uint idx, ppe_uint * restrict n);
-
-/* -- Wrappers -- */
-
-static inline ppe_bool ppe_cspt_is_empty(const ppe_cs_snippet restrict spt)
-{
-    return ppe_cspt_count(spt) == 0;
-}
-
-static inline ppe_bool ppe_cspt_is_full(const ppe_cs_snippet restrict spt)
-{
-    return ppe_cspt_count(spt) == ppe_cspt_capacity(spt);
-}
 
 /* ==== Declaration : C-String ============================================== */
 
