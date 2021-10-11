@@ -15,8 +15,10 @@ extern "C"
 
 /* ---- Preset Values ------------------------------------------------------- */
 
-static const ppe_cstr_c cs_empty_s = "";
+static ppe_cstr_c const cs_empty_s = "";
 static ppe_cs_snippet_st cspt_empty_s = {1, 1, 0, {{cs_empty_s, 0}}};
+
+static ppe_cstr_c const cs_err_null_string_arg = "The argument is a NULL string, expect a non-NULL one.";
 
 /* ---- Functions ----------------------------------------------------------- */
 
@@ -257,51 +259,25 @@ static ppe_cstr_c cs_substitute(ppe_cstr_c const restrict s, ppe_cstr_c const re
 
 /* -- Preset values -- */
 
-PPE_API ppe_cstr_c ppe_cs_get_empty(void)
+PPE_API ppe_cstr_c ppe_cs_empty(void)
 {
     return cs_empty_s;
-}
+} /* ppe_cs_empty */
 
 /* -- Property -- */
 
-PPE_API ppe_size ppe_cs_size(ppe_cstr_c const restrict s)
+PPE_API ppe_size ppe_cs_size(ppe_cstr_c restrict s)
 {
-    assert(s);
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+
+        /* TODO: Throw an exception or abort. */
+        return 0;
+    }
     return strlen(s);
-}
-
-/* -- Test -- */
-
-PPE_API ppe_bool ppe_cs_is_empty(ppe_cstr_c const restrict s)
-{
-    assert(s);
-    return (s[0] == '\0');
-}
-
-PPE_API ppe_int ppe_cs_compare(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
-{
-    assert(s1);
-    assert(s2);
-    return strcmp(s1, s2);
-}
-
-/* -- Find -- */
-
-PPE_API ppe_cstr_c const ppe_cs_find(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t)
-{
-    assert(s);
-    assert(t);
-    return (const ppe_cstr) strstr(s, t);
-}
+} /* ppe_cs_size */
 
 /* -- Create & Destroy -- */
-
-PPE_API void ppe_cs_destroy(ppe_cstr_c restrict s)
-{
-    if (s && s != cs_empty_s) {
-        ppe_mp_free((void *)s);
-    }
-}
 
 PPE_API ppe_cstr_c ppe_cs_create(ppe_cstr_c const restrict s, const ppe_size sz)
 {
@@ -325,17 +301,76 @@ PPE_API ppe_cstr_c ppe_cs_create(ppe_cstr_c const restrict s, const ppe_size sz)
     memcpy(nw, s, sz);
     nw[sz] = '\0';
     return nw;
-}
+} /* ppe_cs_create */
+
+PPE_API void ppe_cs_destroy(ppe_cstr_c restrict s)
+{
+    if (s && s != cs_empty_s) {
+        ppe_mp_free((void *)s);
+    }
+} /* ppe_cs_destroy */
+
+/* -- Test -- */
+
+PPE_API ppe_bool ppe_cs_is_empty(ppe_cstr_c restrict s)
+{
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, cs_err_null_string_arg);
+
+        /* TODO: Throw an exception or abort. */
+        return ppe_true; /* Take NULL strings as empty ones. */
+    }
+    return (s[0] == '\0');
+} /* ppe_cs_is_empty */
+
+PPE_API ppe_int ppe_cs_compare(ppe_cstr_c restrict s1, ppe_cstr_c restrict s2)
+{
+    if (! s1) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, cs_err_null_string_arg);
+
+        /* TODO: Throw an exception or abort. */
+        s1 = cs_empty_s; /* Take NULL strings as empty ones. */
+    }
+    if (! s2) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, cs_err_null_string_arg);
+
+        /* TODO: Throw an exception or abort. */
+        s2 = cs_empty_s; /* Take NULL strings as empty ones. */
+    }
+    if (s1 == s2) {
+        /* CASE-1: s1 and s2 are NULL strings. */
+        /* CASE-2: s1 and s2 are NON-NULL strings. */
+        return 0;
+    }
+    return strcmp(s1, s2);
+} /* ppe_cs_compare */
 
 /* -- Substring -- */
 
-PPE_API ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off, const ppe_size ssz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt)
+PPE_API ppe_cstr_c ppe_cs_find(ppe_cstr_c restrict s, ppe_cstr_c restrict t)
+{
+    if (! s) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, cs_err_null_string_arg);
+        return NULL;
+    }
+    if (! t) {
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, cs_err_null_string_arg);
+        return NULL;
+    }
+    if (s == t) {
+        /* CASE-1: s1 and s2 are NON-NULL strings. */
+        return s;
+    }
+    return (ppe_cstr_c) strstr(s, t);
+} /* ppe_cs_find */
+
+PPE_API ppe_cstr_c ppe_cs_slice(ppe_cstr_c const restrict s, const ppe_size off, const ppe_size rsz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt)
 {
     ppe_size sz = 0;
     ppe_size cpsz = 0;
 
     if (! s) {
-        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
+        ppe_err_set(PPE_ERR_INVALID_ARGUMENT, cs_err_null_string_arg);
         return NULL;
     }
 
@@ -345,7 +380,7 @@ PPE_API ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off
         return NULL;
     }
 
-    cpsz = sz < off + ssz ? sz - off : ssz;
+    cpsz = sz < off + rsz ? sz - off : rsz;
     
     if (! b) {
         if (bsz) {
@@ -376,7 +411,7 @@ PPE_API ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off
     b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
-} /* ppe_cs_substr */
+} /* ppe_cs_slice */
 
 /* -- Trim & Chomp -- */
 

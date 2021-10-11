@@ -11,17 +11,6 @@ extern "C"
 {
 #endif
 
-/* ==== Declaration : String ================================================ */
-
-/* ---- Types --------------------------------------------------------------- */
-
-typedef ppe_char * ppe_cstr;
-typedef const ppe_char * ppe_cstr_c;
-
-struct PPE_STRING; 
-typedef struct PPE_STRING * ppe_string;
-typedef const ppe_string ppe_string_c;
-
 typedef enum
 {
     PPE_STR_JOIN_END = 0,
@@ -66,35 +55,74 @@ typedef ppe_uint ppe_str_option;
 
 #define PPE_STR_ARG_END NULL
 
-/* ==== Declaration : C-String ============================================== */
+/* ==== Declaration : C-String Module ======================================= */
+
+/* ---- Types --------------------------------------------------------------- */
+
+typedef ppe_char * ppe_cstr;
+typedef const ppe_char * ppe_cstr_c;
 
 /* ---- Functions ----------------------------------------------------------- */
 
 /* -- Preset values -- */
 
-PPE_API extern ppe_cstr_c ppe_cs_get_empty(void);
+PPE_API extern ppe_cstr_c ppe_cs_empty(void);
 
 /* -- Property -- */
 
-PPE_API extern ppe_size ppe_cs_size(ppe_cstr_c const restrict s);
-
-/* -- Test -- */
-
-PPE_API extern ppe_bool ppe_cs_is_empty(ppe_cstr_c const restrict s);
-PPE_API extern ppe_int ppe_cs_compare(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2);
-
-/* -- Find -- */
-
-PPE_API extern ppe_cstr_c const ppe_cs_find(ppe_cstr_c const restrict s, ppe_cstr_c const restrict t);
+PPE_API extern ppe_size ppe_cs_size(ppe_cstr_c restrict s);
 
 /* -- Create & Destroy -- */
 
-PPE_API extern void ppe_cs_destroy(ppe_cstr_c restrict s);
 PPE_API extern ppe_cstr_c ppe_cs_create(ppe_cstr_c const restrict s, const ppe_size sz);
+PPE_API extern void ppe_cs_destroy(ppe_cstr_c restrict s);
+
+static inline ppe_cstr_c ppe_cs_clone(ppe_cstr_c const restrict s)
+{
+    return ppe_cs_create(s, ppe_cs_size(s));
+}
+
+/* -- Test -- */
+
+PPE_API extern ppe_bool ppe_cs_is_empty(ppe_cstr_c restrict s);
+PPE_API extern ppe_int ppe_cs_compare(ppe_cstr_c restrict s1, ppe_cstr_c restrict s2);
+
+static inline ppe_bool ppe_cs_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
+{
+    return ppe_cs_compare(s1, s2) == 0;
+}
+
+static inline ppe_bool ppe_cs_less_than(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
+{
+    return ppe_cs_compare(s1, s2) < 0;
+}
+
+static inline ppe_bool ppe_cs_less_than_or_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
+{
+    return ppe_cs_compare(s1, s2) <= 0;
+}
+
+static inline ppe_bool ppe_cs_greater_than(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
+{
+    return ppe_cs_compare(s1, s2) > 0;
+}
+
+static inline ppe_bool ppe_cs_greater_than_or_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
+{
+    return ppe_cs_compare(s1, s2) >= 0;
+}
 
 /* -- Substring -- */
 
-PPE_API extern ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off, const ppe_size ssz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt);
+PPE_API extern ppe_cstr_c ppe_cs_find(ppe_cstr_c restrict s, ppe_cstr_c restrict t);
+PPE_API extern ppe_cstr_c ppe_cs_slice(ppe_cstr_c const restrict s, const ppe_size off, const ppe_size rsz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt);
+
+static inline ppe_cstr_c ppe_cs_substr(ppe_cstr_c const restrict s, const ppe_size off, const ppe_size rsz, ppe_cstr restrict b, ppe_size * bsz, ppe_str_option opt)
+{
+    return ppe_cs_slice(s, off, rsz, b, bsz, opt);
+} /* ppe_cs_substr */
+
+/* TODO: ppe_cs_index_of */
 
 /* -- Trim & Chomp -- */
 
@@ -121,37 +149,6 @@ PPE_API extern ppe_cstr_c ppe_cs_substitute(ppe_cstr_c const restrict s, ppe_cst
 PPE_API extern ppe_cstr ppe_cs_sprintf(ppe_cstr restrict b, ppe_size * restrict bsz, const ppe_str_option opt, const ppe_cstr restrict fmt, ...);
 
 /* -- Wrapper -- */
-
-static inline ppe_bool ppe_cs_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
-{
-    return ppe_cs_compare(s1, s2) == 0;
-}
-
-static inline ppe_bool ppe_cs_is_less_than(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
-{
-    return ppe_cs_compare(s1, s2) < 0;
-}
-
-static inline ppe_bool ppe_cs_is_less_than_or_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
-{
-    return ppe_cs_compare(s1, s2) <= 0;
-}
-
-static inline ppe_bool ppe_cs_is_greater_than(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
-{
-    return ppe_cs_compare(s1, s2) > 0;
-}
-
-static inline ppe_bool ppe_cs_is_greater_than_or_equal_to(ppe_cstr_c const restrict s1, ppe_cstr_c const restrict s2)
-{
-    return ppe_cs_compare(s1, s2) >= 0;
-}
-
-static inline ppe_cstr_c ppe_cs_clone(ppe_cstr_c const restrict s)
-{
-    return ppe_cs_create(s, ppe_cs_size(s));
-}
-
 static inline ppe_cstr_c ppe_cs_trim_left(ppe_cstr_c const restrict s, const ppe_cstr restrict t, ppe_cstr restrict b, ppe_size * bsz)
 {
     return ppe_cs_trim(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_LEFT_END);
@@ -167,7 +164,13 @@ static inline ppe_cstr_c ppe_cs_trim_both(ppe_cstr_c const restrict s, ppe_cstr 
     return ppe_cs_trim(s, PPE_STR_SPACES, b, bsz, PPE_STR_OPT_BOTH_ENDS);
 }
 
-/* ==== Declaration : String ================================================ */
+/* ==== Declaration : String Module ========================================= */
+
+/* ---- Types --------------------------------------------------------------- */
+
+struct PPE_STRING; 
+typedef struct PPE_STRING * ppe_string;
+typedef const ppe_string ppe_string_c;
 
 /* ---- Functions ----------------------------------------------------------- */
 
