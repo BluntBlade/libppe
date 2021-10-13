@@ -3,7 +3,7 @@
 
 #include "ppe/types.h"
 #include "ppe/macros.h"
-#include "ppe/cstring.h"
+#include "ppe/string.h"
 
 #ifdef __cplusplus
 extern "C"

@@ -2,6 +2,8 @@
 #include <assert.h>
 
 #include "ppe/mempool.h"
+#include "ppe/snippet.h"
+#include "ppe/error.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -52,7 +54,7 @@ PPE_API ppe_size ppe_spt_total_size(ppe_snippet_c restrict spt)
 PPE_API ppe_snippet ppe_spt_create(const ppe_uint cap)
 {
     ppe_snippet nw = NULL;
-    ppe_size nwsz = sizeof(ppe_cs_snippet_st);
+    ppe_size nwsz = sizeof(ppe_snippet_st);
 
     nwsz += cap > CSPT_PRESERVED_CAPACITY ? sizeof(spt_item_st) * (cap - CSPT_PRESERVED_CAPACITY) : 0;
     nw = ppe_mp_malloc(nwsz);
