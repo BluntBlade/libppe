@@ -6,9 +6,9 @@
 #include "ppe/string.h"
 #include "ppe/error.h"
 
-static void test_cs_get_empty(void)
+static void test_cs_empty(void)
 {
-    ppe_cstr_c s = ppe_cs_get_empty();
+    ppe_cstr_c s = ppe_cs_empty();
 
     CU_ASSERT_PTR_NOT_NULL(s);
     CU_ASSERT_EQUAL(strlen(s), 0);
@@ -27,7 +27,7 @@ static void test_cs_is_empty(void)
     ppe_cstr_c s = "";
     CU_ASSERT_TRUE(ppe_cs_is_empty(s));
 
-    s = ppe_cs_get_empty();
+    s = ppe_cs_empty();
     CU_ASSERT_TRUE(ppe_cs_is_empty(s));
 }
 
@@ -79,27 +79,27 @@ static void test_cs_create(void)
 
     s = ppe_cs_create("", 0);
     CU_ASSERT_PTR_NOT_NULL(s);
-    CU_ASSERT_PTR_EQUAL(s, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(s, ppe_cs_empty());
     CU_ASSERT_EQUAL(ppe_cs_size(s), 0);
 
     ppe_cs_destroy(s);
 
     s = ppe_cs_create("", 0);
     CU_ASSERT_PTR_NOT_NULL(s);
-    CU_ASSERT_PTR_EQUAL(s, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(s, ppe_cs_empty());
     CU_ASSERT_EQUAL(ppe_cs_size(s), 0);
 
     ppe_cs_destroy(s);
 
     s = ppe_cs_create(b, strlen(b));
     CU_ASSERT_PTR_NOT_NULL(s);
-    CU_ASSERT_PTR_NOT_EQUAL(s, ppe_cs_get_empty());
+    CU_ASSERT_PTR_NOT_EQUAL(s, ppe_cs_empty());
     CU_ASSERT_EQUAL(ppe_cs_size(s), strlen(b));
     CU_ASSERT_EQUAL(strncmp(s, b, strlen(b)), 0);
 
     s2 = ppe_cs_create(b, strlen(b));
     CU_ASSERT_PTR_NOT_NULL(s2);
-    CU_ASSERT_PTR_NOT_EQUAL(s2, ppe_cs_get_empty());
+    CU_ASSERT_PTR_NOT_EQUAL(s2, ppe_cs_empty());
     CU_ASSERT_EQUAL(ppe_cs_size(s2), strlen(b));
     CU_ASSERT_EQUAL(strncmp(s2, b, strlen(b)), 0);
     CU_ASSERT_PTR_NOT_EQUAL(s2, s);
@@ -518,7 +518,7 @@ static void test_cs_chop_for_using_new_string_mode(void)
     t = ppe_cs_chop("", NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
     CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
 } /* test_cs_chop_for_using_new_string_mode */
 
@@ -724,7 +724,7 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
 
     ppe_cs_destroy(t);
 
@@ -732,19 +732,19 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
 
     ppe_cs_destroy(t);
 
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
 
     t2 = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
-    CU_ASSERT_PTR_EQUAL(t2, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t2, ppe_cs_empty());
 
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
@@ -765,21 +765,21 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 2, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
 
     ppe_cs_destroy(t);
 
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
 
     ppe_cs_destroy(t);
 
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_get_empty());
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
 
     ppe_cs_destroy(t);
 
@@ -981,7 +981,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
 } /* test_cs_chomp_for_using_fill_buffer_mode */
 
 CU_TestInfo test_normal_cases[] = {
-    {"test_cs_get_empty()", test_cs_get_empty},
+    {"test_cs_empty()", test_cs_empty},
     {"test_cs_size()", test_cs_size},
     {"test_cs_is_empty()", test_cs_is_empty},
     {"test_cs_compare()", test_cs_compare},
