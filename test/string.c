@@ -95,15 +95,15 @@ static void test_cs_create(void)
     CU_ASSERT_PTR_NOT_NULL(s);
     CU_ASSERT_PTR_NOT_EQUAL(s, ppe_cs_empty());
     CU_ASSERT_EQUAL(ppe_cs_size(s), strlen(b));
-    CU_ASSERT_EQUAL(strncmp(s, b, strlen(b)), 0);
+    CU_ASSERT_EQUAL(memcmp(s, b, strlen(b)), 0);
 
     s2 = ppe_cs_create(b, strlen(b));
     CU_ASSERT_PTR_NOT_NULL(s2);
     CU_ASSERT_PTR_NOT_EQUAL(s2, ppe_cs_empty());
     CU_ASSERT_EQUAL(ppe_cs_size(s2), strlen(b));
-    CU_ASSERT_EQUAL(strncmp(s2, b, strlen(b)), 0);
+    CU_ASSERT_EQUAL(memcmp(s2, b, strlen(b)), 0);
     CU_ASSERT_PTR_NOT_EQUAL(s2, s);
-    CU_ASSERT_EQUAL(strncmp(s2, s, ppe_cs_size(s)), 0);
+    CU_ASSERT_EQUAL(memcmp(s2, s, ppe_cs_size(s)), 0);
 
     ppe_cs_destroy(s);
     ppe_cs_destroy(s2);
@@ -115,20 +115,75 @@ static void test_cs_substr_for_using_measure_mode(void)
     ppe_cstr_c t = NULL;
     ppe_size sz = 0;
 
+    /* -- Test MEASURE mode -- */
+    /* At the beginning. */
+    /*   Cut nothing out. */
+    t = ppe_cs_substr(s, 0, 0, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 0);
+
+    /*   Cut out a string whose length is 5 characters. */
     t = ppe_cs_substr(s, 0, 5, NULL, &sz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
-    CU_ASSERT_EQUAL(sz, 6);
+    CU_ASSERT_EQUAL(sz, 5);
 
+    /*   Cut out a string whose length is the same of the source string. */
+    t = ppe_cs_substr(s, 0, ppe_cs_size(s), NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, ppe_cs_size(s));
+
+    /*   Cut out a string whose length is longer than the source string. */
+    t = ppe_cs_substr(s, 0, ppe_cs_size(s) + 4, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, ppe_cs_size(s));
+
+    /* At the middle. */
+    /*   Cut nothing out. */
+    t = ppe_cs_substr(s, 10, 0, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 0);
+
+    /*   Cut out a string whose length is 5 characters. */
     t = ppe_cs_substr(s, 10, 5, NULL, &sz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
-    CU_ASSERT_EQUAL(sz, 6);
+    CU_ASSERT_EQUAL(sz, 5);
 
-    t = ppe_cs_substr(s, 17, 5, NULL, &sz, 0);
+    /*   Cut out a string at the end of the source string. */
+    t = ppe_cs_substr(s, 14, 6, NULL, &sz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
-    CU_ASSERT_EQUAL(sz, 4);
+    CU_ASSERT_EQUAL(sz, 6);
+
+    /*   Cut out a string whose length is longer than the rest of the source string. */
+    t = ppe_cs_substr(s, 14, 10, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 6);
+
+    /* At the end. */
+    /*   Cut nothing out (#1). */
+    t = ppe_cs_substr(s, ppe_cs_size(s), 0, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 0);
+
+    /*   Cut nothing out (#2). */
+    t = ppe_cs_substr(s, ppe_cs_size(s), 10, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+    CU_ASSERT_EQUAL(sz, 0);
+
+    /* Beyond the end. */
+    /*   Throw an error. */
+    t = ppe_cs_substr(s, ppe_cs_size(s) + 2, 0, NULL, &sz, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
 } /* test_cs_substr_for_using_measure_mode */
 
 static void test_cs_substr_for_using_new_string_mode(void)
@@ -142,16 +197,16 @@ static void test_cs_substr_for_using_new_string_mode(void)
     t = ppe_cs_substr(s, 0, 5, NULL, NULL, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_EQUAL(strncmp(t, s, 5), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "This ", 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s, 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This ", 5), 0);
 
     /* At the middle. */
     t2 = ppe_cs_substr(s, 10, 5, NULL, NULL, 0);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_PTR_NOT_EQUAL(t2, t);
-    CU_ASSERT_EQUAL(strncmp(t2, s + 10, 5), 0);
-    CU_ASSERT_EQUAL(strncmp(t2, "test ", 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t2, s + 10, 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t2, "test ", 5), 0);
 
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
@@ -160,8 +215,8 @@ static void test_cs_substr_for_using_new_string_mode(void)
     t = ppe_cs_substr(s, 15, 5, NULL, NULL, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_EQUAL(strncmp(t, s + 15, 5), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "line.", 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s + 15, 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "line.", 5), 0);
 
     ppe_cs_destroy(t);
 
@@ -169,8 +224,8 @@ static void test_cs_substr_for_using_new_string_mode(void)
     t = ppe_cs_substr(s, 17, 5, NULL, NULL, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_EQUAL(strncmp(t, s + 17, 3), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "ne.", 3), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s + 17, 3), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "ne.", 3), 0);
 
     ppe_cs_destroy(t);
 } /* test_cs_substr_for_using_new_string_mode */
@@ -189,8 +244,8 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     t = ppe_cs_substr(s, 0, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
-    CU_ASSERT_EQUAL(strncmp(t, s, 5), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "This ", 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s, 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This ", 5), 0);
 
     /* At the middle. */
     memset(b, 0, sizeof(b));
@@ -198,8 +253,8 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     t = ppe_cs_substr(s, 10, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
-    CU_ASSERT_EQUAL(strncmp(t, s + 10, 5), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "test ", 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s + 10, 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "test ", 5), 0);
 
     /* At the end. */
     memset(b, 0, sizeof(b));
@@ -207,8 +262,8 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     t = ppe_cs_substr(s, 15, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
-    CU_ASSERT_EQUAL(strncmp(t, s + 15, 5), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "line.", 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s + 15, 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "line.", 5), 0);
 
     /* Reach beyond the end. */
     memset(b, 0, sizeof(b));
@@ -216,17 +271,17 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     t = ppe_cs_substr(s, 17, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
-    CU_ASSERT_EQUAL(strncmp(t, s + 17, 3), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "ne.", 3), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s + 17, 3), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "ne.", 3), 0);
 
     /* Truncate the substring. */
     memset(b, 0, sizeof(b));
-    bsz = sizeof(b);
+    bsz = 5;
     t = ppe_cs_substr(s, 5, 10, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
-    CU_ASSERT_EQUAL(strncmp(t, s + 5, 9), 0);
-    CU_ASSERT_EQUAL(strncmp(t, "is a test", 9), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s + 5, 5), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "is a ", 5), 0);
 } /* test_cs_substr_for_using_fill_buffer_mode */
 
 static void test_cs_trim_for_using_measure_mode(void)
@@ -542,7 +597,7 @@ static void test_cs_chop_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(sz, ppe_cs_size(s) - 1);
-    CU_ASSERT_EQUAL(strncmp(t, s, sz), 0);
+    CU_ASSERT_EQUAL(memcmp(t, s, sz), 0);
 
     sz = sizeof(b);
     t2 = ppe_cs_chop(t, b, &sz, PPE_STR_OPT_NONE);
@@ -550,7 +605,7 @@ static void test_cs_chop_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_PTR_EQUAL(t2, b);
     CU_ASSERT_EQUAL(sz, ppe_cs_size(s) - 2);
-    CU_ASSERT_EQUAL(strncmp(t2, s, sz), 0);
+    CU_ASSERT_EQUAL(memcmp(t2, s, sz), 0);
 
     /* -- Test empty string input. -- */
     t = ppe_cs_chop("", NULL, NULL, PPE_STR_OPT_NONE);
@@ -693,7 +748,7 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
-    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
 
     ppe_cs_destroy(t);
 
@@ -702,7 +757,7 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
 
     ppe_cs_destroy(t);
 
@@ -710,14 +765,14 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
 
     t2 = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_PTR_NOT_EQUAL(t2, t);
     CU_ASSERT_EQUAL(ppe_cs_size(t2), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
-    CU_ASSERT_EQUAL(strncmp(t2, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t2)), 0);
+    CU_ASSERT_EQUAL(memcmp(t2, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t2)), 0);
 
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
@@ -762,7 +817,7 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
-    CU_ASSERT_EQUAL(strncmp(t, PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
 
     ppe_cs_destroy(t);
 
@@ -795,7 +850,7 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc"));
-    CU_ASSERT_EQUAL(strncmp(t, "abcnabc", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "abcnabc", ppe_cs_size(t)), 0);
 
     ppe_cs_destroy(t);
 
@@ -803,7 +858,7 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "abcn", ppe_cs_size(t)), 0);
 
     ppe_cs_destroy(t);
 
@@ -811,14 +866,14 @@ static void test_cs_chomp_for_using_new_string_mode(void)
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "abcn", ppe_cs_size(t)), 0);
 
     t2 = ppe_cs_chomp(s, "abc", -1, NULL, NULL, PPE_STR_OPT_NONE);
     CU_ASSERT_PTR_NOT_NULL(t2);
     CU_ASSERT_PTR_NOT_EQUAL(t2, s);
     CU_ASSERT_PTR_NOT_EQUAL(t2, t);
     CU_ASSERT_EQUAL(ppe_cs_size(t2), strlen(s) - strlen("abc") * 2);
-    CU_ASSERT_EQUAL(strncmp(t2, "abcn", ppe_cs_size(t2)), 0);
+    CU_ASSERT_EQUAL(memcmp(t2, "abcn", ppe_cs_size(t2)), 0);
 
     ppe_cs_destroy(t);
     ppe_cs_destroy(t2);
@@ -840,7 +895,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE));
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
-    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one." PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
 
     /*  Test for stripping out two newlines.  */
     sz = sizeof(b);
@@ -850,7 +905,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
 
     sz = sizeof(b);
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 3, b, &sz, PPE_STR_OPT_NONE);
@@ -859,7 +914,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
 
     sz = sizeof(b);
     t = ppe_cs_chomp(s, PPE_STR_NEWLINE, -1, b, &sz, PPE_STR_OPT_NONE);
@@ -868,7 +923,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE) * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "And this is another one.", ppe_cs_size(t)), 0);
 
     /* -- Test for empty string input. -- */
     s = "";
@@ -918,7 +973,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen(PPE_STR_NEWLINE));
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen(PPE_STR_NEWLINE));
-    CU_ASSERT_EQUAL(strncmp(t, PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, PPE_STR_NEWLINE, ppe_cs_size(t)), 0);
 
     /*  Test for stripping out two newlines.  */
     sz = sizeof(b);
@@ -955,7 +1010,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc"));
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc"));
-    CU_ASSERT_EQUAL(strncmp(t, "abcnabc", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "abcnabc", ppe_cs_size(t)), 0);
 
     sz = sizeof(b);
     t = ppe_cs_chomp(s, "abc", 2, b, &sz, PPE_STR_OPT_NONE);
@@ -964,7 +1019,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc") * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "abcn", ppe_cs_size(t)), 0);
 
     sz = sizeof(b);
     t = ppe_cs_chomp(s, "abc", 3, b, &sz, PPE_STR_OPT_NONE);
@@ -973,7 +1028,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc") * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "abcn", ppe_cs_size(t)), 0);
 
     sz = sizeof(b);
     t = ppe_cs_chomp(s, "abc", -1, b, &sz, PPE_STR_OPT_NONE);
@@ -982,7 +1037,7 @@ static void test_cs_chomp_for_using_fill_buffer_mode(void)
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(ppe_cs_size(t), strlen(s) - strlen("abc") * 2);
     CU_ASSERT_EQUAL(sz, strlen(s) - strlen("abc") * 2);
-    CU_ASSERT_EQUAL(strncmp(t, "abcn", ppe_cs_size(t)), 0);
+    CU_ASSERT_EQUAL(memcmp(t, "abcn", ppe_cs_size(t)), 0);
 } /* test_cs_chomp_for_using_fill_buffer_mode */
 
 CU_TestInfo test_normal_cases[] = {

@@ -320,7 +320,7 @@ static ppe_cstr_c cs_dupstr(ppe_cstr_c const restrict s, ppe_size cpsz, ppe_cstr
     if (! b) {
         if (bsz) {
             /* MEASURE-SIZE MODE */
-            *bsz = cpsz + 1; /* Include the terminating NUL byte. */
+            *bsz = cpsz; /* Exclude the terminating NUL byte. */
             ppe_err_set(PPE_ERR_TRY_AGAIN, NULL);
             return NULL;
         }
@@ -336,13 +336,13 @@ static ppe_cstr_c cs_dupstr(ppe_cstr_c const restrict s, ppe_size cpsz, ppe_cstr
     if (*bsz < cpsz + 1) {
         if (opt & PPE_STR_OPT_DONT_TRUNCATE) {
             /* Caller wants a full copy but the buffer would be out of space. */
+            *bsz = cpsz;
             ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
             return NULL;
         }
         cpsz = *bsz - 1;
     } /* if */
     memcpy(b, s, cpsz);
-    b[cpsz] = '\0';
     *bsz = cpsz;
     return b;
 } /* cs_dupstr */
@@ -353,7 +353,7 @@ PPE_API ppe_cstr_c ppe_cs_slice(ppe_cstr_c const restrict s, const ppe_size off,
     ppe_size cpsz = 0;
 
     sz = ppe_cs_size(s);
-    if (sz <= off) {
+    if (sz < off) {
         ppe_err_set(PPE_ERR_OUT_OF_RANGE, NULL);
         return NULL;
     }
