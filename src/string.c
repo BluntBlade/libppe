@@ -315,7 +315,7 @@ PPE_API ppe_cstr_c ppe_cs_find(ppe_cstr_c restrict s, ppe_cstr_c restrict t)
     return (ppe_cstr_c) strstr(s, t);
 } /* ppe_cs_find */
 
-static ppe_cstr_c cs_dupstr(ppe_cstr_c const restrict s, const ppe_size cpsz, ppe_cstr restrict b, ppe_size * restrict bsz)
+static ppe_cstr_c cs_dupstr(ppe_cstr_c const restrict s, ppe_size cpsz, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
 {
     if (! b) {
         if (bsz) {
@@ -334,9 +334,13 @@ static ppe_cstr_c cs_dupstr(ppe_cstr_c const restrict s, const ppe_size cpsz, pp
         return NULL;
     }
     if (*bsz < cpsz + 1) {
-        ppe_err_set(PPE_ERR_OUT_OF_CAPACITY, NULL);
-        return NULL;
-    }
+        if (opt & PPE_STR_OPT_DONT_TRUNCATE) {
+            /* Caller wants a full copy but the buffer would be out of space. */
+            ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
+            return NULL;
+        }
+        cpsz = *bsz - 1;
+    } /* if */
     memcpy(b, s, cpsz);
     b[cpsz] = '\0';
     *bsz = cpsz;
@@ -355,7 +359,7 @@ PPE_API ppe_cstr_c ppe_cs_slice(ppe_cstr_c const restrict s, const ppe_size off,
     }
 
     cpsz = sz < off + rsz ? sz - off : rsz;
-    return cs_dupstr(s, cpsz, b, bsz);    
+    return cs_dupstr(s, cpsz, b, bsz, opt);
 } /* ppe_cs_slice */
 
 /* -- Trim & Chomp -- */
@@ -395,7 +399,7 @@ PPE_API ppe_cstr_c ppe_cs_trim(ppe_cstr_c const restrict s, ppe_cstr_c restrict 
     }
 
     p = cs_get_trim_position(s, ppe_cs_size(s), t, &cpsz, opt);
-    return cs_dupstr(p, cpsz, b, bsz);
+    return cs_dupstr(p, cpsz, b, bsz, opt);
 } /* ppe_cs_trim */
 
 PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b, ppe_size * restrict bsz, ppe_str_option opt)
@@ -408,7 +412,7 @@ PPE_API ppe_cstr_c ppe_cs_chop(ppe_cstr_c const restrict s, ppe_cstr restrict b,
         /* TODO: What if chopping a UTF-8 character? */
         cpsz = ppe_cs_size(s) - 1;
     } /* if */
-    return cs_dupstr(s, cpsz, b, bsz);
+    return cs_dupstr(s, cpsz, b, bsz, opt);
 } /* ppe_cs_chop */
 
 static ppe_cstr_c cs_get_chomp_position(ppe_cstr_c const restrict s, const ppe_size sz, ppe_cstr_c const restrict t, const ppe_size tsz, const ppe_int n, ppe_size * restrict cpsz)
@@ -434,13 +438,13 @@ PPE_API ppe_cstr_c ppe_cs_chomp(ppe_cstr_c const restrict s, ppe_cstr_c const re
 
     sz = ppe_cs_size(s);
     if (ppe_cs_is_empty(t)) {
-        return cs_dupstr(s, sz, b, bsz);
+        return cs_dupstr(s, sz, b, bsz, opt);
     }
     if (ppe_cs_is_empty(s)) {
-        return cs_dupstr(cs_empty_s, 0, b, bsz);
+        return cs_dupstr(cs_empty_s, 0, b, bsz, opt);
     }
     p = cs_get_chomp_position(s, sz, t, ppe_cs_size(t), n, &cpsz);
-    return cs_dupstr(p, cpsz, b, bsz);
+    return cs_dupstr(p, cpsz, b, bsz, opt);
 } /* ppe_cs_chomp */
 
 ///* -- Join & Concat -- */
