@@ -333,14 +333,14 @@ static ppe_cstr_c cs_dupstr(ppe_cstr_c const restrict s, ppe_size cpsz, ppe_cstr
         ppe_err_set(PPE_ERR_INVALID_ARGUMENT, NULL);
         return NULL;
     }
-    if (*bsz < cpsz + 1) {
+    if (*bsz < cpsz) {
         if (opt & PPE_STR_OPT_DONT_TRUNCATE) {
             /* Caller wants a full copy but the buffer would be out of space. */
             *bsz = cpsz;
             ppe_err_set(PPE_ERR_OUT_OF_BUFFER, NULL);
             return NULL;
         }
-        cpsz = *bsz - 1;
+        cpsz = *bsz;
     } /* if */
     memcpy(b, s, cpsz);
     *bsz = cpsz;
