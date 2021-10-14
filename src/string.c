@@ -359,7 +359,7 @@ PPE_API ppe_cstr_c ppe_cs_slice(ppe_cstr_c const restrict s, const ppe_size off,
     }
 
     cpsz = sz < off + rsz ? sz - off : rsz;
-    return cs_dupstr(s, cpsz, b, bsz, opt);
+    return cs_dupstr(s + off, cpsz, b, bsz, opt);
 } /* ppe_cs_slice */
 
 /* -- Trim & Chomp -- */

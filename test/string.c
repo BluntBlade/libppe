@@ -184,6 +184,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
 
     /* -- Test FILL-BUFFER MODE -- */
     /* At the beginning. */
+    memset(b, 0, sizeof(b));
     bsz = sizeof(b);
     t = ppe_cs_substr(s, 0, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
@@ -192,6 +193,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     CU_ASSERT_EQUAL(strncmp(t, "This ", 5), 0);
 
     /* At the middle. */
+    memset(b, 0, sizeof(b));
     bsz = sizeof(b);
     t = ppe_cs_substr(s, 10, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
@@ -200,6 +202,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     CU_ASSERT_EQUAL(strncmp(t, "test ", 5), 0);
 
     /* At the end. */
+    memset(b, 0, sizeof(b));
     bsz = sizeof(b);
     t = ppe_cs_substr(s, 15, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
@@ -208,6 +211,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     CU_ASSERT_EQUAL(strncmp(t, "line.", 5), 0);
 
     /* Reach beyond the end. */
+    memset(b, 0, sizeof(b));
     bsz = sizeof(b);
     t = ppe_cs_substr(s, 17, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
@@ -216,6 +220,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     CU_ASSERT_EQUAL(strncmp(t, "ne.", 3), 0);
 
     /* Truncate the substring. */
+    memset(b, 0, sizeof(b));
     bsz = sizeof(b);
     t = ppe_cs_substr(s, 5, 10, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
