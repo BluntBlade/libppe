@@ -109,7 +109,68 @@ static void test_cs_create(void)
     ppe_cs_destroy(s2);
 } /* test_cs_create */
 
-static void test_cs_substr_for_using_measure_mode(void)
+static void test_cs_slice_from_empty(void)
+{
+    ppe_cstr_c t = NULL;
+    ppe_size bsz = 0;
+    ppe_char b[32];
+
+    /* CASE-1: Slice substring of zero bytes from the beginning of an empty string. */
+    {
+        /* CASE-1-1: Zero bytes using MEASURE mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 0, 0, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-1-2: Zero bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 0, 0, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-1-3: Zero bytes using NEW-STRING mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 0, 0, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+
+        /* CASE-1-4: 10 bytes using MEASURE mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 0, 10, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-1-5: Zero bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 0, 10, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-1-6: Zero bytes using NEW-STRING mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 0, 10, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+    }
+} /* test_cs_slice_from_empty */
+
+static void test_cs_slice(void)
+{
+    test_cs_slice_from_empty();
+} /* test_cs_slice */
+
+static void test_cs_slice_for_using_measure_mode(void)
 {
     ppe_cstr_c s = "This is a test line.";
     ppe_cstr_c t = NULL;
@@ -118,75 +179,75 @@ static void test_cs_substr_for_using_measure_mode(void)
     /* -- Test MEASURE mode -- */
     /* At the beginning. */
     /*   Cut nothing out. */
-    t = ppe_cs_substr(s, 0, 0, NULL, &bsz, 0);
+    t = ppe_cs_slice(s, 0, 0, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 0);
 
-    /*   Cut out a string whose length is 5 characters. */
-    t = ppe_cs_substr(s, 0, 5, NULL, &bsz, 0);
+    /*   Cut out a subsrting whose length is 5 characters. */
+    t = ppe_cs_slice(s, 0, 5, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 5);
 
-    /*   Cut out a string whose length is the same of the source string. */
-    t = ppe_cs_substr(s, 0, ppe_cs_size(s), NULL, &bsz, 0);
+    /*   Cut out a subsrting whose length is the same of the source. */
+    t = ppe_cs_slice(s, 0, ppe_cs_size(s), NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, ppe_cs_size(s));
 
-    /*   Cut out a string whose length is longer than the source string. */
-    t = ppe_cs_substr(s, 0, ppe_cs_size(s) + 4, NULL, &bsz, 0);
+    /*   Cut out a subsrting whose length is longer than the source. */
+    t = ppe_cs_slice(s, 0, ppe_cs_size(s) + 4, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, ppe_cs_size(s));
 
     /* At the middle. */
     /*   Cut nothing out. */
-    t = ppe_cs_substr(s, 10, 0, NULL, &bsz, 0);
+    t = ppe_cs_slice(s, 10, 0, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 0);
 
-    /*   Cut out a string whose length is 5 characters. */
-    t = ppe_cs_substr(s, 10, 5, NULL, &bsz, 0);
+    /*   Cut out a subsrting whose length is 5 characters. */
+    t = ppe_cs_slice(s, 10, 5, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 5);
 
-    /*   Cut out a string at the end of the source string. */
-    t = ppe_cs_substr(s, 14, 6, NULL, &bsz, 0);
+    /*   Cut out a subsrting at the end of the source. */
+    t = ppe_cs_slice(s, 14, 6, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 6);
 
-    /*   Cut out a string whose length is longer than the rest of the source string. */
-    t = ppe_cs_substr(s, 14, 10, NULL, &bsz, 0);
+    /*   Cut out a subsrting whose length is longer than the rest of the source. */
+    t = ppe_cs_slice(s, 14, 10, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 6);
 
     /* At the end. */
     /*   Cut nothing out (#1). */
-    t = ppe_cs_substr(s, ppe_cs_size(s), 0, NULL, &bsz, 0);
+    t = ppe_cs_slice(s, ppe_cs_size(s), 0, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 0);
 
     /*   Cut nothing out (#2). */
-    t = ppe_cs_substr(s, ppe_cs_size(s), 10, NULL, &bsz, 0);
+    t = ppe_cs_slice(s, ppe_cs_size(s), 10, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
     CU_ASSERT_EQUAL(bsz, 0);
 
     /* Beyond the end. */
-    /*   Throw an error. */
-    t = ppe_cs_substr(s, ppe_cs_size(s) + 2, 0, NULL, &bsz, 0);
+    /*   Return an error. */
+    t = ppe_cs_slice(s, ppe_cs_size(s) + 2, 0, NULL, &bsz, 0);
     CU_ASSERT_PTR_NULL(t);
     CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
-} /* test_cs_substr_for_using_measure_mode */
+} /* test_cs_slice_for_using_measure_mode */
 
-static void test_cs_substr_for_using_new_string_mode(void)
+static void test_cs_slice_for_using_new_string_mode(void)
 {
     ppe_cstr_c s = "This is a test line.";
     ppe_cstr_c t = NULL;
@@ -194,43 +255,96 @@ static void test_cs_substr_for_using_new_string_mode(void)
     
     /* -- Test NEW-STRING MODE -- */
     /* At the beginning. */
-    t = ppe_cs_substr(s, 0, 5, NULL, NULL, 0);
+    /*   Cut nothing out. */
+    t = ppe_cs_slice(s, 0, 0, NULL, NULL, 0);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+    ppe_cs_destroy(t);
+    t = NULL;
+
+    /*   Cut out a subsrting whose length is 5 characters. */
+    t = ppe_cs_slice(s, 0, 5, NULL, NULL, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_NOT_EQUAL(t, s);
     CU_ASSERT_EQUAL(memcmp(t, s, 5), 0);
-    CU_ASSERT_EQUAL(memcmp(t, "This ", 5), 0);
+    ppe_cs_destroy(t);
+    t = NULL;
+
+    /*   Cut out a subsrting whose length is the same of the source. */
+    t = ppe_cs_slice(s, 0, ppe_cs_size(s), NULL, NULL, 0);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(memcmp(t, s, ppe_cs_size(s)), 0);
+    ppe_cs_destroy(t);
+    t = NULL;
+
+    /*   Cut out a subsrting whose length is longer than the source. */
+    t = ppe_cs_slice(s, 0, ppe_cs_size(s) + 4, NULL, NULL, 0);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(memcmp(t, s, ppe_cs_size(s)), 0);
+    ppe_cs_destroy(t);
+    t = NULL;
 
     /* At the middle. */
-    t2 = ppe_cs_substr(s, 10, 5, NULL, NULL, 0);
-    CU_ASSERT_PTR_NOT_NULL(t2);
-    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
-    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
-    CU_ASSERT_EQUAL(memcmp(t2, s + 10, 5), 0);
-    CU_ASSERT_EQUAL(memcmp(t2, "test ", 5), 0);
-
+    /*   Cut nothing out. */
+    t = ppe_cs_slice(s, 10, 0, NULL, NULL, 0);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
     ppe_cs_destroy(t);
-    ppe_cs_destroy(t2);
+    t = NULL;
+
+    /*   Cut out a subsrting whose length is 5 characters. */
+    t = ppe_cs_slice(s, 10, 5, NULL, NULL, 0);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 5);
+    CU_ASSERT_EQUAL(memcmp(t, s + 10, 5), 0);
+    ppe_cs_destroy(t);
+    t = NULL;
+
+    /*   Cut out a subsrting at the end of the source. */
+    t = ppe_cs_slice(s, 14, 6, NULL, NULL, 0);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 6);
+    CU_ASSERT_EQUAL(memcmp(t, s + 14, 6), 0);
+    ppe_cs_destroy(t);
+    t = NULL;
+
+    /*   Cut out a subsrting whose length is longer than the rest of the source. */
+    t = ppe_cs_slice(s, 14, 10, NULL, NULL, 0);
+    CU_ASSERT_PTR_NOT_NULL(t);
+    CU_ASSERT_PTR_NOT_EQUAL(t, s);
+    CU_ASSERT_EQUAL(ppe_cs_size(t), 6);
+    CU_ASSERT_EQUAL(memcmp(t, s + 14, 6), 0);
+    ppe_cs_destroy(t);
+    t = NULL;
 
     /* At the end. */
-    t = ppe_cs_substr(s, 15, 5, NULL, NULL, 0);
+    /*   Cut nothing out (#1). */
+    t = ppe_cs_slice(s, ppe_cs_size(s), 0, NULL, NULL, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
-    CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_EQUAL(memcmp(t, s + 15, 5), 0);
-    CU_ASSERT_EQUAL(memcmp(t, "line.", 5), 0);
-
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
     ppe_cs_destroy(t);
+    t = NULL;
 
-    /* Reach beyond the end. */
-    t = ppe_cs_substr(s, 17, 5, NULL, NULL, 0);
+    /*   Cut nothing out (#2). */
+    t = ppe_cs_slice(s, ppe_cs_size(s), 10, NULL, NULL, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
-    CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_EQUAL(memcmp(t, s + 17, 3), 0);
-    CU_ASSERT_EQUAL(memcmp(t, "ne.", 3), 0);
-
+    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
     ppe_cs_destroy(t);
-} /* test_cs_substr_for_using_new_string_mode */
+    t = NULL;
 
-static void test_cs_substr_for_using_fill_buffer_mode(void)
+    /* Beyond the end. */
+    /*   Return an error. */
+    t = ppe_cs_slice(s, ppe_cs_size(s) + 2, 0, NULL, NULL, 0);
+    CU_ASSERT_PTR_NULL(t);
+    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+} /* test_cs_slice_for_using_new_string_mode */
+
+static void test_cs_slice_for_using_fill_buffer_mode(void)
 {
     ppe_cstr_c s = "This is a test line.";
     ppe_cstr_c t = NULL;
@@ -241,7 +355,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     /* At the beginning. */
     memset(b, 0, sizeof(b));
     bsz = sizeof(b);
-    t = ppe_cs_substr(s, 0, 5, b, &bsz, 0);
+    t = ppe_cs_slice(s, 0, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(memcmp(t, s, 5), 0);
@@ -250,7 +364,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     /* At the middle. */
     memset(b, 0, sizeof(b));
     bsz = sizeof(b);
-    t = ppe_cs_substr(s, 10, 5, b, &bsz, 0);
+    t = ppe_cs_slice(s, 10, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(memcmp(t, s + 10, 5), 0);
@@ -259,7 +373,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     /* At the end. */
     memset(b, 0, sizeof(b));
     bsz = sizeof(b);
-    t = ppe_cs_substr(s, 15, 5, b, &bsz, 0);
+    t = ppe_cs_slice(s, 15, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(memcmp(t, s + 15, 5), 0);
@@ -268,7 +382,7 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     /* Reach beyond the end. */
     memset(b, 0, sizeof(b));
     bsz = sizeof(b);
-    t = ppe_cs_substr(s, 17, 5, b, &bsz, 0);
+    t = ppe_cs_slice(s, 17, 5, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(memcmp(t, s + 17, 3), 0);
@@ -277,12 +391,12 @@ static void test_cs_substr_for_using_fill_buffer_mode(void)
     /* Truncate the substring. */
     memset(b, 0, sizeof(b));
     bsz = 5;
-    t = ppe_cs_substr(s, 5, 10, b, &bsz, 0);
+    t = ppe_cs_slice(s, 5, 10, b, &bsz, 0);
     CU_ASSERT_PTR_NOT_NULL(t);
     CU_ASSERT_PTR_EQUAL(t, b);
     CU_ASSERT_EQUAL(memcmp(t, s + 5, 5), 0);
     CU_ASSERT_EQUAL(memcmp(t, "is a ", 5), 0);
-} /* test_cs_substr_for_using_fill_buffer_mode */
+} /* test_cs_slice_for_using_fill_buffer_mode */
 
 static void test_cs_trim_for_using_measure_mode(void)
 {
@@ -1065,9 +1179,10 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_compare()", test_cs_compare},
     {"test_cs_find()", test_cs_find},
     {"test_cs_create()", test_cs_create},
-    {"test_cs_substr_for_using_measure_mode()", test_cs_substr_for_using_measure_mode},
-    {"test_cs_substr_for_using_fill_buffer_mode()", test_cs_substr_for_using_fill_buffer_mode},
-    {"test_cs_substr_for_using_new_string_mode()", test_cs_substr_for_using_new_string_mode},
+    {"test_cs_slice()", test_cs_slice},
+    {"test_cs_slice_for_using_measure_mode()", test_cs_slice_for_using_measure_mode},
+    {"test_cs_slice_for_using_fill_buffer_mode()", test_cs_slice_for_using_fill_buffer_mode},
+    {"test_cs_slice_for_using_new_string_mode()", test_cs_slice_for_using_new_string_mode},
     {"test_cs_trim_for_using_measure_mode()", test_cs_trim_for_using_measure_mode},
     {"test_cs_trim_for_using_fill_buffer_mode()", test_cs_trim_for_using_fill_buffer_mode},
     {"test_cs_trim_for_using_new_string_mode()", test_cs_trim_for_using_new_string_mode},
