@@ -109,16 +109,17 @@ static void test_cs_create(void)
     ppe_cs_destroy(s2);
 } /* test_cs_create */
 
-static void test_cs_slice_from_empty(void)
+static void test_cs_slice(void)
 {
+    ppe_cstr_c s = "This is a test line.";
     ppe_cstr_c t = NULL;
+    ppe_size cpsz = 0;
     ppe_size bsz = 0;
     ppe_char b[32];
 
-    /* CASE-1: Slice substring of zero bytes from the beginning of an empty string. */
+    /* CASE-1: Slice substring from the beginning of an empty string. */
     {
         /* CASE-1-1: Zero bytes using MEASURE mode. */
-        memset(b, 0, sizeof(b));
         bsz = sizeof(b);
         t = ppe_cs_slice(ppe_cs_empty(), 0, 0, NULL, &bsz, 0);
         CU_ASSERT_PTR_NULL(t);
@@ -134,21 +135,18 @@ static void test_cs_slice_from_empty(void)
         CU_ASSERT_EQUAL(bsz, 0);
 
         /* CASE-1-3: Zero bytes using NEW-STRING mode. */
-        memset(b, 0, sizeof(b));
-        bsz = sizeof(b);
         t = ppe_cs_slice(ppe_cs_empty(), 0, 0, NULL, NULL, 0);
         CU_ASSERT_PTR_NOT_NULL(t);
         CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
 
         /* CASE-1-4: 10 bytes using MEASURE mode. */
-        memset(b, 0, sizeof(b));
         bsz = sizeof(b);
         t = ppe_cs_slice(ppe_cs_empty(), 0, 10, NULL, &bsz, 0);
         CU_ASSERT_PTR_NULL(t);
         CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
         CU_ASSERT_EQUAL(bsz, 0);
 
-        /* CASE-1-5: Zero bytes using FILL-BUFFER mode. */
+        /* CASE-1-5: 10 bytes using FILL-BUFFER mode. */
         memset(b, 0, sizeof(b));
         bsz = sizeof(b);
         t = ppe_cs_slice(ppe_cs_empty(), 0, 10, b, &bsz, 0);
@@ -156,18 +154,325 @@ static void test_cs_slice_from_empty(void)
         CU_ASSERT_PTR_EQUAL(t, b);
         CU_ASSERT_EQUAL(bsz, 0);
 
-        /* CASE-1-6: Zero bytes using NEW-STRING mode. */
-        memset(b, 0, sizeof(b));
-        bsz = sizeof(b);
+        /* CASE-1-6: 10 bytes using NEW-STRING mode. */
         t = ppe_cs_slice(ppe_cs_empty(), 0, 10, NULL, NULL, 0);
         CU_ASSERT_PTR_NOT_NULL(t);
         CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
     }
-} /* test_cs_slice_from_empty */
 
-static void test_cs_slice(void)
-{
-    test_cs_slice_from_empty();
+    /* CASE-2: Slice substring beyond the end of an empty string. */
+    {
+        /* CASE-2-1: Zero bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 10, 0, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+
+        /* CASE-2-2: Zero bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 10, 0, b, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+
+        /* CASE-2-3: Zero bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(ppe_cs_empty(), 10, 0, NULL, NULL, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+
+        /* CASE-2-4: 10 bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 10, 10, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+
+        /* CASE-2-5: 10 bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(ppe_cs_empty(), 10, 10, b, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+
+        /* CASE-2-6: 10 bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(ppe_cs_empty(), 10, 10, NULL, NULL, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+    }
+
+    /* CASE-3: Slice substring from the beginning of a non-empty string. */
+    {
+        /* CASE-3-1: Zero bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, 0, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-3-2: Zero bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, 0, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-3-3: Zero bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 0, 0, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+
+        /* CASE-3-4: One bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, 1, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 1);
+
+        /* CASE-3-5: One bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, 1, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 1);
+        CU_ASSERT_EQUAL(memcmp(b, s, 1), 0);
+
+        /* CASE-3-6: One bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 0, 1, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "T"));
+        CU_ASSERT_FALSE(ppe_cs_equal_to(t, s));
+        ppe_cs_destroy(t);
+
+        /* CASE-3-7: First half of the source using MEASURE mode. */
+        cpsz = ppe_cs_size(s) / 2;
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, cpsz, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+
+        /* CASE-3-8: First half of the source using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, cpsz, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+        CU_ASSERT_EQUAL(memcmp(b, s, cpsz), 0);
+
+        /* CASE-3-9: First half of the source using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 0, cpsz, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "This is a "));
+        CU_ASSERT_FALSE(ppe_cs_equal_to(t, s));
+        ppe_cs_destroy(t);
+
+        /* CASE-3-10: All of the source using MEASURE mode. */
+        cpsz = ppe_cs_size(s);
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, cpsz, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+
+        /* CASE-3-11: All of the source using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, cpsz, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+        CU_ASSERT_EQUAL(memcmp(b, s, cpsz), 0);
+
+        /* CASE-3-12: All of the source using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 0, cpsz, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, s));
+        ppe_cs_destroy(t);
+
+        /* CASE-3-13: All of the source plus one byte using MEASURE mode. */
+        cpsz = ppe_cs_size(s) + 1;
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, cpsz, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, cpsz - 1);
+
+        /* CASE-3-14: All of the source plus one byte using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, cpsz, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, cpsz - 1);
+        CU_ASSERT_EQUAL(memcmp(b, s, cpsz), 0);
+
+        /* CASE-3-15: All of the source plus one byte using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 0, cpsz, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, s));
+    }
+
+    /* CASE-4: Slice substring from the middle of a non-empty string. */
+    {
+        /* CASE-4-1: Zero bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 10, 0, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-4-2: Zero bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 0, 0, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-4-3: Zero bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 0, 0, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+
+        /* CASE-4-4: One bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 10, 1, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 1);
+
+        /* CASE-4-5: One bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 10, 1, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 1);
+        CU_ASSERT_EQUAL(memcmp(b, s + 10, 1), 0);
+
+        /* CASE-4-6: One bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 10, 1, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "t"));
+        CU_ASSERT_FALSE(ppe_cs_equal_to(t, s));
+        ppe_cs_destroy(t);
+
+        /* CASE-4-7: First half of the rest of the source using MEASURE mode. */
+        cpsz = 5;
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 10, cpsz, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+
+        /* CASE-4-8: First half of the rest of the source using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 10, cpsz, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+        CU_ASSERT_EQUAL(memcmp(b, s + 10, cpsz), 0);
+
+        /* CASE-4-9: First half of the rest of the source using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 10, cpsz, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "test "));
+        CU_ASSERT_FALSE(ppe_cs_equal_to(t, s + 10));
+        ppe_cs_destroy(t);
+
+        /* CASE-4-10: All of the rest of the source using MEASURE mode. */
+        cpsz = 5;
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 15, cpsz, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+
+        /* CASE-4-11: All of the rest of the source using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 15, cpsz, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, cpsz);
+        CU_ASSERT_EQUAL(memcmp(b, s + 15, cpsz), 0);
+
+        /* CASE-4-12: All of the rest of the source using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 15, cpsz, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, s + 15));
+        ppe_cs_destroy(t);
+
+        /* CASE-4-13: All of the rest of the source plus one byte using MEASURE mode. */
+        cpsz = 6;
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 15, cpsz, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, cpsz - 1);
+
+        /* CASE-4-14: All of the rest of the source plus one byte using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, 15, cpsz, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, cpsz - 1);
+        CU_ASSERT_EQUAL(memcmp(b, s + 15, cpsz), 0);
+
+        /* CASE-4-15: All of the rest of the source plus one byte using NEW-STRING mode. */
+        t = ppe_cs_slice(s, 15, cpsz, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, s + 15));
+        ppe_cs_destroy(t);
+    }
+
+    /* CASE-5: Slice substring from the end of a non-empty string. */
+    {
+        /* CASE-5-1: Zero bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, ppe_cs_size(s), 0, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-1-2: Zero bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, ppe_cs_size(s), 0, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 0);
+
+        /* CASE-1-3: Zero bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(s, ppe_cs_size(s), 0, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+    }
+
+    /* CASE-6: Slice substring from beyond the end of a non-empty string. */
+    {
+        /* CASE-6-1: Zero bytes using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, ppe_cs_size(s) + 1, 0, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+
+        /* CASE-6-2: Zero bytes using FILL-BUFFER mode. */
+        memset(b, 0, sizeof(b));
+        bsz = sizeof(b);
+        t = ppe_cs_slice(s, ppe_cs_size(s) + 1, 0, b, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+
+        /* CASE-6-3: Zero bytes using NEW-STRING mode. */
+        t = ppe_cs_slice(s, ppe_cs_size(s) + 1, 0, NULL, NULL, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
+    }
 } /* test_cs_slice */
 
 static void test_cs_slice_for_using_measure_mode(void)
