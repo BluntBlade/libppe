@@ -475,6 +475,97 @@ static void test_cs_slice(void)
     }
 } /* test_cs_slice */
 
+static void test_cs_trim(void)
+{
+    ppe_cstr_c s = NULL;
+    ppe_cstr_c t = NULL;
+    ppe_size bsz = 0;
+    ppe_char b[32];
+
+    /* Case-1: Trim spaces surrounding text. */
+    {
+        s = "   Text surrounded by spaces.   ";
+
+        /* Case-1-1: Trim preceding spaces before text using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_trim(s, PPE_STR_SPACES, NULL, &bsz, PPE_STR_OPT_LEFT_END);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 29);
+
+        /* Case-1-2: Trim preceding spaces before text using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_trim(s, PPE_STR_SPACES, b, &bsz, PPE_STR_OPT_LEFT_END);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 29);
+        CU_ASSERT_EQUAL(memcmp(t, "Text surrounded by spaces.   ", bsz), 0);
+
+        /* Case-1-3: Trim preceding spaces before text using NEW-STRING mode. */
+        t = ppe_cs_trim(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_LEFT_END);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_EQUAL(ppe_cs_size(t), 29);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "Text surrounded by spaces.   "));
+        ppe_cs_destroy(t);
+
+        /* Case-1-4: Trim tailing spaces after text using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_trim(s, PPE_STR_SPACES, NULL, &bsz, PPE_STR_OPT_RIGHT_END);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 29);
+
+        /* Case-1-5: Trim tailing spaces after text using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_trim(s, PPE_STR_SPACES, b, &bsz, PPE_STR_OPT_RIGHT_END);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 29);
+        CU_ASSERT_EQUAL(memcmp(t, "   Text surrounded by spaces.", bsz), 0);
+
+        /* Case-1-6: Trim tailing spaces after text using NEW-STRING mode. */
+        t = ppe_cs_trim(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_RIGHT_END);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_EQUAL(ppe_cs_size(t), 29);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "   Text surrounded by spaces."));
+        ppe_cs_destroy(t);
+
+        /* Case-1-7: Trim all spaces surrounding text using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_trim(s, PPE_STR_SPACES, NULL, &bsz, PPE_STR_OPT_BOTH_ENDS);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 26);
+
+        /* Case-1-8: Trim all spaces surrounding text using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_trim(s, PPE_STR_SPACES, b, &bsz, PPE_STR_OPT_BOTH_ENDS);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 26);
+        CU_ASSERT_EQUAL(memcmp(t, "Text surrounded by spaces.", bsz), 0);
+
+        /* Case-1-9: Trim all spaces surrounding using NEW-STRING mode. */
+        t = ppe_cs_trim(s, PPE_STR_SPACES, NULL, NULL, PPE_STR_OPT_BOTH_ENDS);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_EQUAL(ppe_cs_size(t), 26);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "Text surrounded by spaces."));
+        ppe_cs_destroy(t);
+    }
+} /* test_cs_trim */
+
 static void test_cs_trim_for_using_measure_mode(void)
 {
     ppe_cstr_c s = "   Text surrounded by spaces.   ";
@@ -1257,6 +1348,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_find()", test_cs_find},
     {"test_cs_create()", test_cs_create},
     {"test_cs_slice()", test_cs_slice},
+    {"test_cs_trim()", test_cs_trim},
     {"test_cs_trim_for_using_measure_mode()", test_cs_trim_for_using_measure_mode},
     {"test_cs_trim_for_using_fill_buffer_mode()", test_cs_trim_for_using_fill_buffer_mode},
     {"test_cs_trim_for_using_new_string_mode()", test_cs_trim_for_using_new_string_mode},
