@@ -815,90 +815,102 @@ static void test_cs_trim(void)
     }
 } /* test_cs_trim */
 
-static void test_cs_chop_for_using_measure_mode(void)
+static void test_cs_chop(void)
 {
-    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE;
+    ppe_cstr_c s = NULL;
     ppe_cstr_c t = NULL;
     ppe_size bsz = 0;
+    ppe_char b[32];
 
-    /* -- Test non-empty string input. -- */
-    t = ppe_cs_chop(s, NULL, &bsz, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NULL(t);
-    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
-    CU_ASSERT_EQUAL(bsz, ppe_cs_size(s) - 1);
+    /* Case-1: Chop empty string. */
+    {
+        s = "";
 
-    /* -- Test empty string input. -- */
-    t = ppe_cs_chop("", NULL, &bsz, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NULL(t);
-    CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
-    CU_ASSERT_EQUAL(bsz, 0);
-} /* test_cs_chop_for_using_measure_mode */
+        /* Case-1-1: Chop empty string using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_chop(s, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 0);
 
-static void test_cs_chop_for_using_new_string_mode(void)
-{
-    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE;
-    ppe_cstr_c t = NULL;
-    ppe_cstr_c t2 = NULL;
+        /* Case-1-2: Chop empty string using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_chop(s, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 0);
 
-    /* -- Test non-empty string input. -- */
-    t = ppe_cs_chop(s, NULL, NULL, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NOT_NULL(t);
-    CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_EQUAL(ppe_cs_size(t), ppe_cs_size(s) - 1);
+        /* Case-1-3: Chop empty string using NEW-STRING mode. */
+        t = ppe_cs_chop(s, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+        ppe_cs_destroy(t);
+    }
 
-    t2 = ppe_cs_chop(t, NULL, NULL, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NOT_NULL(t2);
-    CU_ASSERT_PTR_NOT_EQUAL(t2, t);
-    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
-    CU_ASSERT_EQUAL(ppe_cs_size(t2), ppe_cs_size(s) - 2);
+    /* Case-2: Chop string which contains only one byte. */
+    {
+        s = "A";
 
-    ppe_cs_destroy(t);
-    ppe_cs_destroy(t2);
+        /* Case-2-1: Chop string using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_chop(s, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 0);
 
-    /* -- Test empty string input. -- */
-    t = ppe_cs_chop("", NULL, NULL, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NOT_NULL(t);
-    CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
-    CU_ASSERT_EQUAL(ppe_cs_size(t), 0);
-} /* test_cs_chop_for_using_new_string_mode */
+        /* Case-2-2: Chop string using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_chop(s, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 0);
 
-static void test_cs_chop_for_using_fill_buffer_mode(void)
-{
-    ppe_cstr_c s = "This is a test line." PPE_STR_NEWLINE;
-    ppe_cstr_c t = NULL;
-    ppe_cstr_c t2 = NULL;
-    ppe_char b[30];
-    ppe_size bsz = sizeof(b);
+        /* Case-2-3: Chop string using NEW-STRING mode. */
+        t = ppe_cs_chop(s, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+        ppe_cs_destroy(t);
+    }
 
-    /* -- Test non-empty string input. -- */
-    memset(b, 0, sizeof(b));
-    t = ppe_cs_chop(s, NULL, NULL, PPE_STR_OPT_NONE);
-    t = ppe_cs_chop(s, b, &bsz, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NOT_NULL(t);
-    CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, b);
-    CU_ASSERT_EQUAL(bsz, ppe_cs_size(s) - 1);
-    CU_ASSERT_EQUAL(memcmp(t, s, bsz), 0);
+    /* Case-3: Chop string which contains two bytes. */
+    {
+        s = "AB";
 
-    bsz = sizeof(b);
-    t2 = ppe_cs_chop(t, b, &bsz, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NOT_NULL(t2);
-    CU_ASSERT_PTR_NOT_EQUAL(t2, s);
-    CU_ASSERT_PTR_EQUAL(t2, b);
-    CU_ASSERT_EQUAL(bsz, ppe_cs_size(s) - 2);
-    CU_ASSERT_EQUAL(memcmp(t2, s, bsz), 0);
+        /* Case-3-1: Chop string using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_chop(s, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 1);
 
-    /* -- Test empty string input. -- */
-    memset(b, 0, sizeof(b));
-    t = ppe_cs_chop("", NULL, NULL, PPE_STR_OPT_NONE);
-    t = ppe_cs_chop("", b, &bsz, PPE_STR_OPT_NONE);
-    CU_ASSERT_PTR_NOT_NULL(t);
-    CU_ASSERT_PTR_NOT_EQUAL(t, s);
-    CU_ASSERT_PTR_EQUAL(t, b);
-    CU_ASSERT_EQUAL(bsz, 0);
-    CU_ASSERT_EQUAL(b[0], '\0');
-} /* test_cs_chop_for_using_fill_buffer_mode */
+        /* Case-3-2: Chop string using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_chop(s, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 1);
+        CU_ASSERT_EQUAL(memcmp(b, "A", 1), 0);
+
+        /* Case-3-3: Chop string using NEW-STRING mode. */
+        t = ppe_cs_chop(s, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_PTR_EQUAL(ppe_cs_size(t), 1);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "A"));
+        ppe_cs_destroy(t);
+    }
+} /* test_cs_chop */
 
 static void test_cs_chomp_for_using_measure_mode(void)
 {
@@ -1348,9 +1360,7 @@ CU_TestInfo test_normal_cases[] = {
     {"test_cs_create()", test_cs_create},
     {"test_cs_slice()", test_cs_slice},
     {"test_cs_trim()", test_cs_trim},
-    {"test_cs_chop_for_using_measure_mode()", test_cs_chop_for_using_measure_mode},
-    {"test_cs_chop_for_using_fill_buffer_mode()", test_cs_chop_for_using_fill_buffer_mode},
-    {"test_cs_chop_for_using_new_string_mode()", test_cs_chop_for_using_new_string_mode},
+    {"test_cs_chop()", test_cs_chop},
     {"test_cs_chomp_for_using_measure_mode()", test_cs_chomp_for_using_measure_mode},
     {"test_cs_chomp_for_using_new_string_mode()", test_cs_chomp_for_using_new_string_mode},
     {"test_cs_chomp_for_using_fill_buffer_mode()", test_cs_chomp_for_using_fill_buffer_mode},
