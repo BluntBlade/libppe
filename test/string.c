@@ -115,7 +115,7 @@ static void test_cs_slice(void)
     ppe_cstr_c t = NULL;
     ppe_size cpsz = 0;
     ppe_size bsz = 0;
-    ppe_char b[32];
+    ppe_char b[64];
 
     /* CASE-1: Slice substring from the beginning of an empty string. */
     {
@@ -480,7 +480,7 @@ static void test_cs_trim(void)
     ppe_cstr_c s = NULL;
     ppe_cstr_c t = NULL;
     ppe_size bsz = 0;
-    ppe_char b[32];
+    ppe_char b[64];
 
     /* Case-1: Trim spaces surrounding text. */
     {
@@ -820,7 +820,7 @@ static void test_cs_chop(void)
     ppe_cstr_c s = NULL;
     ppe_cstr_c t = NULL;
     ppe_size bsz = 0;
-    ppe_char b[32];
+    ppe_char b[64];
 
     /* Case-1: Chop empty string. */
     {
@@ -918,7 +918,7 @@ static void test_cs_chomp(void)
     ppe_cstr_c rs = NULL;
     ppe_cstr_c t = NULL;
     ppe_size bsz = 0;
-    ppe_char b[32];
+    ppe_char b[64];
 
     /* Case-1: Chomp empty string. */
     {
@@ -1053,6 +1053,118 @@ static void test_cs_chomp(void)
         CU_ASSERT_PTR_NOT_EQUAL(t, s);
         CU_ASSERT_PTR_NOT_EQUAL(t, b);
         CU_ASSERT_PTR_EQUAL(t, ppe_cs_empty());
+        ppe_cs_destroy(t);
+    }
+
+    /* Case-3: Chomp normal string. */
+    {
+        s = "This is a test line." PPE_STR_NEWLINE;
+        rs = PPE_STR_NEWLINE;
+
+        /* Case-3-1: Chomp normal string using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_chomp(s, rs, 1, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 20);
+
+        /* Case-3-2: Chomp normal string using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_chomp(s, rs, 1, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 20);
+        CU_ASSERT_EQUAL(memcmp(t, "This is a test line.", bsz), 0);
+
+        /* Case-3-3: Chomp normal string using NEW-STRING mode. */
+        t = ppe_cs_chomp(s, rs, 1, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_EQUAL(ppe_cs_size(t), 20);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "This is a test line."));
+        ppe_cs_destroy(t);
+
+        /* Case-3-4: Chomp normal string using MEASURE mode. */
+        bsz = sizeof(b);
+        t = ppe_cs_chomp(s, rs, 2, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 20);
+
+        /* Case-3-5: Chomp normal string using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_chomp(s, rs, 2, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 20);
+        CU_ASSERT_EQUAL(memcmp(t, "This is a test line.", bsz), 0);
+
+        /* Case-3-6: Chomp normal string using NEW-STRING mode. */
+        t = ppe_cs_chomp(s, rs, 2, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_EQUAL(ppe_cs_size(t), 20);
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "This is a test line."));
+        ppe_cs_destroy(t);
+
+        /* Case-3-7: Chomp normal string using MEASURE mode. */
+        s = "This is a test line." PPE_STR_NEWLINE "This is another one." PPE_STR_NEWLINE;
+        bsz = sizeof(b);
+        t = ppe_cs_chomp(s, rs, 1, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 40 + ppe_cs_size(PPE_STR_NEWLINE));
+
+        /* Case-3-8: Chomp normal string using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_chomp(s, rs, 1, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 40 + ppe_cs_size(PPE_STR_NEWLINE));
+        CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "This is another one.", bsz), 0);
+
+        /* Case-3-9: Chomp normal string using NEW-STRING mode. */
+        t = ppe_cs_chomp(s, rs, 1, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_EQUAL(ppe_cs_size(t), 40 + ppe_cs_size(PPE_STR_NEWLINE));
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "This is a test line." PPE_STR_NEWLINE "This is another one."));
+        ppe_cs_destroy(t);
+
+        /* Case-3-10: Chomp normal string using MEASURE mode. */
+        s = "This is a test line." PPE_STR_NEWLINE "This is another one." PPE_STR_NEWLINE;
+        bsz = sizeof(b);
+        t = ppe_cs_chomp(s, rs, 2, NULL, &bsz, 0);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_TRY_AGAIN);
+        CU_ASSERT_EQUAL(bsz, 40 + ppe_cs_size(PPE_STR_NEWLINE));
+
+        /* Case-3-11: Chomp normal string using FILL-BUFFER mode. */
+        bsz = sizeof(b);
+        memset(b, 0, sizeof(b));
+        t = ppe_cs_chomp(s, rs, 2, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 40 + ppe_cs_size(PPE_STR_NEWLINE));
+        CU_ASSERT_EQUAL(memcmp(t, "This is a test line." PPE_STR_NEWLINE "This is another one.", bsz), 0);
+
+        /* Case-3-12: Chomp normal string using NEW-STRING mode. */
+        t = ppe_cs_chomp(s, rs, 2, NULL, NULL, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_NOT_EQUAL(t, s);
+        CU_ASSERT_PTR_NOT_EQUAL(t, b);
+        CU_ASSERT_EQUAL(ppe_cs_size(t), 40 + ppe_cs_size(PPE_STR_NEWLINE));
+        CU_ASSERT_TRUE(ppe_cs_equal_to(t, "This is a test line." PPE_STR_NEWLINE "This is another one."));
         ppe_cs_destroy(t);
     }
 } /* test_cs_chomp */
