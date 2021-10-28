@@ -473,6 +473,26 @@ static void test_cs_slice(void)
         CU_ASSERT_PTR_NULL(t);
         CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_RANGE);
     }
+
+    /* CASE-7: Try to slice a string with 10 bytes but the buffer is not enough. */
+    {
+        /* CASE-7-1: Using FILL-BUFFER mode and allow truncating. */
+        s = "This is a test line.";
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_slice(s, 2, 10, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 8);
+        CU_ASSERT_EQUAL(memcmp(b, "is is a ", bsz), 0);
+
+        /* CASE-7-2: Using FILL-BUFFER mode but don't allow truncating. */
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_slice(s, 2, 10, b, &bsz, PPE_STR_OPT_DONT_TRUNCATE);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_BUFFER);
+    }
 } /* test_cs_slice */
 
 static void test_cs_trim(void)
@@ -813,6 +833,26 @@ static void test_cs_trim(void)
         CU_ASSERT_TRUE(ppe_cs_equal_to(t, "Text surrounded by spaces."));
         ppe_cs_destroy(t);
     }
+
+    /* CASE-5: Try to trim a string but the buffer is not enough. */
+    {
+        /* CASE-5-1: Using FILL-BUFFER mode and allow truncating. */
+        s = "Text surrounded by spaces.";
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_trim(s, PPE_STR_SPACES, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 8);
+        CU_ASSERT_EQUAL(memcmp(b, "Text sur", bsz), 0);
+
+        /* CASE-5-2: Using FILL-BUFFER mode but don't allow truncating. */
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_trim(s, PPE_STR_SPACES, b, &bsz, PPE_STR_OPT_DONT_TRUNCATE);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_BUFFER);
+    }
 } /* test_cs_trim */
 
 static void test_cs_chop(void)
@@ -909,6 +949,26 @@ static void test_cs_chop(void)
         CU_ASSERT_PTR_EQUAL(ppe_cs_size(t), 1);
         CU_ASSERT_TRUE(ppe_cs_equal_to(t, "A"));
         ppe_cs_destroy(t);
+    }
+
+    /* CASE-4: Try to chop a string but the buffer is not enough. */
+    {
+        /* CASE-4-1: Using FILL-BUFFER mode and allow truncating. */
+        s = "This is a test line.";
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_chop(s, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 8);
+        CU_ASSERT_EQUAL(memcmp(b, "This is a", bsz), 0);
+
+        /* CASE-4-2: Using FILL-BUFFER mode but don't allow truncating. */
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_chop(s, b, &bsz, PPE_STR_OPT_DONT_TRUNCATE);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_BUFFER);
     }
 } /* test_cs_chop */
 
@@ -1166,6 +1226,26 @@ static void test_cs_chomp(void)
         CU_ASSERT_EQUAL(ppe_cs_size(t), 40 + ppe_cs_size(PPE_STR_NEWLINE));
         CU_ASSERT_TRUE(ppe_cs_equal_to(t, "This is a test line." PPE_STR_NEWLINE "This is another one."));
         ppe_cs_destroy(t);
+    }
+
+    /* CASE-4: Try to chomp a string but the buffer is not enough. */
+    {
+        /* CASE-4-1: Using FILL-BUFFER mode and allow truncating. */
+        s = "This is a test line." PPE_STR_NEWLINE;
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, b, &bsz, 0);
+        CU_ASSERT_PTR_NOT_NULL(t);
+        CU_ASSERT_PTR_EQUAL(t, b);
+        CU_ASSERT_EQUAL(bsz, 8);
+        CU_ASSERT_EQUAL(memcmp(b, "This is a", bsz), 0);
+
+        /* CASE-4-2: Using FILL-BUFFER mode but don't allow truncating. */
+        memset(b, 0, sizeof(b));
+        bsz = 8;
+        t = ppe_cs_chomp(s, PPE_STR_NEWLINE, 1, b, &bsz, PPE_STR_OPT_DONT_TRUNCATE);
+        CU_ASSERT_PTR_NULL(t);
+        CU_ASSERT_EQUAL(ppe_err_get_code(), PPE_ERR_OUT_OF_BUFFER);
     }
 } /* test_cs_chomp */
 
